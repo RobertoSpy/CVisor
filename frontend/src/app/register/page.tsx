@@ -44,13 +44,20 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow-lg flex flex-col gap-4 w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-2 text-center">Înregistrare</h1>
+    <main className="flex flex-col items-center justify-center min-h-screen bg-gradient-hero">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white bg-opacity-80 p-8 rounded-xl shadow-2xl flex flex-col gap-4 w-full max-w-md backdrop-blur"
+      >
+        <h1 className="text-3xl font-extrabold mb-2 text-center text-primary drop-shadow">Înregistrare</h1>
         {error && <div className="bg-red-100 text-red-700 px-4 py-2 rounded">{error}</div>}
         {success && <div className="bg-green-100 text-green-700 px-4 py-2 rounded">{success}</div>}
-        <label className="font-semibold">Rol:</label>
-        <select value={role} onChange={e => setRole(e.target.value)} className="border p-2 rounded w-full">
+        <label className="font-semibold text-primary">Rol:</label>
+        <select
+          value={role}
+          onChange={e => setRole(e.target.value)}
+          className="border p-2 rounded w-full"
+        >
           <option value="admin">Admin</option>
           <option value="student">Student</option>
           <option value="asociatie">Asociație</option>
@@ -73,7 +80,7 @@ export default function RegisterPage() {
         />
         <button
           type="submit"
-          className="bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 transition"
+          className="bg-primary text-white py-2 rounded font-semibold hover:bg-secondary transition"
           disabled={loading}
         >
           {loading ? "Se înregistrează..." : "Înregistrare"}
