@@ -47,6 +47,18 @@ app.get('/hello', async (req, res) => {
 const authRoutes = require("./routes/auth");
 app.use("/api/auth", authRoutes);
 
+
+const usersRoutes = require("./routes/students/users");  
+app.use("/api/users", usersRoutes);       
+
+const oppRoutes = require("./routes/students/opportunities");
+app.use("/api/opportunities", oppRoutes);
+
+
+const appsRoutes = require("./routes/students/applications");
+app.use("/api/applications", appsRoutes);
+
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
