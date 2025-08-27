@@ -26,21 +26,26 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      // Exemplu de request (schimbă endpointul după backendul tău)
+      
       const res = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, role }),
-        credentials: "include", // dacă folosești cookie/sesiuni
+        credentials: "include", 
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.message || "Login failed");
       } else {
+        //salveaza token
+         if (data.token) localStorage.setItem("token", data.token);
+          // Salvează rolul
+      if (data.role) localStorage.setItem("role", data.role);
+
         // Redirect în funcție de rol
         if (role === "admin") router.push("/admin");
         else if (role === "student") router.push("/student");
-        else router.push("/asociatie");
+        else router.push("/organization");
       }
     } catch (err: any) {
       setError("Network error");
@@ -65,7 +70,7 @@ export default function LoginPage() {
         >
           <option value="admin">Admin</option>
           <option value="student">Student</option>
-          <option value="asociatie">Asociație</option>
+          <option value="asociatie">Organization</option>
         </select>
         <input
           type="email"

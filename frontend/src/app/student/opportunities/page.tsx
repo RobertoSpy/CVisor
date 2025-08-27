@@ -15,24 +15,20 @@ export default function OpportunitiesPage() {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
 
-  async function load() {
-    setLoading(true);
-    try {
-      // TODO: leagă de backend (ex):
-      // const url = `${process.env.NEXT_PUBLIC_API_BASE}/api/opportunities${q ? `?q=${encodeURIComponent(q)}` : ""}`;
-      // const res = await fetch(url, { credentials: "include" });
-      // setItems(await res.json());
-
-      // demo fallback
-      const demo: Opportunity[] = [
-        { id: "1", title: "Voluntariat Tech Event", orgName: "DevClub", type: "volunteering", skills: ["JS", "Teamwork"], deadline: "2025-10-01" },
-        { id: "2", title: "Workshop React", orgName: "CVisor Org", type: "workshop", skills: ["React"], deadline: "2025-10-05" },
-      ];
-      setItems(q ? demo.filter(d => (d.title + d.skills.join(" ")).toLowerCase().includes(q.toLowerCase())) : demo);
-    } finally {
-      setLoading(false);
-    }
+async function load() {
+  setLoading(true);
+  try {
+    const token = localStorage.getItem("token");
+    const url = `http://localhost:5000/api/opportunities${q ? `?q=${encodeURIComponent(q)}` : ""}`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    });
+    setItems(await res.json());
+  } finally {
+    setLoading(false);
   }
+}
 
   useEffect(() => { load(); }, []); // on mount
 

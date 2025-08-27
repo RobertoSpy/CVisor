@@ -59,6 +59,23 @@ const appsRoutes = require("./routes/students/applications");
 app.use("/api/applications", appsRoutes);
 
 
+// --- NEW: Rute pentru ORGANIZAȚII
+const orgUsersRoutes = require("./routes/organizations/users");
+app.use("/api/organizations/users", orgUsersRoutes);
+
+const orgOppRoutes = require("./routes/organizations/opportunities");
+app.use("/api/organizations/opportunities", orgOppRoutes);
+/*
+const orgTimelineRoutes = require("./routes/organizations/timeline");
+app.use("/api/organizations/timeline", orgTimelineRoutes);
+
+const orgTestimonialsRoutes = require("./routes/organizations/testimonials");
+app.use("/api/organizations/testimonials", orgTestimonialsRoutes);
+
+const orgSkillsRoutes = require("./routes/organizations/skills");
+app.use("/api/organizations/skills", orgSkillsRoutes);
+*/
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

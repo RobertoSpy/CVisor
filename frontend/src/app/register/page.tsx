@@ -60,7 +60,7 @@ export default function RegisterPage() {
         >
           <option value="admin">Admin</option>
           <option value="student">Student</option>
-          <option value="asociatie">Asociație</option>
+          <option value="organization">Organization</option>
         </select>
         <input
           type="email"
