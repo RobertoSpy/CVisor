@@ -153,6 +153,8 @@ export default function OpportunitiesPage() {
     });
   }
 
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
   return (
     <div className="space-y-8 mt-10">
       <div className="flex items-center justify-between mb-6">
@@ -292,9 +294,14 @@ export default function OpportunitiesPage() {
           {opportunities.map((opp) => (
             <li
               key={opp.id}
-              className="bg-card rounded-2xl p-5 ring-1 ring-black/5 shadow-[0_6px_24px_rgba(0,0,0,0.06)] flex flex-col justify-between"
+              className={`bg-card rounded-2xl p-5 ring-1 ring-black/5 shadow-[0_6px_24px_rgba(0,0,0,0.06)] flex flex-col justify-between relative overflow-visible`}
             >
-              <h3 className="text-lg font-semibold tracking-tight mt-0.5 text-primary">{opp.title}</h3>
+              <button
+                className="w-full text-left"
+                onClick={() => setExpandedId(expandedId === opp.id ? null : opp.id)}
+              >
+                <h3 className="text-lg font-semibold tracking-tight mt-0.5 text-primary">{opp.title}</h3>
+              </button>
               <div className="text-xs mt-1">Tip: <span className="font-medium text-secondary">{opp.type}</span></div>
               <div className="text-xs mt-1 text-gray-600">Deadline: {opp.deadline ? new Date(opp.deadline).toLocaleDateString() : '-'}</div>
 
@@ -323,6 +330,24 @@ export default function OpportunitiesPage() {
                   Șterge
                 </button>
               </div>
+
+              {expandedId === opp.id && (
+                <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-2xl h-[70vh] bg-white rounded-2xl shadow-2xl z-50 p-8 flex flex-col border border-primary animate-fade-in overflow-y-auto" style={{ minHeight: '320px' }}>
+                  <button className="absolute top-4 right-6 text-primary text-2xl" onClick={() => setExpandedId(null)}>&#10005;</button>
+                  <h3 className="text-2xl font-bold mb-4 text-primary">{opp.title}</h3>
+                  <div className="mb-2"><span className="font-medium">Tip:</span> {opp.type}</div>
+                  <div className="mb-2"><span className="font-medium">Deadline:</span> {opp.deadline ? new Date(opp.deadline).toLocaleDateString() : '-'}</div>
+                  <div className="mb-2"><span className="font-medium">Locație:</span> {opp.location}</div>
+                  <div className="mb-2"><span className="font-medium">Preț:</span> {opp.price} RON</div>
+                  <div className="mb-2"><span className="font-medium">Locuri disponibile:</span> {opp.spots}</div>
+                  <div className="mb-4"><span className="font-medium">Descriere:</span> {opp.description}</div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {Array.isArray(opp.skills) && opp.skills.map((s) => (
+                      <span key={s} className="text-xs px-3 py-1 rounded-md bg-primary/10 text-primary font-medium">{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </li>
           ))}
         </ul>
