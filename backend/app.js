@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
 require('dotenv').config();
+const path = require("path"); 
 
 const app = express();
 const PORT = process.env.PORT;
@@ -58,6 +59,9 @@ app.use("/api/opportunities", oppRoutes);
 const appsRoutes = require("./routes/students/applications");
 app.use("/api/applications", appsRoutes);
 
+const uploadRouter = require("./routes/upload");
+app.use("/api/upload", uploadRouter);
+
 
 // --- NEW: Rute pentru ORGANIZAȚII
 const orgUsersRoutes = require("./routes/organizations/users");
@@ -75,6 +79,9 @@ app.use("/api/organizations/testimonials", orgTestimonialsRoutes);
 const orgSkillsRoutes = require("./routes/organizations/skills");
 app.use("/api/organizations/skills", orgSkillsRoutes);
 */
+
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
