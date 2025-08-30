@@ -29,7 +29,8 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const { rows, rowCount } = await pool.query(
-      `SELECT id, title, org_name AS "orgName", type, skills, deadline
+      `SELECT id, title, type, skills, deadline,available_spots, price, banner_image, promo_video, gallery,
+        participants, location, tags, agenda, faq, reviews, description
        FROM opportunities WHERE id=$1`, [req.params.id]
     );
     if (!rowCount) return res.status(404).json({ message: "Not found" });
