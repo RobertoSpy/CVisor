@@ -338,10 +338,20 @@ export function useOpportunityHandlers({
 
   // Deschide modal editare
   function openEditModal(opp: Opportunity) {
-    setEditId(opp.id);
-   setEditForm({
-  title: opp.title || "",
-  deadline: opp.deadline || "",
+     setEditId(opp.id);
+    // Convertim deadline la formatul YYYY-MM-DD
+    let deadlineValue = "";
+    if (opp.deadline) {
+      const d = new Date(opp.deadline);
+      if (!isNaN(d.getTime())) {
+        deadlineValue = d.toISOString().slice(0, 10);
+      } else {
+        deadlineValue = opp.deadline;
+      }
+    }
+    setEditForm({
+    title: opp.title || "",
+    deadline: deadlineValue,
   type: opp.type || "",
   skills: Array.isArray(opp.skills) ? opp.skills.join(", ") : (opp.skills || ""),
   available_spots: opp.available_spots?.toString() ?? "",

@@ -119,22 +119,28 @@ export default function OpportunitiesPage() {
       </div>
 
       {/* MODAL ADAUGARE */}
-     {showForm && (
-  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white rounded-xl p-8 shadow-2xl flex flex-col gap-7 min-w-[350px] w-full max-w-xl"
-    >
+    {showForm && (
+      <div
+        className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+        onClick={e => {
+          // Închide modalul dacă se dă click pe overlay, nu pe formular
+          if (e.target === e.currentTarget) setShowForm(false);
+        }}
+      >
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white rounded-2xl p-10 shadow-2xl flex flex-col gap-8 min-w-[400px] w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-primary/60 scrollbar-track-gray-200"
+        >
       {/* Top: Titlu, Locuri, Deadline */}
       <div className="flex flex-col gap-2">
-        <h2 className="font-bold text-2xl text-primary mb-1">Adaugă oportunitate nouă</h2>
-        <div className="grid grid-cols-2 gap-4">
+  <h2 className="font-bold text-3xl text-primary mb-3">Adaugă oportunitate nouă</h2>
+  <div className="grid grid-cols-2 gap-6">
           <input
             type="text"
             placeholder="Titlu"
             value={form.title}
             onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-            className="border p-2 rounded col-span-2"
+            className="border p-3 rounded-lg col-span-2 focus:outline-primary/60 transition"
             required
           />
           <input
@@ -142,7 +148,7 @@ export default function OpportunitiesPage() {
             placeholder="Număr locuri"
             value={form.available_spots}
             onChange={e => setForm(f => ({ ...f, available_spots: e.target.value }))}
-            className="border p-2 rounded"
+            className="border p-3 rounded-lg focus:outline-primary/60 transition"
             required min="1"
           />
           <input
@@ -150,36 +156,36 @@ export default function OpportunitiesPage() {
             placeholder="Deadline"
             value={form.deadline}
             onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))}
-            className="border p-2 rounded"
+            className="border p-3 rounded-lg focus:outline-primary/60 transition"
             required
           />
         </div>
       </div>
 
       {/* Banner + Video + Galerie */}
-      <div className="flex flex-col gap-3 bg-gray-50 rounded-lg p-4">
+  <div className="flex flex-col gap-4 bg-gray-50 rounded-xl p-5">
         <label className="font-semibold text-primary">Banner imagine</label>
         <input type="file" accept="image/*" onChange={handleBannerChange} 
-          className="border p-2 rounded bg-white"
+          className="border p-3 rounded-lg bg-white focus:outline-primary/60 transition"
         />
         <label className="font-semibold text-primary mt-2">Video promo</label>
         <input type="file" accept="video/*" onChange={handlePromoChange} 
-          className="border p-2 rounded bg-white"
+          className="border p-3 rounded-lg bg-white focus:outline-primary/60 transition"
         />
         <label className="font-semibold text-primary mt-2">Galerie imagini</label>
        <input type="file" accept="image/*" onChange={handleGalleryChange} 
-          className="border p-2 rounded bg-white"
+          className="border p-3 rounded-lg bg-white focus:outline-primary/60 transition"
         />
       </div>
 
       {/* Detalii generale */}
-      <div className="grid grid-cols-2 gap-4">
+  <div className="grid grid-cols-2 gap-6">
         <input
           type="text"
           placeholder="Tip oportunitate"
           value={form.type}
           onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-          className="border p-2 rounded"
+          className="border p-3 rounded-lg focus:outline-primary/60 transition"
           required
         />
         <input
@@ -187,7 +193,7 @@ export default function OpportunitiesPage() {
           placeholder="Preț (RON)"
           value={form.price}
           onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
-          className="border p-2 rounded"
+          className="border p-3 rounded-lg focus:outline-primary/60 transition"
           required min="0"
         />
         <input
@@ -195,7 +201,7 @@ export default function OpportunitiesPage() {
           placeholder="Locație"
           value={form.location}
           onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-          className="border p-2 rounded"
+          className="border p-3 rounded-lg focus:outline-primary/60 transition"
           required
         />
         <input
@@ -203,17 +209,17 @@ export default function OpportunitiesPage() {
           placeholder="Tag-uri (virgulă)"
           value={form.tags}
           onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
-          className="border p-2 rounded"
+          className="border p-3 rounded-lg focus:outline-primary/60 transition"
         />
       </div>
       
       {/* Descriere, skilluri, agenda, FAQ, reviews */}
-      <div className="flex flex-col gap-2">
+  <div className="flex flex-col gap-4">
         <textarea
           placeholder="Descriere"
           value={form.description}
           onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-          className="border p-2 rounded"
+          className="border p-3 rounded-lg focus:outline-primary/60 transition min-h-[80px]"
           required
         />
         <input
@@ -221,37 +227,37 @@ export default function OpportunitiesPage() {
           placeholder="Skilluri (virgulă)"
           value={form.skills}
           onChange={e => setForm(f => ({ ...f, skills: e.target.value }))}
-          className="border p-2 rounded"
+          className="border p-3 rounded-lg focus:outline-primary/60 transition"
         />
         <input
           type="text"
           placeholder="Agenda"
           value={form.agenda}
           onChange={e => setForm(f => ({ ...f, agenda: e.target.value }))}
-          className="border p-2 rounded"
+          className="border p-3 rounded-lg focus:outline-primary/60 transition"
         />
         <input
           type="text"
           placeholder="FAQ"
           value={form.faq}
           onChange={e => setForm(f => ({ ...f, faq: e.target.value }))}
-          className="border p-2 rounded"
+          className="border p-3 rounded-lg focus:outline-primary/60 transition"
         />
         <input
           type="text"
           placeholder="Reviews"
           value={form.reviews}
           onChange={e => setForm(f => ({ ...f, reviews: e.target.value }))}
-          className="border p-2 rounded"
+          className="border p-3 rounded-lg focus:outline-primary/60 transition"
         />
       </div>
 
       {/* Butoane */}
-      <div className="flex gap-2 justify-end pt-4">
-        <button type="button" className="text-gray-500" onClick={() => setShowForm(false)}>
+      <div className="flex gap-3 justify-end pt-6">
+        <button type="button" className="text-gray-500 hover:text-primary/80 px-4 py-2 rounded-lg transition" onClick={() => setShowForm(false)}>
           Anulează
         </button>
-        <button type="submit" className="bg-primary text-white px-4 py-2 rounded-lg">
+        <button type="submit" className="bg-primary text-white px-6 py-2 rounded-lg shadow hover:bg-primary/80 transition font-semibold">
           Postează
         </button>
       </div>
@@ -261,12 +267,17 @@ export default function OpportunitiesPage() {
 
 
       {/* MODAL EDITARE */}
-   {editId && (
-  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-    <form
-      onSubmit={handleEditSubmit}
-      className="bg-white rounded-xl p-8 shadow-2xl flex flex-col gap-7 min-w-[350px] w-full max-w-xl"
+  {editId && (
+    <div
+      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+      onClick={e => {
+        if (e.target === e.currentTarget) setEditId(null);
+      }}
     >
+      <form
+        onSubmit={handleEditSubmit}
+        className="bg-white rounded-2xl p-10 shadow-2xl flex flex-col gap-8 min-w-[400px] w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-primary/60 scrollbar-track-gray-200"
+      >
       {/* Top: Titlu, Locuri, Deadline */}
       <div className="flex flex-col gap-2">
         <h2 className="font-bold text-2xl text-primary mb-1">Editează oportunitatea</h2>
