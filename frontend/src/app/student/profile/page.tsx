@@ -347,7 +347,7 @@ export default function StudentProfileWizard(){
   return (
     <div className="grid lg:grid-cols-[260px,1fr] gap-6 mt-10">
       {/* Left: Stepper + checklist */}
-  <div className="space-y-4">
+      <div className="space-y-4">
         <Card>
           <div className="flex items-center justify-between mb-2"><div className="text-sm text-gray-600">Completitudine</div><div className="text-sm font-medium">{pct}%</div></div>
           <div className="h-2 bg-black/10 rounded-full overflow-hidden mb-2"><div className="h-full bg-primary" style={{width:`${pct}%`}}/></div>
