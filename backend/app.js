@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { Pool } = require('pg');
+const { pool } = require('./db');
 require('dotenv').config();
 const path = require("path"); 
 
@@ -18,14 +18,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// PostgreSQL connection
-const pool = new Pool({
-  host: process.env.PGHOST,
-  port: process.env.PGPORT,
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD,
-  database: process.env.PGDATABASE,
-});
+// PostgreSQL connection pool este importat din db.js
 
 // Basic test route
 app.get('/', (req, res) => {
@@ -81,6 +74,26 @@ app.use("/api/organizations/skills", orgSkillsRoutes);
 */
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Noua structură
+const studentAnalytics = require("./routes/students/analytics");
+app.use("/api/students/analytics", studentAnalytics);
+
+const orgAnalytics = require("./routes/organizations/analytics");
+app.use("/api/organizations/analytics", orgAnalytics);
+
+// Alias-uri compatibile cu ce ai deja în frontend:
+app.use("/api/analytics/student", studentAnalytics); // => /api/analytics/student/logins
+app.use("/api/analytics/orgs", orgAnalytics);        // => /api/analytics/orgs/posts
+
+app.use((err, req, res, next) => {
+  console.error("[GLOBAL ERROR]", err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({
+    error: "Internal Server Error",
+    details: err?.message || "unknown",
+    stack: err?.stack || null,
+  });
+});
 
 
 app.listen(PORT, () => {

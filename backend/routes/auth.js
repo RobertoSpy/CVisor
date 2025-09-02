@@ -3,6 +3,8 @@ const router = express.Router();
 const bcrypt = require("bcrypt"); // Asigură-te că ai instalat bcrypt
 const jwt = require("jsonwebtoken"); // Pentru token, dacă folosești JWT
 const { getUserByEmail, saveUser } = require("../db"); // Exemplu funcție DB
+const { pool } = require("../db");
+
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -24,6 +26,18 @@ router.post("/login", async (req, res) => {
       JWT_SECRET,
       { expiresIn: "1h" }
     );
+     
+
+        try {
+      await pool.query(
+        "INSERT INTO app_events (user_id, event_type) VALUES ($1, 'login')",
+        [user.id]
+      );
+    } catch (e) {
+      console.error("Eroare logare eveniment login:", e.message);
+      // nu blocăm login-ul, e doar log
+    } 
+
 
     res.json({ message: "Login reușit", token, user: { id: user.id, email: user.email, role: user.role } });
   } catch (err) {
