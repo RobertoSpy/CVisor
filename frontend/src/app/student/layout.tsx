@@ -1,29 +1,55 @@
+"use client";
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
+  const router = useRouter();
+
+  function handleLogout() {
+    localStorage.removeItem("token");
+    router.push("/login");
+  }
+
+  // Protecție: verifică token-ul la fiecare acces
+  useEffect(() => {
+    if (!localStorage.getItem("token")) {
+      router.push("/login");
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-neutral">
       <header className="bg-primary text-white">
         {/* Bara superioară */}
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-3 border-b border-white/15">
           <div className="font-bold text-xl">CVISOR — Student</div>
-          <nav className="flex gap-2 text-sm">
-            {[
-              { href: "/student", label: "Dashboard" },
-              { href: "/student/opportunities", label: "Oportunități" },
-              { href: "/student/applications", label: "Aplicațiile mele" },
-              { href: "/student/profile", label: "Profil" },
-            ].map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className="px-3 py-1.5 rounded-lg hover:bg-white/15 transition"
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
+          <div className="flex items-center gap-4">
+            <nav className="flex gap-2 text-sm">
+              {[
+                { href: "/student", label: "Dashboard" },
+                { href: "/student/opportunities", label: "Oportunități" },
+                { href: "/student/applications", label: "Aplicațiile mele" },
+                { href: "/student/profile", label: "Profil" },
+              ].map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="px-3 py-1.5 rounded-lg hover:bg-white/15 transition"
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
+            {/* Buton Logout */}
+            <button
+              onClick={handleLogout}
+              className="px-4 py-1.5 rounded-lg bg-red-500 hover:bg-red-700 transition font-semibold ml-2"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         {/* Hero cu gradient + subtitlu, aerisit */}

@@ -177,13 +177,32 @@ export default function OpportunityDetailPage() {
   </div>
 )}
 
-        {/* Call to Action */}
-        <div className="text-center mt-12">
-          <button className="bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-white font-bold px-8 py-3 rounded-2xl shadow-lg text-lg transition-all duration-200 hover:scale-105">
-            Aplică acum și descoperă oportunitatea!
-          </button>
-          <div className="mt-2 text-xs text-gray-500">* Pentru mai multe detalii, contactează organizația.</div>
-        </div>
+      {/* Call to Action */}
+<div className="text-center mt-12">
+  {opp.cta_url ? (
+    <a
+      href={opp.cta_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-block bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-white font-bold px-8 py-3 rounded-2xl shadow-lg text-lg transition-all duration-200 hover:scale-105"
+    >
+      Aplică acum și descoperă oportunitatea!
+    </a>
+  ) : (
+    <button
+      className="bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-white font-bold px-8 py-3 rounded-2xl shadow-lg text-lg transition-all duration-200 hover:scale-105"
+      disabled
+      title="Momentan nu poți aplica direct"
+    >
+      Aplică acum și descoperă oportunitatea!
+    </button>
+  )}
+  <div className="mt-2 text-xs text-gray-500">
+    {opp.cta_url
+      ? "* Vei fi redirecționat către pagina oficială a organizației."
+      : "* Pentru mai multe detalii, contactează organizația."}
+  </div>
+</div>
       </div>
     </div>
   );

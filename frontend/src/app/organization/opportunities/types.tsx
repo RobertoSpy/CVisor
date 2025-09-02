@@ -23,4 +23,5 @@ export type Opportunity = {
   faq?: string;
   reviews?: string;
   description: string;
+  cta_url: string;
 };

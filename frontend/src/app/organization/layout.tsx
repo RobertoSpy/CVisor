@@ -1,7 +1,25 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function OrganizationLayout({ children }: { children: ReactNode }) {
+  const router = useRouter();
+
+  function handleLogout() {
+    localStorage.removeItem("token");
+    router.push("/login");
+  }
+
+  // Verificare token la fiecare acces
+  useEffect(() => {
+    if (!localStorage.getItem("token")) {
+      router.push("/login");
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-neutral">
       <header className="bg-primary text-white">
@@ -26,6 +44,12 @@ export default function OrganizationLayout({ children }: { children: ReactNode }
               </Link>
             ))}
           </nav>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-1.5 rounded-lg bg-red-500 hover:bg-red-700 transition font-semibold ml-2"
+          >
+            Logout
+          </button>
         </div>
 
         {/* Hero cu gradient + subtitlu */}

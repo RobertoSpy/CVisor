@@ -27,6 +27,7 @@ export default function OpportunitiesPage() {
     agenda: "",
     faq: "",
     reviews: "",
+    cta_url: "",
   });
 
   // Modal editare
@@ -47,6 +48,7 @@ export default function OpportunitiesPage() {
     agenda: "",
     faq: "",
     reviews: "",
+    cta_url: "",
   });
 
   // Fișiere
@@ -250,6 +252,15 @@ export default function OpportunitiesPage() {
           onChange={e => setForm(f => ({ ...f, reviews: e.target.value }))}
           className="border p-3 rounded-lg focus:outline-primary/60 transition"
         />
+          <input
+  type="url"
+  placeholder="Link extern de înscriere (opțional)"
+  value={form.cta_url || ""}
+  onChange={e => setForm(f => ({ ...f, cta_url: e.target.value }))}
+  className="border p-3 rounded-lg focus:outline-primary/60 transition"
+  autoComplete="off"
+/>
+        
       </div>
 
       {/* Butoane */}
@@ -368,6 +379,15 @@ export default function OpportunitiesPage() {
           onChange={e => setEditForm(f => ({ ...f, tags: e.target.value }))}
           className="border p-2 rounded"
         />
+
+        <input
+  type="url"
+  placeholder="Link extern de înscriere (opțional)"
+  value={editForm.cta_url || ""}
+  onChange={e => setEditForm(f => ({ ...f, cta_url: e.target.value }))}
+  className="border p-2 rounded"
+  autoComplete="off"
+/>
       </div>
       
       {/* Descriere, skilluri, agenda, FAQ, reviews */}

@@ -38,7 +38,8 @@ router.post("/", verifyToken, verifyOrg, async (req, res) => {
     agenda,
     faq,
     reviews,
-    description
+    description,
+    cta_url
   } = req.body;
 
   if (!title || !type || !deadline || !description) {
@@ -48,14 +49,14 @@ router.post("/", verifyToken, verifyOrg, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `INSERT INTO opportunities 
-        (title, type, skills, deadline, user_id, available_spots, price, banner_image, promo_video, gallery, participants, location, tags, agenda, faq, reviews, description)
+        (title, type, skills, deadline, user_id, available_spots, price, banner_image, promo_video, gallery, participants, location, tags, agenda, faq, reviews, description, cta_url)
        VALUES 
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
        RETURNING *`,
       [
         title, type, toPgArray(skills), deadline, userId,
         available_spots, price, banner_image, promo_video,
-        toPgArray(gallery), toJson(participants), location, toPgArray(tags), toJson(agenda), toJson(faq), toJson(reviews), description
+        toPgArray(gallery), toJson(participants), location, toPgArray(tags), toJson(agenda), toJson(faq), toJson(reviews), description,  cta_url
       ]
     );
     res.json(rows[0]);

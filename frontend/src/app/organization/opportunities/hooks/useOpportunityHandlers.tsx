@@ -168,6 +168,7 @@ export function useOpportunityHandlers({
           agenda: "",
           faq: "",
           reviews: "",
+          cta_url: form.cta_url || "",
         });
         setBannerFile(null);
         setPromoFile(null);
@@ -313,6 +314,7 @@ export function useOpportunityHandlers({
           agenda: "",
           faq: "",
           reviews: "",
+           cta_url: form.cta_url || "",
         });
         setEditBannerFile(null);
         setEditPromoFile(null);
