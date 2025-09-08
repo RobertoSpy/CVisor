@@ -29,12 +29,8 @@ router.post("/pageview", verifyToken, async (req, res) => {
 });
 
 // GET /api/students/analytics/presence?days=35
+// GET /api/students/analytics/presence?days=35
 router.get("/presence", verifyToken, async (req, res) => {
-  console.log(`[presence]`, {
-    method: req.method,
-    url: req.originalUrl,
-    userId: req.user?.id
-  });
   const days = Math.max(1, parseInt(req.query.days ?? "35", 10));
   try {
     const uid = Number(req.user?.id);
@@ -48,7 +44,7 @@ router.get("/presence", verifyToken, async (req, res) => {
         SELECT date(created_at) AS d, count(*) AS cnt
         FROM app_events
         WHERE user_id = $2
-          AND event_type IN ('login','pageview')
+          AND event_type = 'login'                 -- << NUMĂRĂM DOAR LOGĂRILE
           AND created_at >= (current_date - ($1::int - 1))::date
         GROUP BY 1
       )
@@ -58,15 +54,15 @@ router.get("/presence", verifyToken, async (req, res) => {
       ORDER BY s.d;
     `;
     const { rows } = await pool.query(sql, [days, uid]);
-    console.log(`[presence] DB rows:`, rows.length);
     const map = {};
     rows.forEach(r => { map[r.day] = Number(r.count); });
-    res.json(map);
+    return res.json(map);
   } catch (e) {
-    console.error("[presence] error:", e.message, e.stack);
-    res.status(500).json({ error: "DB error", details: e.message });
+    console.error("[presence] error:", e);
+    return res.status(500).json({ error: "DB error", details: e.message });
   }
 });
+
 
 // — doar temporar, pentru debug —
 router.get("/whoami", verifyToken, (req, res) => {
