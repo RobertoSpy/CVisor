@@ -14,14 +14,15 @@ router.get("/me", verifyToken, async (req, res) => {
               bio,
               avatar_url AS "avatarUrl",
               skills,
-              social
+              social,
+              location
        FROM profiles WHERE user_id=$1`,
       [uid]
     );
 
     const prof = p.rows[0] || {
       name: "", headline: "", bio: "",
-      avatarUrl: "", skills: [], social: {}
+      avatarUrl: "", skills: [], social: {}, location: ""
     };
 
     const edu = await pool.query(
@@ -37,13 +38,22 @@ router.get("/me", verifyToken, async (req, res) => {
       [uid]
     );
 
-    // compat: întoarcem și avatarDataUrl (aceeași valoare)
+    // MEDIA
+    const media = await pool.query(
+      `SELECT id, kind, url, caption
+       FROM portfolio_media WHERE user_id=$1
+       ORDER BY id ASC`,
+      [uid]
+    );
+
     res.json({
       ...prof,
       avatarDataUrl: prof.avatarUrl || "",
       skills: prof.skills || [],
+      location: prof.location || "",
       education: edu.rows,
-      experience: exp.rows
+      experience: exp.rows,
+      portfolioMedia: media.rows
     });
   } catch (e) {
     res.status(500).json({ message: "DB error", error: e.message });
@@ -58,10 +68,11 @@ router.put("/me", verifyToken, async (req, res) => {
     name, headline, bio,
     avatarUrl, avatarDataUrl,
     skills = [], social = {},
-    education = [], experience = []
+    education = [], experience = [],
+    portfolioMedia = [],
+    location = ""
   } = body;
 
-  // preferăm avatarUrl; dacă nu, luăm avatarDataUrl
   const avatar = avatarUrl || avatarDataUrl || null;
 
   const client = await pool.connect();
@@ -69,8 +80,8 @@ router.put("/me", verifyToken, async (req, res) => {
     await client.query("BEGIN");
 
     await client.query(
-      `INSERT INTO profiles (user_id, name, headline, bio, avatar_url, skills, social, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,now())
+      `INSERT INTO profiles (user_id, name, headline, bio, avatar_url, skills, social, location, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now())
        ON CONFLICT (user_id) DO UPDATE SET
          name=EXCLUDED.name,
          headline=EXCLUDED.headline,
@@ -78,8 +89,9 @@ router.put("/me", verifyToken, async (req, res) => {
          avatar_url=EXCLUDED.avatar_url,
          skills=EXCLUDED.skills,
          social=EXCLUDED.social,
+         location=EXCLUDED.location,
          updated_at=now()`,
-      [uid, name || null, headline || null, bio || null, avatar, skills, social]
+      [uid, name || null, headline || null, bio || null, avatar, skills, social, location || null]
     );
 
     await client.query("DELETE FROM education WHERE user_id=$1", [uid]);
@@ -97,6 +109,16 @@ router.put("/me", verifyToken, async (req, res) => {
         `INSERT INTO experience (user_id, role, company, start_ym, end_ym, details)
          VALUES ($1,$2,$3,$4,$5,$6)`,
         [uid, e.role || "", e.company || "", e.start || null, e.end || null, e.details || null]
+      );
+    }
+
+    // PORTFOLIO MEDIA
+    await client.query("DELETE FROM portfolio_media WHERE user_id=$1", [uid]);
+    for (const m of portfolioMedia) {
+      await client.query(
+        `INSERT INTO portfolio_media (user_id, kind, url, caption)
+         VALUES ($1, $2, $3, $4)`,
+        [uid, m.kind, m.url, m.caption || null]
       );
     }
 

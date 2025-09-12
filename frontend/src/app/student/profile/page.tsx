@@ -1,5 +1,8 @@
 "use client";
+import { useRouter } from "next/navigation";
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
+
 
 // ===================== Types =====================
 type SocialLinks = { github?: string; linkedin?: string; website?: string };
@@ -15,7 +18,7 @@ type OppRef = { id: string; title: string; role?: string; org?: string; date?: s
 type ProfilePayload = { name: string; headline?: string; bio?: string; avatarDataUrl?: string; location?: string; skills: string[]; social: SocialLinks; education: EducationItem[]; experience: ExperienceItem[]; portfolioMedia: Media[]; opportunityRefs: OppRef[] };
 
 // ===================== Utils =====================
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
+const API = "http://localhost:5000";
 const uid = () => Math.random().toString(36).slice(2, 9);
 const cls = (...x: Array<string | false | undefined>) => x.filter(Boolean).join(" ");
 
@@ -252,7 +255,27 @@ function OppsEditor({items,setItems}:{items:OppRef[];setItems:(v:OppRef[])=>void
 }
 
 function MediaEditor({media,setMedia}:{media:Media[];setMedia:(v:Media[])=>void}){
-  function add(files: FileList | null){ if(!files) return; const next: Media[]=[]; Array.from(files).forEach(f=>{ const url = URL.createObjectURL(f); const isVideo = /video/.test(f.type) || /\.(mp4|webm|ogg)$/i.test(f.name); next.push({id:uid(), kind:isVideo?"video":"image", url, caption:f.name}); }); setMedia([...media, ...next]); }
+  async function add(files: FileList | null){
+  if(!files) return;
+  const next: Media[] = [];
+  for (const f of Array.from(files)) {
+    // Upload către backend!
+    const formData = new FormData();
+    formData.append("file", f);
+
+    // Endpoint pentru upload (vezi backend mai jos)
+    const resp = await fetch("http://localhost:5000/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await resp.json();
+    const url = data.url; // url public returnat de backend
+
+    const isVideo = /video/.test(f.type) || /\.(mp4|webm|ogg)$/i.test(f.name);
+    next.push({ id: uid(), kind: isVideo ? "video" : "image", url, caption: f.name });
+  }
+  setMedia([...media, ...next]);
+}
   function remove(id:string){ setMedia(media.filter(m=>m.id!==id)); }
   return (
     <div className="space-y-3">
@@ -300,6 +323,8 @@ function missingList(p:ProfilePayload){
 
 // ===================== Main =====================
 export default function StudentProfileWizard(){
+const router = useRouter();
+
   // State
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | undefined>();
   const [name, setName] = useState("");
@@ -332,7 +357,30 @@ export default function StudentProfileWizard(){
   },[payload]);
 
   // Save
-  async function save(){ setSaving(true); setMsg(null); try{ await fetch(`${API}/api/users/me`, { method:"PUT", credentials:"include", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload) }); setMsg("Salvat!"); } catch { setMsg("Eroare la salvare"); } finally { setSaving(false); setTimeout(()=> setMsg(null), 2000);} }
+ async function save() {
+  setSaving(true);
+  setMsg(null);
+
+ 
+  const token = localStorage.getItem("token");
+
+  try {
+    await fetch(`${API}/api/users/me`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { "Authorization": `Bearer ${token}` }) 
+      },
+      body: JSON.stringify(payload)
+    });
+    setMsg("Salvat!");
+  } catch {
+    setMsg("Eroare la salvare");
+  } finally {
+    setSaving(false);
+    setTimeout(() => setMsg(null), 2000);
+  }
+}
 
   const pct = pctProfile(payload);
   const xp = xpOf(payload);
@@ -477,9 +525,20 @@ export default function StudentProfileWizard(){
             {step!=="review" && (
               <Button onClick={next} disabled={!validateStep(step, payload)}>Continuă</Button>
             )}
-            {step==="review" && (
-              <Button onClick={save} disabled={miss.length>0 || saving}>{saving?"Se salvează…":"Salvează profilul"}</Button>
-            )}
+            {step === "review" && (
+      <>
+        <Button onClick={save} disabled={miss.length > 0 || saving}>
+          {saving ? "Se salvează…" : "Salvează profilul"}
+        </Button>
+        <Button
+          className="ml-2"
+          onClick={() => router.push("/student/profile/preview")}
+          type="button"
+        >
+          Previzualizează profilul
+        </Button>
+      </>
+    )}
             <div className="ml-auto text-sm text-gray-600 flex items-center gap-2"><span className="px-2 py-1 rounded bg-black/5">XP: {xp}</span><span className="px-2 py-1 rounded bg-black/5">{pct}%</span><span className="hidden md:inline">ⓘ Ctrl/⌘+S salvează</span></div>
             {msg && <span className={cls("text-sm", msg==="Salvat!"?"text-success":"text-primary")}>{msg}</span>}
           </div>
