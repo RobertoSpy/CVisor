@@ -1,15 +1,9 @@
-export type Mentor = {
-  name: string;
-  role: string; // ex: "Mentor", "Speaker"
-  profileUrl: string;
-  avatarUrl: string;
-};
 
 export type Opportunity = {
   id: number;
   title: string;
   deadline: string;
-  type: string;
+   type: "party" | "self-development";
   skills: string[];
   available_spots: number;
   price: number;

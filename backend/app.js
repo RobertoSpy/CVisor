@@ -85,6 +85,10 @@ app.use("/api/organizations/analytics", orgAnalytics);
 app.use("/api/analytics/student", studentAnalytics); // => /api/analytics/student/logins
 app.use("/api/analytics/orgs", orgAnalytics);        // => /api/analytics/orgs/posts
 
+
+const contactRoutes = require("./routes/contact/contact");
+app.use("/api/contact", contactRoutes);
+
 app.use((err, req, res, next) => {
   console.error("[GLOBAL ERROR]", err);
   if (res.headersSent) return next(err);

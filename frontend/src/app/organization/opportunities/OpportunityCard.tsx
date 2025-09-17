@@ -11,18 +11,29 @@ export default function OpportunityCard({ opportunity: opp, onEdit, onDelete }: 
   return (
     <li
       key={opp.id}
-      className="bg-card rounded-2xl p-5 ring-1 ring-black/5 shadow-[0_6px_24px_rgba(0,0,0,0.06)] flex flex-col justify-between relative overflow-visible"
+      className="bg-card rounded-2xl p-5 ring-1 ring-black/5 shadow flex flex-col justify-between relative overflow-visible"
     >
-      <h3 className="text-lg font-semibold tracking-tight mt-0.5 text-primary">
+      {/* Imagine banner */}
+      {opp.banner_image && (
+        <div className="w-full flex justify-center mb-4">
+          <img
+            src={opp.banner_image}
+            alt={opp.title}
+            className="object-cover rounded-xl max-h-48 w-full"
+            style={{ maxWidth: "400px" }}
+          />
+        </div>
+      )}
+      <h3 className="text-lg font-semibold tracking-tight mt-0.5 text-primary text-center">
         <Link href={`/organization/opportunities/${opp.id}`}>{opp.title}</Link>
       </h3>
-      <div className="text-xs mt-1">
-        Tip: <span className="font-medium text-secondary">{opp.type}</span>
+      <div className="text-xs mt-1 text-center">
+        Tip: <span className="font-medium text-secondary">{opp.type === "party" ? "Party" : "Self-development"}</span>
       </div>
-      <div className="text-xs mt-1 text-gray-600">
+      <div className="text-xs mt-1 text-gray-600 text-center">
         Deadline: {opp.deadline ? new Date(opp.deadline).toLocaleDateString() : '-'}
       </div>
-      <div className="flex flex-wrap gap-1.5 mt-3">
+      <div className="flex flex-wrap gap-1.5 mt-3 justify-center">
         {Array.isArray(opp.skills) &&
           opp.skills.map((s, i) => (
             <span
@@ -33,7 +44,7 @@ export default function OpportunityCard({ opportunity: opp, onEdit, onDelete }: 
             </span>
           ))}
       </div>
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex gap-2 justify-center">
         <button
           className="px-3 py-1 rounded-lg bg-accent text-white hover:bg-primary transition shadow text-sm"
           onClick={() => onEdit(opp)}

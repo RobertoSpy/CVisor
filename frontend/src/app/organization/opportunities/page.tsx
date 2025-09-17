@@ -7,7 +7,10 @@ import { useOpportunityHandlers } from "./hooks/useOpportunityHandlers";
 export default function OpportunitiesPage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedType, setSelectedType] = useState<"party" | "self-development" | null>(null);
+
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 
   // Modal adaugare
   const [showForm, setShowForm] = useState(false);
@@ -92,6 +95,8 @@ export default function OpportunitiesPage() {
     editId,
   });
 
+
+
   useEffect(() => {
     fetch("http://localhost:5000/api/organizations/opportunities", {
       credentials: "include",
@@ -107,9 +112,46 @@ export default function OpportunitiesPage() {
       .catch(() => setLoading(false));
   }, []);
 
+  // Filtrare după tip
+  const filteredOpps = selectedType
+    ? opportunities.filter(opp => opp.type === selectedType)
+    : [];
   
   return (
     <div className="space-y-8 mt-10">
+
+    {/* Carduri mari pentru alegere tip */}
+      {!selectedType && (
+        <div className="flex flex-col md:flex-row items-center justify-center gap-8 mb-8">
+          <button
+            className="bg-primary/10 border-2 border-primary text-primary rounded-2xl px-16 py-12 text-2xl font-bold shadow hover:bg-primary/20 transition flex flex-col items-center"
+            onClick={() => setSelectedType("party")}
+          >
+            <span className="mb-4 text-5xl">🎉</span>
+            Party
+          </button>
+          <button
+            className="bg-secondary/10 border-2 border-secondary text-secondary rounded-2xl px-16 py-12 text-2xl font-bold shadow hover:bg-secondary/20 transition flex flex-col items-center"
+            onClick={() => setSelectedType("self-development")}
+          >
+            <span className="mb-4 text-5xl">🧠</span>
+            Self-development
+          </button>
+        </div>
+      )}
+
+      {/* Buton pentru revenire la alegere tip */}
+      {selectedType && (
+        <div className="flex justify-center mb-6">
+          <button
+            className="bg-gray-200 text-gray-700 px-6 py-2 rounded-xl font-semibold shadow hover:bg-gray-300 transition"
+            onClick={() => setSelectedType(null)}
+          >
+            ← Alege alt tip de oportunitate
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-primary">Oportunități active</h1>
         <button
@@ -119,6 +161,8 @@ export default function OpportunitiesPage() {
           Postează oportunitate nouă
         </button>
       </div>
+
+
 
       {/* MODAL ADAUGARE */}
     {showForm && (
@@ -182,14 +226,16 @@ export default function OpportunitiesPage() {
 
       {/* Detalii generale */}
   <div className="grid grid-cols-2 gap-6">
-        <input
-          type="text"
-          placeholder="Tip oportunitate"
-          value={form.type}
-          onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-          className="border p-3 rounded-lg focus:outline-primary/60 transition"
-          required
-        />
+         <select
+    value={form.type}
+    onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
+    className="border p-3 rounded-lg focus:outline-primary/60 transition"
+    required
+  >
+    <option value="">Alege tipul oportunității</option>
+    <option value="party">Party</option>
+    <option value="self-development">Self-development</option>
+  </select>
         <input
           type="number"
           placeholder="Preț (RON)"
@@ -348,14 +394,16 @@ export default function OpportunitiesPage() {
 
       {/* Detalii generale */}
       <div className="grid grid-cols-2 gap-4">
-        <input
-          type="text"
-          placeholder="Tip oportunitate"
-          value={editForm.type}
-          onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))}
-          className="border p-2 rounded"
-          required
-        />
+       <select
+  value={editForm.type}
+  onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))}
+  className="border p-2 rounded"
+  required
+>
+  <option value="">Alege tipul oportunității</option>
+  <option value="party">Party</option>
+  <option value="self-development">Self-development</option>
+</select>
         <input
           type="number"
           placeholder="Preț (RON)"
@@ -442,12 +490,14 @@ export default function OpportunitiesPage() {
   </div>
 )}
 
-    <OpportunityGrid
-        opportunities={opportunities}
-        loading={loading}
-        onEdit={openEditModal}
-        onDelete={handleDelete}
-      />
+   {selectedType && (
+  <OpportunityGrid
+    opportunities={filteredOpps}
+    loading={loading}
+    onEdit={openEditModal}
+    onDelete={handleDelete}
+  />
+)}
       </div>
   );
 }

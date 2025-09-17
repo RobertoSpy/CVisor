@@ -2,16 +2,9 @@
 
 export default function TimelinePage() {
   return (
-    <div>
-      <h1 className="text-xl font-semibold mb-6">Timeline proiecte & impact</h1>
-      <ul className="space-y-4">
-        <li>
-          <div className="font-bold">Hackathon Educație — 2025</div>
-          <div className="text-sm text-gray-700">100 voluntari, 20 proiecte, 500 elevi ajutați</div>
-          <div className="text-xs text-success">Finalizat</div>
-        </li>
-        {/* ...alte proiecte */}
-      </ul>
-    </div>
+   <div className="bg-card rounded-2xl p-8 text-center ring-1 ring-black/5 shadow mb-8">
+        <h3 className="text-lg font-bold text-primary">Deblocare la badge 50</h3>
+        <p className="text-sm text-gray-600 mt-2">SOON</p>
+      </div>
   );
 }

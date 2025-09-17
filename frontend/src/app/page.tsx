@@ -9,13 +9,14 @@ import Footer from "./components/Footer"
 
 export default function HomePage() {
   return (
-    <div className="bg-neutral min-h-screen flex flex-col">
+    <div className="min-h-screen bg-gradient-sm via-blue-300 to-pink-200 py-12 px-4 flex flex-col pb-0">
       <Navbar />
-      <main>
+      <main className="flex-1 flex flex-col gap-8">
         <HeroSection />
         <StatsSection />
-        <VideoGallery />
         <Testimonials />
+        <VideoGallery />
+        
       </main>
       <Footer />
     </div>

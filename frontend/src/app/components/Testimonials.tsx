@@ -1,28 +1,37 @@
+"use client";
+import { FiUsers, FiBriefcase, FiHelpCircle } from "react-icons/fi";
+
+const partners = [
+  {
+    icon: <FiUsers className="text-4xl text-primary" />,
+    title: "2000+ Studenți",
+    desc: "Suntem dedicați să ajutăm studenții să se dezvolte și să găsească oportunități.",
+  },
+  {
+    icon: <FiBriefcase className="text-4xl text-pink-600" />,
+    title: "15+ Asociații",
+    desc: "Colaborăm cu asociații studențești pentru o comunitate mai puternică.",
+  },
+  {
+    icon: <FiHelpCircle className="text-4xl text-gray-400" />,
+    title: "În curând",
+    desc: "Pregătim noi parteneriate și surprize pentru comunitate!",
+  },
+];
+
 export default function Testimonials() {
-  const testimonials = [
-    {
-      name: "Andrei",
-      text: "CVISOR m-a ajutat să găsesc asociația potrivită și să mă implic activ!",
-      avatar: "https://randomuser.me/api/portraits/men/32.jpg"
-    },
-    {
-      name: "Ioana",
-      text: "Soluția perfectă pentru studenți! Recomand tuturor celor care vor să se implice.",
-      avatar: "https://randomuser.me/api/portraits/women/44.jpg"
-    },
-  ];
   return (
-    <section className="py-12 bg-gradient-hero">
-      <h2 className="text-3xl font-bold text-center text-white mb-8 drop-shadow-lg">Ce spun utilizatorii</h2>
-      <div className="flex gap-8 justify-center flex-wrap">
-        {testimonials.map((t, idx) => (
+    <section className="py-12" id="parteneri">
+      <h2 className="text-3xl font-bold text-center text-white mb-8 drop-shadow-lg">Parteneriate CVISOR</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        {partners.map((card, idx) => (
           <div
             key={idx}
-            className="bg-white bg-opacity-80 rounded-lg shadow-xl p-6 flex flex-col items-center max-w-xs transition-transform hover:scale-105 hover:shadow-2xl"
+            className="flex flex-col items-center gap-4 p-6 rounded-2xl shadow-lg hover:scale-105 transition bg-white cursor-pointer border-b-4 border-primary/30"
           >
-            <img src={t.avatar} alt={t.name} className="w-16 h-16 rounded-full mb-4 shadow-md" />
-            <p className="text-dark italic mb-4">“{t.text}”</p>
-            <span className="text-primary font-bold">{t.name}</span>
+            <div>{card.icon}</div>
+            <div className="font-bold text-primary text-lg">{card.title}</div>
+            <div className="text-gray-700 text-md text-center">{card.desc}</div>
           </div>
         ))}
       </div>

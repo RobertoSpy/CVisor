@@ -17,8 +17,9 @@ module.exports = {
       },
       backgroundImage: {
         'gradient-primary': 'linear-gradient(90deg, #2563eb 0%, #ff6b6b 100%)',
+        'gradient-sm': 'linear-gradient(90deg, #2563eb 0%, #ffffff 100%)',
         'gradient-hero': 'linear-gradient(180deg, #2563eb 0%, #fcaf45 100%)',
-         'gradient-video': 'linear-gradient(180deg, #fcaf45 0%, #2563eb 100%)', // pentru video
+         'gradient-video': 'linear-gradient(180deg, #fcaf45 0%, #2563eb 100%)',
       },
     },
   },
