@@ -1,13 +1,17 @@
 "use client";
 import Link from "next/link";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 const STREAK_MILESTONES = [3, 7, 14, 30, 50, 100] as const;
 const MILESTONE_LABELS: Record<number, string> = {
-  3: "Novice", 7: "Focus", 14: "Momentum", 30: "On Fire", 50: "Pro", 100: "Legend",
+  3: "Novice",
+  7: "Focus",
+  14: "Momentum",
+  30: "On Fire",
+  50: "Pro",
+  100: "Legend",
 };
-const nextMilestoneFor = (n: number) => STREAK_MILESTONES.find(m => m > n) ?? null;
-
+const nextMilestoneFor = (n: number) => STREAK_MILESTONES.find((m) => m > n) ?? null;
 
 /** ————— mici utilitare ————— */
 function classNames(...x: (string | false | null | undefined)[]) {
@@ -29,32 +33,106 @@ function isAllZeroBars(arr: { label: string; value: number }[]) {
   return arr.length === 0 || arr.every((b) => !b.value);
 }
 
-/** ——— metrici din presence: streak curent, best streak, count pe 7/14 zile ——— */
-/** ——— metrici din presence: streak curent, best streak, zile bifate 7/14 ——— */
-/** ——— metrici: streak curent, best streak, zile bifate 7/14 ——— */
-function derivePresenceMetrics(map: Record<string, number>) {
-  const fmt = fmtDate; // folosim local, nu UTC
+/** ——— DUOLINGO-LIKE, dar AUTO (1 zi se repară singură) ———
+ *  - dacă lipsești 1 zi între două zile bifate și ești prezent azi -> auto-patch (fără buton)
+ *  - dacă pauza e de 2+ zile și ești prezent azi -> oferim Repair (cu buton)
+ *  - zilele patchuite sunt marcate în localStorage și contează în calcule + heatmap
+ */
+type GapInfo = { start: string; end: string; length: number } | null;
+
+const LS_KEYS = {
+  patchedDays: "streak:patchedDays",        // JSON array cu zile (YYYY-MM-DD) marcate artificial
+  lastFreezeUsed: "streak:freeze:lastUsed", // ultima zi când s-a aplicat auto-freeze
+  lastRepairUsed: "streak:repair:lastUsed", // ultima zi când s-a făcut repair
+} as const;
+
+function getPatchedSet(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(LS_KEYS.patchedDays) || "[]"));
+  } catch {
+    return new Set();
+  }
+}
+function savePatchedSet(s: Set<string>) {
+  localStorage.setItem(LS_KEYS.patchedDays, JSON.stringify([...s]));
+}
+
+/** Marchează o listă de zile ca „vizitate artificial” (freeze/repair) */
+function patchDays(daysISO: string[]) {
+  const s = getPatchedSet();
+  daysISO.forEach((d) => s.add(d));
+  savePatchedSet(s);
+}
+
+function deriveRawPresence(map: Record<string, number>) {
+  const fmt = fmtDate;
   const today = new Date(); today.setHours(0,0,0,0);
-  const visited = (d: Date) => ((map[fmt(d)] ?? 0) > 0) ? 1 : 0;
 
-  // streak curent + best (rămân la fel)
-  let currentStreak = 0;
-  const cur = new Date(today);
-  while (visited(cur)) { currentStreak++; cur.setDate(cur.getDate() - 1); }
+  const visitedRaw = (d: Date) => ((map[fmt(d)] ?? 0) > 0) ? 1 : 0;
 
-  const dates = Object.keys(map || {}).sort();
-  let bestStreak = 0, run = 0;
-  for (let i = dates.length - 1; i >= 0; i--) {
-    if ((map[dates[i]] ?? 0) > 0) { run++; bestStreak = Math.max(bestStreak, run); } else run = 0;
+  // azi
+  const todayVisited = visitedRaw(today) === 1;
+
+  // săptămâna curentă (Lu–Du)
+  const startOfWeek = (d: Date) => { const t = new Date(d); const dow = (t.getDay()+6)%7; t.setDate(t.getDate()-dow); t.setHours(0,0,0,0); return t; };
+  const weekStart = startOfWeek(today);
+  let weekCount = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart); d.setDate(weekStart.getDate()+i);
+    if (d > today) break;
+    weekCount += visitedRaw(d);
   }
 
-  // --- NUMĂRĂM ZILELE DIN SĂPTĂMÂNA CURENTĂ (Luni–Duminică) ---
+  // ultimele 14 zile (0/1)
+  const last14Flags: number[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    last14Flags.push(visitedRaw(d));
+  }
+
+  return { weekCount, last14Flags, todayVisited };
+}
+
+
+/** ——— metrici: streak curent, best streak, zile bifate 7/14 ——— */
+function derivePresenceMetrics(map: Record<string, number>) {
+  const fmt = fmtDate;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const patched = typeof window !== "undefined" ? getPatchedSet() : new Set<string>();
+
+  const visited = (d: Date) => {
+    const k = fmt(d);
+    const v = (map[k] ?? 0) > 0 ? 1 : 0;
+    return v === 1 || patched.has(k) ? 1 : 0;
+  };
+
+  // — streak curent
+  let currentStreak = 0;
+  const cur = new Date(today);
+  while (visited(cur)) {
+    currentStreak++;
+    cur.setDate(cur.getDate() - 1);
+  }
+
+  // — best streak
+  const dates = Object.keys(map || {}).sort();
+  let bestStreak = 0,
+    run = 0;
+  for (let i = 0; i < dates.length; i++) {
+    const v = (map[dates[i]] ?? 0) > 0 || patched.has(dates[i]) ? 1 : 0;
+    if (v) {
+      run++;
+      bestStreak = Math.max(bestStreak, run);
+    } else run = 0;
+  }
+
+  // — count săptămâna curentă (Lu–Du)
   const startOfWeek = (d: Date) => {
     const t = new Date(d);
-    const dow = t.getDay();               // 0=Sun,...,6=Sat
-    const delta = (dow + 6) % 7;          // 0 => Mon
-    t.setDate(t.getDate() - delta);
-    t.setHours(0,0,0,0);
+    const dow = (t.getDay() + 6) % 7;
+    t.setDate(t.getDate() - dow);
+    t.setHours(0, 0, 0, 0);
     return t;
   };
   const weekStart = startOfWeek(today);
@@ -62,14 +140,15 @@ function derivePresenceMetrics(map: Record<string, number>) {
   for (let i = 0; i < 7; i++) {
     const d = new Date(weekStart);
     d.setDate(weekStart.getDate() + i);
-    if (d > today) break;                 // numărăm până azi inclusiv
+    if (d > today) break;
     weekCount += visited(d);
   }
 
-  // serii 14 zile (0/1) pentru sparkline – rămân la fel
+  // — ultimele 14 zile (0/1)
   const last14Flags: number[] = [];
   for (let i = 13; i >= 0; i--) {
-    const d = new Date(today); d.setDate(today.getDate() - i);
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
     last14Flags.push(visited(d));
   }
 
@@ -77,8 +156,112 @@ function derivePresenceMetrics(map: Record<string, number>) {
   return { currentStreak, bestStreak, weekCount, last14Flags, todayVisited };
 }
 
+/** ——— AUTO freeze + repair logic ——— */
+function computeStreakAuto(map: Record<string, number>) {
+  const fmt = fmtDate;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-/** ————— card statistic scurt ————— */
+  const patched = getPatchedSet();
+  const visitedRaw = (d: Date) => (map[fmt(d)] ?? 0) > 0;
+  const visited = (d: Date) => visitedRaw(d) || patched.has(fmt(d));
+
+  let usedAutoFreezeNow = false;
+
+  // Aplică automat 1 "gaură" dacă ești prezent azi
+  if (visitedRaw(today)) {
+    // mergem înapoi peste seria curentă (1-uri + patched) până la primul 0
+    const probe = new Date(today);
+    while (visited(probe)) probe.setDate(probe.getDate() - 1);
+
+    // probe e primul 0 din runul curent; verificăm dacă e gaura unică între 1-uri
+    const hole = new Date(probe);
+    const holeISO = fmt(hole);
+    const newer = new Date(hole);
+    newer.setDate(hole.getDate() + 1);
+    const older = new Date(hole);
+    older.setDate(hole.getDate() - 1);
+
+    const isHole =
+      !visited(hole) && // zi lipsă
+      visited(newer) && // a doua zi (mai recentă) a fost bifată
+      visited(older); // și ziua dinainte a fost bifată
+
+    if (isHole && !patched.has(holeISO)) {
+      patched.add(holeISO);
+      savePatchedSet(patched);
+      localStorage.setItem(LS_KEYS.lastFreezeUsed, fmt(today));
+      usedAutoFreezeNow = true;
+    }
+  }
+
+  // Detectează pauză 2+ zile (care atinge ieri) – oferim Repair
+  const y = new Date(today);
+  y.setDate(y.getDate() - 1);
+  let gapLen = 0;
+  const gapDays: string[] = [];
+  if (visitedRaw(today)) {
+    const p = new Date(y);
+    while (!visited(p)) {
+      gapLen++;
+      gapDays.push(fmt(p));
+      p.setDate(p.getDate() - 1);
+      if (gapLen > 90) break; // defensiv
+    }
+  }
+  gapDays.sort();
+  const gapInfo: GapInfo = gapLen >= 2 ? { start: gapDays[0], end: gapDays[gapDays.length - 1], length: gapLen } : null;
+
+  // Recalculează streak (cu patched)
+  let currentStreak = 0;
+  const cur = new Date(today);
+  while (visited(cur)) {
+    currentStreak++;
+    cur.setDate(cur.getDate() - 1);
+  }
+
+  // Best streak (cu patched)
+  const dates = Object.keys(map || {}).sort();
+  let bestStreak = 0,
+    run = 0;
+  for (let i = 0; i < dates.length; i++) {
+    const v = (map[dates[i]] ?? 0) > 0 || patched.has(dates[i]) ? 1 : 0;
+    if (v) {
+      run++;
+      bestStreak = Math.max(bestStreak, run);
+    } else run = 0;
+  }
+
+  const todayVisited = visited(today) === 1;
+  return {
+    currentStreak,
+    bestStreak,
+    todayVisited,
+    usedAutoFreezeNow,
+    gapInfo,
+    patchedDays: new Set(patched),
+  };
+}
+
+/** Buton/handler – “Repară streak” pentru gap-ul curent (2+ zile) */
+function repairGap(gap: GapInfo, costGems = 100) {
+  if (!gap) return;
+  const span: string[] = [];
+  const start = new Date(gap.start + "T00:00:00"),
+    end = new Date(gap.end + "T00:00:00");
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) span.push(fmtDate(d));
+  patchDays(span);
+  localStorage.setItem(LS_KEYS.lastRepairUsed, fmtDate(new Date()));
+}
+
+/** ——— UI helpers ——— */
+function GentleBanner({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl px-4 py-2 bg-amber-50 text-amber-800 text-sm ring-1 ring-amber-200 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
+      {children}
+    </div>
+  );
+}
 function Stat({ title, value }: { title: string; value: string | number }) {
   return (
     <div className="bg-card rounded-2xl p-5 ring-1 ring-black/5 shadow-[0_6px_24px_rgba(0,0,0,0.06)]">
@@ -87,8 +270,6 @@ function Stat({ title, value }: { title: string; value: string | number }) {
     </div>
   );
 }
-
-/** ——— tooltip minimal ——— */
 function CursorTooltip({ show, x, y, children }: { show: boolean; x: number; y: number; children: React.ReactNode }) {
   if (!show) return null;
   return (
@@ -100,8 +281,6 @@ function CursorTooltip({ show, x, y, children }: { show: boolean; x: number; y: 
     </div>
   );
 }
-
-/** ——— badge „bec” (poți înlocui cu logo-ul vostru, cu fill="currentColor") ——— */
 function StreakBadgeIcon({ active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" className={active ? "text-emerald-600" : "text-gray-400"}>
@@ -112,8 +291,6 @@ function StreakBadgeIcon({ active }: { active: boolean }) {
     </svg>
   );
 }
-
-/** ——— inel de progres pentru țintă săptămânală ——— */
 function GoalRing({ current, target }: { current: number; target: number }) {
   const pct = Math.min(100, Math.round((current / Math.max(1, target)) * 100));
   const C = 2 * Math.PI * 18;
@@ -145,15 +322,12 @@ function GoalRing({ current, target }: { current: number; target: number }) {
       <div>
         <div className="text-sm font-semibold">Țintă săptămânală</div>
         <div className="text-xs text-gray-600">
-        {current}/{target} zile
+          {current}/{target} zile
         </div>
-
       </div>
     </div>
   );
 }
-
-/** ——— Sparkline mic pentru ultimele 14 zile ——— */
 function SparklineCard({ values }: { values: number[] }) {
   const width = 260;
   const height = 68;
@@ -171,7 +345,6 @@ function SparklineCard({ values }: { values: number[] }) {
       <div className="text-sm font-semibold">Activitate (14 zile)</div>
       <div className="w-full mt-2">
         <svg width={width} height={height} role="img" aria-label="Sparkline activitate">
-          {/* umbră sub linie */}
           <polyline
             points={points.join(" ")}
             fill="none"
@@ -180,7 +353,6 @@ function SparklineCard({ values }: { values: number[] }) {
             strokeLinejoin="round"
             strokeLinecap="round"
           />
-          {/* linie principală */}
           <polyline
             points={points.join(" ")}
             fill="none"
@@ -196,7 +368,7 @@ function SparklineCard({ values }: { values: number[] }) {
   );
 }
 
-/** ——— Streak Hero (inel conic + confetti) ——— */
+/** ——— Streak Hero ——— */
 function StreakHeroCard({
   currentStreak,
   bestStreak,
@@ -209,7 +381,7 @@ function StreakHeroCard({
 }: {
   currentStreak: number;
   bestStreak: number;
-  goal: number;                // acum e următorul milestone
+  goal: number;
   todayVisited: boolean;
   nextMilestone?: number | null;
   celebrate?: number | null;
@@ -234,17 +406,28 @@ function StreakHeroCard({
 
   const Flame = ({ on }: { on: boolean }) => (
     <svg width="22" height="22" viewBox="0 0 24 24" className={on ? "text-amber-500 flame" : "text-gray-300"}>
-      <path fill="currentColor" d="M12 2c2 3 1 4 4 6s3 6-1 8-7 0-8-3 1-5 3-7 1-3 2-4Z"/>
+      <path fill="currentColor" d="M12 2c2 3 1 4 4 6s3 6-1 8-7 0-8-3 1-5 3-7 1-3 2-4Z" />
       <style jsx>{`
-        @keyframes wobble { 0%{transform:rotate(-6deg)} 50%{transform:rotate(6deg)} 100%{transform:rotate(-6deg)} }
-        .flame { animation: wobble 1.8s ease-in-out infinite; }
+        @keyframes wobble {
+          0% {
+            transform: rotate(-6deg);
+          }
+          50% {
+            transform: rotate(6deg);
+          }
+          100% {
+            transform: rotate(-6deg);
+          }
+        }
+        .flame {
+          animation: wobble 1.8s ease-in-out infinite;
+        }
       `}</style>
     </svg>
   );
 
   return (
     <div className="relative overflow-hidden rounded-2xl ring-1 ring-black/5 shadow bg-gradient-to-br from-white to-emerald-50">
-      {/* mic ribbon dacă suntem chiar pe un milestone */}
       {STREAK_MILESTONES.includes(currentStreak as any) && (
         <div className="absolute top-2 right-2 text-[11px] px-2 py-1 rounded-full bg-amber-100 text-amber-800 ring-1 ring-amber-200">
           🏅 {MILESTONE_LABELS[currentStreak as keyof typeof MILESTONE_LABELS] || `Streak ${currentStreak}`}
@@ -252,7 +435,6 @@ function StreakHeroCard({
       )}
 
       <div className="p-5 flex items-center gap-5">
-        {/* inel conic */}
         <div className="relative">
           <div className="w-20 h-20 rounded-full" style={ring} />
           <div className="absolute inset-2 rounded-full bg-white ring-1 ring-black/5 grid place-items-center">
@@ -261,13 +443,11 @@ function StreakHeroCard({
           {achieved && <div className="absolute -inset-1 rounded-full blur-xl bg-emerald-400/25 animate-pulse" />}
         </div>
 
-        {/* text */}
         <div className="flex-1">
           <div className="text-sm font-semibold text-gray-800">Streak curent</div>
           <div className="text-3xl font-semibold tracking-tight mt-0.5">{currentStreak} zile</div>
           <div className="text-xs text-gray-500 mt-1">Cel mai bun: {bestStreak}</div>
 
-          {/* status azi + țintă dinamică */}
           <div className="mt-2 flex items-center gap-3 text-xs">
             <span className={todayVisited ? "text-emerald-600" : "text-gray-500"}>
               {todayVisited ? "Azi: bifat ✅" : "Azi: încă nebifat"}
@@ -276,49 +456,36 @@ function StreakHeroCard({
             <span className="text-gray-600">Țintă: {goal} zile</span>
           </div>
 
-          {/* progres spre următorul milestone */}
           <div className="mt-3">
             <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-amber-400 to-emerald-500"
-                style={{ width: `${pctToNext}%` }}
-              />
+              <div className="h-full bg-gradient-to-r from-amber-400 to-emerald-500" style={{ width: `${pctToNext}%` }} />
             </div>
             <div className="mt-1 text-[11px] text-gray-600">
-              {nextMilestone
-                ? `Încă ${Math.max(0, nextMilestone - currentStreak)} zile până la ${nextMilestone}`
-                : "Legendă! 🔥"}
+              {nextMilestone ? `Încă ${Math.max(0, nextMilestone - currentStreak)} zile până la ${nextMilestone}` : "Legendă! 🔥"}
             </div>
           </div>
         </div>
       </div>
 
-      {/* modal de celebrare (o singură dată per milestone) */}
       {celebrate !== null && (
-  <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px] flex items-center justify-center">
-    <div className="bg-white rounded-2xl p-5 shadow-xl text-center ring-1 ring-black/10">
-      <div className="text-4xl mb-1">🏆</div>
-      <div className="text-lg font-semibold">Streak {celebrate} zile!</div>
-      <div className="text-sm text-gray-600 mt-1">
-        Badge: {MILESTONE_LABELS[celebrate as keyof typeof MILESTONE_LABELS] ?? "Streaker"}
-      </div>
-      <button
-        onClick={onCloseCelebrate}
-        className="mt-3 px-3 py-1.5 rounded-lg bg-secondary text-white hover:bg-accent transition"
-      >
-        Nice!
-      </button>
-    </div>
-  </div>
-)}
-
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px] flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-5 shadow-xl text-center ring-1 ring-black/10">
+            <div className="text-4xl mb-1">🏆</div>
+            <div className="text-lg font-semibold">Streak {celebrate} zile!</div>
+            <div className="text-sm text-gray-600 mt-1">
+              Badge: {MILESTONE_LABELS[celebrate as keyof typeof MILESTONE_LABELS] ?? "Streaker"}
+            </div>
+            <button onClick={onCloseCelebrate} className="mt-3 px-3 py-1.5 rounded-lg bg-secondary text-white hover:bg-accent transition">
+              Nice!
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-
-
-/** ————— HEATMAP: prezență în aplicație (stil GitHub) ————— */
+/** ————— HEATMAP ————— */
 function ActivityHeatmap({
   title = "Prezență în aplicație (ultimele 35 zile)",
   data,
@@ -355,11 +522,9 @@ function ActivityHeatmap({
     return 4;
   };
 
-  // împărțim în coloane (săptămâni) cu câte 7 rânduri
   const weeks: { date: string; value: number }[][] = [];
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
 
-  // label de lună sub prima coloană dintr-o lună
   const monthLabelFor = (iso: string) => {
     const d = new Date(iso + "T00:00:00");
     return d.toLocaleString(undefined, { month: "short" });
@@ -383,7 +548,6 @@ function ActivityHeatmap({
     >
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
-        {/* legendă */}
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <span>0</span>
           {palette.map((c, i) => (
@@ -408,7 +572,6 @@ function ActivityHeatmap({
                 )}
               />
             ))}
-            {/* label de lună sub coloană dacă prima zi din lună e în coloană */}
             {firstOfMonth.has(w[0]?.date) && (
               <div className="h-4 text-[10px] text-gray-500 text-center mt-1">{monthLabelFor(w[0].date)}</div>
             )}
@@ -416,7 +579,6 @@ function ActivityHeatmap({
         ))}
       </div>
 
-      {/* Empty state overlay */}
       {isAllZeroMap(data) && (
         <div className="absolute inset-0 rounded-2xl bg-white/70 backdrop-blur-[1px] flex items-center justify-center">
           <div className="text-center">
@@ -436,7 +598,7 @@ function ActivityHeatmap({
   );
 }
 
-/** ————— BAR CHART: postări organizații / săptămână ————— */
+/** ————— BAR CHART ————— */
 function OrgPostsBar({
   title = "Postări organizații / săptămână",
   data,
@@ -453,11 +615,6 @@ function OrgPostsBar({
     text: "",
   });
 
-  // ——— helpers etichete ———
-  const compactWeekLabel = (s: string) =>
-    String(s).replace("Săpt.", "S").replace(/\s+/g, " ").trim(); // „Săpt. -3” -> „S-3”, „Săpt. curentă” -> „S curentă”
-
-  // rărim etichetele ca să nu se suprapună (vizăm ~6 etichete vizibile)
   const showEvery = useMemo(() => {
     if (data.length <= 6) return 1;
     return Math.ceil(data.length / 6);
@@ -470,12 +627,11 @@ function OrgPostsBar({
     return Math.round(v * 10) / 10;
   }, [data]);
 
-  // ——— layout ———
   const barW = 26;
   const gap = 12;
   const LEFT_PAD = 12;
   const RIGHT_PAD = 12;
-  const LABEL_PAD = 32; // spațiu pentru etichete jos (orizontal)
+  const LABEL_PAD = 32;
   const TOP_PAD = 18;
   const innerH = height - (LABEL_PAD + TOP_PAD);
   const width = LEFT_PAD + RIGHT_PAD + data.length * barW + (data.length - 1) * gap;
@@ -502,59 +658,31 @@ function OrgPostsBar({
             </linearGradient>
           </defs>
 
-          {/* gridlines */}
           {ticks.map((t, i) => {
             const y = height - LABEL_PAD - Math.round(t * innerH);
-            return (
-              <line
-                key={i}
-                x1={LEFT_PAD}
-                x2={width - RIGHT_PAD}
-                y1={y}
-                y2={y}
-                className="stroke-gray-200"
-                strokeDasharray="3 6"
-              />
-            );
+            return <line key={i} x1={LEFT_PAD} x2={width - RIGHT_PAD} y1={y} y2={y} className="stroke-gray-200" strokeDasharray="3 6" />;
           })}
 
-          {/* linia de medie + chip */}
-                <line
-        x1={LEFT_PAD}
-        x2={width - RIGHT_PAD}
-        y1={height - LABEL_PAD - avgH}
-        y2={height - LABEL_PAD - avgH}
-        className="stroke-amber-700/40"
-        strokeDasharray="4 4"
-      />
+          <line
+            x1={LEFT_PAD}
+            x2={width - RIGHT_PAD}
+            y1={height - LABEL_PAD - avgH}
+            y2={height - LABEL_PAD - avgH}
+            className="stroke-amber-700/40"
+            strokeDasharray="4 4"
+          />
+          <rect x={LEFT_PAD + 4} y={height - LABEL_PAD - avgH - 16} width="56" height="18" rx="9" className="fill-white" />
+          <text x={LEFT_PAD + 32} y={height - LABEL_PAD - avgH - 3} textAnchor="middle" fontSize="10" className="fill-amber-700">
+            avg {avg}
+          </text>
 
-                <rect
-        x={LEFT_PAD + 4}
-        y={height - LABEL_PAD - avgH - 16}
-        width="56"
-        height="18"
-        rx="9"
-        className="fill-white"
-      />
-                <text
-        x={LEFT_PAD + 32}
-        y={height - LABEL_PAD - avgH - 3}
-        textAnchor="middle"
-        fontSize="10"
-        className="fill-amber-700"
-      >
-        avg {avg}
-      </text>
-
-          {/* bare + etichete */}
           {data.map((d, i) => {
             const h = Math.round((d.value / max) * innerH);
             const x = LEFT_PAD + i * (barW + gap);
             const y = height - LABEL_PAD - h;
 
-            // eticheta afisată doar la fiecare 'showEvery'
-            const showLabel = i % showEvery === 0 || i === data.length - 1; // afișăm ultima mereu
-            const label = compactWeekLabel(d.label);
+            const showLabel = i % showEvery === 0 || i === data.length - 1;
+            const label = String(d.label).replace("Săpt.", "S").replace(/\s+/g, " ").trim();
 
             return (
               <g key={i}>
@@ -566,31 +694,14 @@ function OrgPostsBar({
                   rx="7"
                   className="drop-shadow-sm"
                   fill="url(#barGrad)"
-                  onMouseEnter={() =>
-                    setTt({
-                      show: true,
-                      x: tt.x,
-                      y: tt.y,
-                      text: `${d.label}: ${d.value} postări / săpt.`,
-                    })
-                  }
+                  onMouseEnter={() => setTt({ show: true, x: tt.x, y: tt.y, text: `${d.label}: ${d.value} postări / săpt.` })}
                   onMouseLeave={() => setTt((t) => ({ ...t, show: false }))}
                 />
-
-                {/* valoarea deasupra barei */}
                 <text x={x + barW / 2} y={y - 6} textAnchor="middle" fontSize="10" className="fill-gray-700">
                   {d.value}
                 </text>
-
-                {/* etichetă orizontală, doar la interval fix */}
                 {showLabel && (
-                  <text
-                    x={x + barW / 2}
-                    y={height - 10}
-                    textAnchor="middle"
-                    fontSize="10"
-                    className="fill-gray-600"
-                  >
+                  <text x={x + barW / 2} y={height - 10} textAnchor="middle" fontSize="10" className="fill-gray-600">
                     {label}
                   </text>
                 )}
@@ -600,7 +711,6 @@ function OrgPostsBar({
         </svg>
       </div>
 
-      {/* Empty state overlay */}
       {isAllZeroBars(data) && (
         <div className="absolute inset-0 rounded-2xl bg-white/70 flex items-center justify-center">
           <div className="text-center">
@@ -620,37 +730,6 @@ function OrgPostsBar({
   );
 }
 
-
-
-
-function formatWeekLabel(raw: string) {
-  const s = String(raw).trim();
-
-  // Cazul tău actual (“azi”, “-1”, “-2” …)
-  if (s === "azi") return "Săpt. curentă";
-  if (/^-\d+$/.test(s)) return `Săpt. ${s}`;
-
-  // Dacă în viitor backend-ul trimite o dată (YYYY-MM-DD) = orice zi din săptămână
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-    const d = new Date(s + "T00:00:00");
-    // calculează luni–duminică pentru acea săptămână
-    const dow = (d.getDay() + 6) % 7; // 0 = luni
-    const start = new Date(d); start.setDate(d.getDate() - dow);
-    const end = new Date(start); end.setDate(start.getDate() + 6);
-    const fmt = (x: Date) => x.toLocaleDateString(undefined, { day: "2-digit", month: "short" });
-    return `${fmt(start)}–${fmt(end)}`;
-  }
-
-  // fallback
-  return s;
-}
-function compactWeekLabel(s: string) {
-  // "Săpt. -7" -> "S-7", "Săpt. curentă" -> "S curentă"
-  return s.replace("Săpt.", "S").replace(/\s+/g, " ");
-}
-
-
-
 /** ————— pagina dashboard student ————— */
 export default function StudentHome() {
   const API = "http://localhost:5000";
@@ -659,110 +738,111 @@ export default function StudentHome() {
 
   const [heatmapData, setHeatmapData] = useState<Record<string, number>>({});
   const [orgBars, setOrgBars] = useState<{ label: string; value: number }[]>([]);
+  const [lastFreezeUsed, setLastFreezeUsed] = useState<string | null>(null);
+  const [lsTick, setLsTick] = useState(0); // forțăm recalcul după patch/repair
 
-  // anti-dublare pageview în dev (StrictMode)
-  const sentRef = useRef(false);
-useEffect(() => {
-  let ignore = false;
-  const token = localStorage.getItem("token") || "";
-  const h = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+  useEffect(() => {
+    let ignore = false;
+    const token = localStorage.getItem("token") || "";
+    const h = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
 
-  (async () => {
-    try {
-      // 0) marchează vizita întâi, ca "azi" să apară imediat în presence
-      //await fetch(`${STUDENT_ANALYTICS}/pageview`, {
-       /// method: "POST",
-       /// credentials: "include",
-        ///headers: h,
-      ///}).catch(() => {});
+    (async () => {
+      try {
+        const pres = await fetch(`${STUDENT_ANALYTICS}/presence?days=35`, {
+          credentials: "include",
+          headers: { Authorization: h.Authorization },
+        });
+        if (pres.ok) {
+          const payload = await pres.json();
+          if (!ignore) setHeatmapData(payload || {});
+        }
 
-      // 1) apoi citește presence (alimentează Heatmap + Streak + Sparkline + GoalRing)
-      const pres = await fetch(`${STUDENT_ANALYTICS}/presence?days=35`, {
-        credentials: "include",
-        headers: { Authorization: h.Authorization },
-      });
-      if (pres.ok) {
-        const payload = await pres.json();
-        if (!ignore) setHeatmapData(payload || {});
-      } else {
-        throw new Error("presence failed");
+        const org = await fetch(`${ORG_ANALYTICS}/posts?weeks=8`, {
+          credentials: "include",
+          headers: { Authorization: h.Authorization },
+        });
+        if (org.ok) {
+          const payload: { label: string; value: number }[] = await org.json();
+          if (!ignore) setOrgBars(payload || []);
+        }
+      } catch {
+        // fallback mock data
+        const mock: Record<string, number> = {};
+        const today = new Date();
+        for (let i = 0; i < 35; i++) {
+          const d = new Date(today);
+          d.setDate(today.getDate() - i);
+          mock[fmtDate(d)] = Math.random() < 0.35 ? 0 : Math.floor(Math.random() * 4);
+        }
+        if (!ignore) setHeatmapData(mock);
+
+        const labels = ["-7", "-6", "-5", "-4", "-3", "-2", "-1", "azi"];
+        if (!ignore)
+          setOrgBars(
+            labels.map((l) => ({
+              label: l,
+              value: Math.floor(Math.random() * 8),
+            }))
+          );
       }
+    })();
 
-      // 2) barchart organizații
-      const org = await fetch(`${ORG_ANALYTICS}/posts?weeks=8`, {
-        credentials: "include",
-        headers: { Authorization: h.Authorization },
-      });
-      if (org.ok) {
-  const payload: { label: string; value: number }[] = await org.json();
-  if (!ignore) setOrgBars((payload || []).map(d => ({ ...d, label: formatWeekLabel(String(d.label)) })));
-}else {
-        throw new Error("org posts failed");
-      }
-    } catch {
-      // —— fallback-uri UI (mock) ——
-      // presence mock
-      const mock: Record<string, number> = {};
-      const today = new Date();
-      for (let i = 0; i < 35; i++) {
-        const d = new Date(today);
-        d.setDate(today.getDate() - i);
-        mock[fmtDate(d)] = Math.random() < 0.35 ? 0 : Math.floor(Math.random() * 4);
-      }
-      if (!ignore) setHeatmapData(mock);
+    const t = setInterval(async () => {
+      try {
+        const res = await fetch(`${STUDENT_ANALYTICS}/presence?days=35`, {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const payload = await res.json();
+          if (!ignore) setHeatmapData(payload || {});
+        }
+      } catch {}
+    }, 60000);
 
-      // org bars mock
-      const labels = ["-7", "-6", "-5", "-4", "-3", "-2", "-1", "azi"];
-if (!ignore) setOrgBars(labels.map(l => ({
-  label: formatWeekLabel(l),
-  value: Math.floor(Math.random() * 8)
-})));
-    }
-  })();
+    return () => {
+      ignore = true;
+      clearInterval(t);
+    };
+  }, [STUDENT_ANALYTICS, ORG_ANALYTICS]);
 
-  // opțional: auto-refresh la fiecare 60s dacă stai pe dashboard
-  const t = setInterval(async () => {
-    try {
-      const res = await fetch(`${STUDENT_ANALYTICS}/presence?days=35`, {
-        credentials: "include",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const payload = await res.json();
-        if (!ignore) setHeatmapData(payload || {});
-      }
-    } catch {}
-  }, 60000);
-
-  return () => {
-    ignore = true;
-    clearInterval(t);
-  };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [STUDENT_ANALYTICS, ORG_ANALYTICS]);
-
-
+  // calcule
+  const presence = useMemo(() => computeStreakAuto(heatmapData), [heatmapData, lsTick]);
   const { currentStreak, bestStreak, weekCount, last14Flags, todayVisited } = useMemo(
-  () => derivePresenceMetrics(heatmapData),
-  [heatmapData]
-);
-  const nextMilestone = useMemo(() => nextMilestoneFor(currentStreak), [currentStreak]);
-const streakGoalForUI = nextMilestone ?? 3; // ținta din card = următorul milestone
+    () => derivePresenceMetrics(heatmapData),
+    [heatmapData, lsTick]
+  );
+  const raw = useMemo(() => deriveRawPresence(heatmapData), [heatmapData]);
 
-// modal/celebrare o singură dată per milestone
-const [celebrate, setCelebrate] = useState<number | null>(null);
-useEffect(() => {
-  if (STREAK_MILESTONES.includes(currentStreak as any)) {
-    const key = `streak:celebrated:${currentStreak}`;
-    if (!localStorage.getItem(key)) {
-      setCelebrate(currentStreak);
-      localStorage.setItem(key, "1");
+  const displayStreak = presence.currentStreak; // include auto-patch
+  const nextMilestone = useMemo(() => nextMilestoneFor(displayStreak), [displayStreak]);
+  const streakGoalForUI = nextMilestone ?? 3;
+
+  // celebrări milestone
+  const [celebrate, setCelebrate] = useState<number | null>(null);
+  useEffect(() => {
+    if (STREAK_MILESTONES.includes(displayStreak as any)) {
+      const key = `streak:celebrated:${displayStreak}`;
+      if (!localStorage.getItem(key)) {
+        setCelebrate(displayStreak);
+        localStorage.setItem(key, "1");
+      }
     }
-  }
-}, [currentStreak]);
+  }, [displayStreak]);
 
-  const STREAK_GOAL = 3; // ex: 3 zile la rând
-  const WEEK_GOAL = 5; // ex: 5 vizite / săptămână
+  // citește ultima folosire auto-freeze / repair
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setLastFreezeUsed(localStorage.getItem(LS_KEYS.lastFreezeUsed));
+  }, []);
+  useEffect(() => {
+    if (presence.usedAutoFreezeNow && typeof window !== "undefined") {
+      setLastFreezeUsed(localStorage.getItem(LS_KEYS.lastFreezeUsed));
+      setLsTick((t) => t + 1); // rederivă metricele după patch automat
+    }
+  }, [presence.usedAutoFreezeNow]);
+
+  const WEEK_GOAL = 5;
 
   return (
     <div className="space-y-8 mt-10">
@@ -774,35 +854,65 @@ useEffect(() => {
         <Stat title="Recomandate" value={5} />
       </div>
 
-      {/* gamification row: streak + goal + sparkline */}
+      {/* gamification row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-       <StreakHeroCard
-  currentStreak={currentStreak}
-  bestStreak={bestStreak}
-  goal={streakGoalForUI}           // ← țintă dinamică
-  todayVisited={todayVisited}
+        <div className="space-y-2">
+          <StreakHeroCard
+  currentStreak={displayStreak}
+  bestStreak={presence.bestStreak}           // din computeStreakDuolingo (cu patched)
+  goal={streakGoalForUI}
+  todayVisited={raw.todayVisited}            // ← REAL
   nextMilestone={nextMilestone}
   celebrate={celebrate}
   onCloseCelebrate={() => setCelebrate(null)}
 />
 
+          {/* A) S-a aplicat auto-freeze azi (a acoperit exact o zi lipsă dintre seriile tale) */}
+          {presence.usedAutoFreezeNow && (
+            <GentleBanner>
+              Bine că ai revenit! 💛 Ți-am „înghețat” streak-ul pentru pauza de ieri / ziua lipsă — se întâmplă, toți mai
+              luăm câte o zi off.
+            </GentleBanner>
+          )}
 
-<GoalRing current={weekCount} target={WEEK_GOAL} />   {/* ← va fi 1/5 */}
-<SparklineCard values={last14Flags} />
+          {/* B) Pauză de 2+ zile? Oferă Repair */}
+          {presence.gapInfo && (
+            <GentleBanner>
+              Ai avut o pauză de <b>{presence.gapInfo.length}</b> zile ({presence.gapInfo.start} → {presence.gapInfo.end}).{" "}
+              Poți repara streakul:
+              <button
+                onClick={() => {
+                  repairGap(presence.gapInfo, 100);
+                  setLsTick((t) => t + 1);
+                }}
+                className="ml-2 px-2 py-1 rounded-md bg-amber-600 text-white"
+              >
+                Repară pentru 100 💎
+              </button>
+            </GentleBanner>
+          )}
 
+          <div className="text-[11px] text-gray-500">
+            Ultimul auto-freeze: {lastFreezeUsed ?? "—"}
+            <span className="text-gray-400"> • </span>
+            Ultimul repair: {localStorage.getItem(LS_KEYS.lastRepairUsed) ?? "—"}
+          </div>
+        </div>
+
+       <GoalRing current={raw.weekCount} target={WEEK_GOAL} />  
+<SparklineCard values={raw.last14Flags} />               
       </div>
 
-      {/* 2 grafice */}
+      {/* grafice */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ActivityHeatmap data={heatmapData} />
         <OrgPostsBar data={orgBars} />
       </div>
 
       {/* recomandate */}
-      <section className="bg-card rounded-2xl p-6 ring-1 ring-black/5 shadow-[0_6px_24px_rgba(0,0,0,0.06)]">
+      <section className="bg-card rounded-2xl p-6 ring-1 ring-black/5 shadow">
         <h2 className="text-lg font-semibold tracking-tight mb-2">Oportunități recomandate</h2>
         <p className="text-sm text-gray-600 mb-4">Vezi lista completă și aplică rapid.</p>
-
         <Link
           href="/student/opportunities"
           className="inline-flex items-center gap-2 bg-secondary text-white px-4 py-2 rounded-lg hover:bg-accent transition shadow"
