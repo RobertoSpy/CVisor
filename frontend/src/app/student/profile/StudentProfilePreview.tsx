@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 type SocialLinks = { github?: string; linkedin?: string; website?: string };
 type EducationItem = { id?: string; school: string; degree: string; start: string; end?: string; details?: string };
@@ -21,48 +21,7 @@ type ProfilePayload = {
   opportunityRefs: OppRef[];
 };
 
-const API = "http://localhost:5000";
-
-export default function StudentProfilePreview() {
-   
-
-  const [profile, setProfile] = useState<ProfilePayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState<string | null> (null);
-
-  useEffect(() => {
-      setToken(localStorage.getItem("token"));
-  }, []);
-
-   useEffect(() => {
-    // Doar dacă token-ul există!
-    if (!token) return;
-
-    fetch(`${API}/api/users/me`, {
-      headers: {
-        "Authorization": `Bearer ${token}`,
-      },
-    })
-      .then(r => r.json())
-      .then(data => {
-        setProfile({
-          name: data.name,
-          headline: data.headline,
-          bio: data.bio,
-          avatarUrl: data.avatarUrl || data.avatarDataUrl,
-          location: data.location,
-          skills: data.skills || [],
-          social: data.social || {},
-          education: data.education || [],
-          experience: data.experience || [],
-          portfolioMedia: data.portfolioMedia || [],
-          opportunityRefs: data.opportunityRefs || [],
-        });
-      })
-      .finally(() => setLoading(false));
-  }, [token]);
-
-  if (loading) return <div className="py-10 text-center text-primary font-semibold text-lg">Se încarcă profilul...</div>;
+export default function StudentProfilePreview({ profile }: { profile: ProfilePayload }) {
   if (!profile) return <div className="py-10 text-center text-red-500 font-semibold text-lg">Nu s-au găsit date de profil.</div>;
 
   return (
@@ -119,7 +78,7 @@ export default function StudentProfilePreview() {
         <div className="font-semibold text-gray-800 mb-4">Parcurs educațional & experiență</div>
         <ol className="relative pl-4">
           <div className="absolute left-0 top-0 bottom-0 w-px bg-black/10"/>
-          {[...profile.education, ...profile.experience, ...profile.opportunityRefs].sort((a, b) =>
+          {[...profile.education, ...profile.experience, ...(profile.opportunityRefs || [])].sort((a, b) =>
             (a.start || a.date || "").localeCompare(b.start || b.date || "")
           ).map((item, idx) => (
            <li key={`${item.degree ? "edu" : item.role ? "exp" : "opp"}_${item.id ?? idx}`} className="mb-7">
@@ -142,45 +101,45 @@ export default function StudentProfilePreview() {
         </ol>
       </div>
 
-    {/* Portofoliu Media */}
-<div className="mb-8">
-  <div className="font-semibold text-gray-800 mb-2">Portofoliu media</div>
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-    {profile.portfolioMedia.length ? profile.portfolioMedia.map(m => (
-      <div key={m.id || m.url} className="rounded-xl overflow-hidden ring-1 ring-black/10 bg-black/5 flex flex-col items-center justify-center p-4">
-        {m.kind === "image" ? (
-          <img
-            src={m.url}
-            alt={m.caption || "media"}
-            className="max-w-xl w-full h-auto object-contain mx-auto"
-            style={{ maxHeight: "400px", borderRadius: "1rem" }}
-          />
-        ) : (
-          <div className="w-full flex items-center justify-center">
-            <div className="aspect-video max-w-xl w-full mx-auto bg-black rounded-xl overflow-hidden flex items-center justify-center">
-              <video
-                controls
-                src={m.url}
-                className="w-full h-full object-contain"
-                style={{ maxHeight: "400px", maxWidth: "100%" }}
-              >
-                Video portofoliu
-              </video>
+      {/* Portofoliu Media */}
+      <div className="mb-8">
+        <div className="font-semibold text-gray-800 mb-2">Portofoliu media</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {profile.portfolioMedia.length ? profile.portfolioMedia.map(m => (
+            <div key={m.id || m.url} className="rounded-xl overflow-hidden ring-1 ring-black/10 bg-black/5 flex flex-col items-center justify-center p-4">
+              {m.kind === "image" ? (
+                <img
+                  src={m.url}
+                  alt={m.caption || "media"}
+                  className="max-w-xl w-full h-auto object-contain mx-auto"
+                  style={{ maxHeight: "400px", borderRadius: "1rem" }}
+                />
+              ) : (
+                <div className="w-full flex items-center justify-center">
+                  <div className="aspect-video max-w-xl w-full mx-auto bg-black rounded-xl overflow-hidden flex items-center justify-center">
+                    <video
+                      controls
+                      src={m.url}
+                      className="w-full h-full object-contain"
+                      style={{ maxHeight: "400px", maxWidth: "100%" }}
+                    >
+                      Video portofoliu
+                    </video>
+                  </div>
+                </div>
+              )}
+              {m.caption && (
+                <div className="p-2 text-xs text-gray-600 text-center">{m.caption}</div>
+              )}
             </div>
-          </div>
-        )}
-        {m.caption && (
-          <div className="p-2 text-xs text-gray-600 text-center">{m.caption}</div>
-        )}
+          )) : (
+            <span className="text-gray-400">Nu ai media încărcată.</span>
+          )}
+        </div>
       </div>
-    )) : (
-      <span className="text-gray-400">Nu ai media încărcată.</span>
-    )}
-  </div>
-</div>
 
       {/* Oportunități (detaliat - dacă vrei separat) */}
-      {profile.opportunityRefs.length > 0 && (
+      {profile.opportunityRefs && profile.opportunityRefs.length > 0 && (
         <div className="mb-8">
           <div className="font-semibold text-gray-800 mb-2">Oportunități</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

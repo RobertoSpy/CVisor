@@ -18,7 +18,6 @@ type OppRef = { id: string; title: string; role?: string; org?: string; date?: s
 type ProfilePayload = { name: string; headline?: string; bio?: string; avatarDataUrl?: string; location?: string; skills: string[]; social: SocialLinks; education: EducationItem[]; experience: ExperienceItem[]; portfolioMedia: Media[]; opportunityRefs: OppRef[] };
 
 // ===================== Utils =====================
-const API = "http://localhost:5000";
 const uid = () => Math.random().toString(36).slice(2, 9);
 const cls = (...x: Array<string | false | undefined>) => x.filter(Boolean).join(" ");
 
@@ -264,7 +263,7 @@ function MediaEditor({media,setMedia}:{media:Media[];setMedia:(v:Media[])=>void}
     formData.append("file", f);
 
     // Endpoint pentru upload (vezi backend mai jos)
-    const resp = await fetch("http://localhost:5000/api/upload", {
+    const resp = await fetch("/api/upload", {
       method: "POST",
       body: formData,
     });
@@ -324,6 +323,9 @@ function missingList(p:ProfilePayload){
 // ===================== Main =====================
 export default function StudentProfileWizard(){
 const router = useRouter();
+// Ia emailul curentului user 
+const userEmail = localStorage.getItem("email") || "default";
+const DRAFT_KEY = `profileWizardDraft_${userEmail}`;
 
   // State
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | undefined>();
@@ -345,9 +347,9 @@ const router = useRouter();
   const payload: ProfilePayload = useMemo(()=>({ name, headline, bio, location, avatarDataUrl, skills, social, education, experience, portfolioMedia, opportunityRefs }), [name, headline, bio, location, avatarDataUrl, skills, social, education, experience, portfolioMedia, opportunityRefs]);
 
   // Autosave
-  const debouncedStore = useDebouncedCallback((data:ProfilePayload)=>{ try{ localStorage.setItem("profileWizardDraft", JSON.stringify(data)); }catch{} }, 600);
+  const debouncedStore = useDebouncedCallback((data:ProfilePayload)=>{ try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(data)); }catch{} }, 600);
   useEffect(()=>{ debouncedStore(payload); }, [payload]);
-  useEffect(()=>{ try{ const raw=localStorage.getItem("profileWizardDraft"); if(raw){ const d=JSON.parse(raw) as ProfilePayload; setName(d.name||""); setHeadline(d.headline||""); setBio(d.bio||""); setLocation(d.location||""); setAvatarDataUrl(d.avatarDataUrl); setSkills(d.skills||[]); setSocial(d.social||{}); setEducation(d.education||[]); setExperience(d.experience||[]); setPortfolioMedia(d.portfolioMedia||[]); setOpportunityRefs(d.opportunityRefs||[]);} }catch{} },[]);
+  useEffect(()=>{ try{ const raw=localStorage.getItem(DRAFT_KEY); if(raw){ const d=JSON.parse(raw) as ProfilePayload; setName(d.name||""); setHeadline(d.headline||""); setBio(d.bio||""); setLocation(d.location||""); setAvatarDataUrl(d.avatarDataUrl); setSkills(d.skills||[]); setSocial(d.social||{}); setEducation(d.education||[]); setExperience(d.experience||[]); setPortfolioMedia(d.portfolioMedia||[]); setOpportunityRefs(d.opportunityRefs||[]);} }catch{} },[]);
 
   // Completion map for stepper
   const completeMap = useMemo(()=>{
@@ -365,7 +367,7 @@ const router = useRouter();
   const token = localStorage.getItem("token");
 
   try {
-    await fetch(`${API}/api/users/me`, {
+    await fetch("/api/users/me", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -398,7 +400,15 @@ const router = useRouter();
       <div className="space-y-4">
         <Card>
           <div className="flex items-center justify-between mb-2"><div className="text-sm text-gray-600">Completitudine</div><div className="text-sm font-medium">{pct}%</div></div>
-          <div className="h-2 bg-black/10 rounded-full overflow-hidden mb-2"><div className="h-full bg-primary" style={{width:`${pct}%`}}/></div>
+         <div className="h-2 bg-black/10 rounded-full overflow-hidden mb-2">
+  <div
+    className={
+      "h-full transition-all duration-300 " +
+      (pct === 100 ? "bg-emerald-500" : pct >= 50 ? "bg-primary" : "bg-accent")
+    }
+    style={{ width: `${pct}%` }}
+  />
+</div>
           <div className="text-xs text-gray-600">XP: <span className="font-medium">{xp}</span></div>
         </Card>
         <Stepper current={step} completeMap={completeMap} go={setStep}/>

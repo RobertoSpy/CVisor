@@ -8,13 +8,14 @@ export default function StudentOpportunityDetailPage() {
   const { id } = useParams();
   const [opp, setOpp] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const API = "http://localhost:5000";
+  
+
 
 
   useEffect(() => {
     if (!id) return;
       const theId = Array.isArray(id) ? id[0] : id;
-     fetch(`${API}/api/opportunities/${theId}`, {
+     fetch(`/api/opportunities/${theId}`, {
        credentials: "include",
       headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
     })
@@ -27,7 +28,7 @@ export default function StudentOpportunityDetailPage() {
        .catch((e) => { console.error("Fetch error:", e); setOpp(null); })
         .finally(() => setLoading(false))
       ;
-  }, [id,API]);
+  }, [id]);
 
   if (loading) return <div className="p-8 text-center text-lg animate-pulse">Se încarcă...</div>;
   if (!opp) return <div className="p-8 text-center text-lg text-red-500">Oportunitatea nu a fost găsită.</div>;

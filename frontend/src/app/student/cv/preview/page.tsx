@@ -15,7 +15,6 @@ type ProfilePayload = {
   experience: ExperienceItem[];
 };
 
-const API = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000";
 
 function fmtRange(start?: string, end?: string) {
   if (!start && !end) return "";
@@ -31,7 +30,7 @@ export default function CVPreviewPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API}/api/users/me`, { credentials: "include" });
+        const res = await fetch("/api/users/me", { credentials: "include" });
         if (res.ok) {
           const json = await res.json();
           setData(json as ProfilePayload);

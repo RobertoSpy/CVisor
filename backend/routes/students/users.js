@@ -132,4 +132,95 @@ router.put("/me", verifyToken, async (req, res) => {
   }
 });
 
+router.get("/all", verifyToken, async (req, res) => {
+  try {
+    // Poți filtra doar userii cu rol student (dacă vrei)
+    const usersResult = await pool.query(
+      `SELECT u.id, u.full_name AS name, p.avatar_url AS "avatarUrl", p.headline, p.bio
+       FROM users u
+       LEFT JOIN profiles p ON p.user_id = u.id
+       WHERE u.role = 'student'`
+    );
+    res.json({ students: usersResult.rows });
+  } catch (e) {
+    res.status(500).json({ message: "DB error", error: e.message });
+  }
+});
+
+// GET /api/users/:id
+router.get("/:id", verifyToken, async (req, res) => {
+  const userId = req.params.id;
+  try {
+    // Ia profilul
+    const p = await pool.query(
+      `SELECT u.id, u.full_name AS name,
+              p.headline,
+              p.bio,
+              p.avatar_url AS "avatarUrl",
+              p.skills,
+              p.social,
+              p.location
+       FROM users u
+       LEFT JOIN profiles p ON p.user_id = u.id
+       WHERE u.id = $1`,
+      [userId]
+    );
+    const prof = p.rows[0];
+    if (!prof) return res.status(404).json({ message: "User not found" });
+
+    // Ia educația
+    const edu = await pool.query(
+      `SELECT id, school, degree, start_ym AS start, end_ym AS "end", details
+       FROM education WHERE user_id=$1
+       ORDER BY start_ym DESC NULLS LAST, id DESC`,
+      [userId]
+    );
+    // Ia experiența
+    const exp = await pool.query(
+      `SELECT id, role, company, start_ym AS start, end_ym AS "end", details
+       FROM experience WHERE user_id=$1
+       ORDER BY start_ym DESC NULLS LAST, id DESC`,
+      [userId]
+    );
+    // Ia media
+    const media = await pool.query(
+      `SELECT id, kind, url, caption
+       FROM portfolio_media WHERE user_id=$1
+       ORDER BY id ASC`,
+      [userId]
+    );
+
+    res.json({
+      ...prof,
+      skills: prof.skills || [],
+      location: prof.location || "",
+      education: edu.rows,
+      experience: exp.rows,
+      portfolioMedia: media.rows
+    });
+  } catch (e) {
+    res.status(500).json({ message: "DB error", error: e.message });
+  }
+});
+
+
+
+// GET /api/users/basic
+router.get("/basic", verifyToken, async (req, res) => {
+  const uid = req.user.id;
+  try {
+    const result = await pool.query(
+      `SELECT id, email, role, full_name
+       FROM users
+       WHERE id=$1`, [uid]
+    );
+    if (!result.rows[0]) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json(result.rows[0]);
+  } catch (e) {
+    res.status(500).json({ message: "DB error", error: e.message });
+  }
+});
+
 module.exports = router;

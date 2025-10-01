@@ -12,7 +12,7 @@ export default function OpportunityDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/organizations/opportunities/${id}`, {
+    fetch(`/api/organizations/opportunities/${id}`, {
       credentials: "include",
       headers: {
         "Authorization": `Bearer ${localStorage.getItem("token")}`,

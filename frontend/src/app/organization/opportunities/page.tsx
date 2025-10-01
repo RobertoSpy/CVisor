@@ -9,8 +9,6 @@ export default function OpportunitiesPage() {
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<"party" | "self-development" | null>(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
 
   // Modal adaugare
   const [showForm, setShowForm] = useState(false);
@@ -86,7 +84,6 @@ export default function OpportunitiesPage() {
     setEditBannerFile,
     setEditPromoFile,
     setEditGalleryFiles,
-    API_URL,
     form,
     bannerFile,
     promoFile,
@@ -98,7 +95,7 @@ export default function OpportunitiesPage() {
 
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/organizations/opportunities", {
+    fetch("/api/organizations/opportunities", {
       credentials: "include",
       headers: {
         "Authorization": `Bearer ${localStorage.getItem("token")}`,

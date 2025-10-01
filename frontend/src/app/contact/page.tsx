@@ -47,7 +47,7 @@ export default function ContactPage() {
     };
 
     try {
-      const response = await fetch("http://localhost:5000/api/contact", {
+      const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -161,7 +161,7 @@ export default function ContactPage() {
         {/* Imagine și text pentru mobil */}
         <div className="lg:hidden flex flex-col items-center mt-10">
           <div className="text-center text-md text-white pt-4">
-            <b><span className="text-primary">Ne poți găsi și la facultate!</span></b>
+            <b><span className="text-white">Ne poți găsi și la facultate!</span></b>
             <br />
             <span className="text-primary">Dacă vrei să ne cunoști sau să povestim direct, scrie-ne și stabilim o întâlnire.</span>
           </div>

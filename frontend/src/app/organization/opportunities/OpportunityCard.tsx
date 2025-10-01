@@ -8,13 +8,40 @@ type Props = {
 };
 
 export default function OpportunityCard({ opportunity: opp, onEdit, onDelete }: Props) {
+  // Gradient și mesaje pentru fallback
+  const fallbackBanner = () => {
+    if (opp.type === "party") {
+      return (
+        <div className="w-full flex justify-center mb-4">
+          <div className="w-full max-w-[400px] h-40 rounded-xl bg-gradient-to-r from-pink-500 via-yellow-400 to-pink-400 flex flex-col items-center justify-center">
+            <span className="text-5xl mb-2 animate-bounce">🎉</span>
+            <span className="text-xl font-bold text-white drop-shadow">Party Time!</span>
+            <span className="text-xs font-semibold text-white/80 mt-1">Let’s celebrate together!</span>
+          </div>
+        </div>
+      );
+    }
+    if (opp.type === "self-development") {
+      return (
+        <div className="w-full flex justify-center mb-4">
+          <div className="w-full max-w-[400px] h-40 rounded-xl bg-gradient-to-r from-blue-500 via-green-400 to-purple-400 flex flex-col items-center justify-center">
+            <span className="text-5xl mb-2 animate-pulse">🧠</span>
+            <span className="text-xl font-bold text-white drop-shadow">Level Up!</span>
+            <span className="text-xs font-semibold text-white/80 mt-1">Self-growth in progress…</span>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <li
       key={opp.id}
       className="bg-card rounded-2xl p-5 ring-1 ring-black/5 shadow flex flex-col justify-between relative overflow-visible"
     >
-      {/* Imagine banner */}
-      {opp.banner_image && (
+      {/* Banner sau fallback */}
+      {opp.banner_image ? (
         <div className="w-full flex justify-center mb-4">
           <img
             src={opp.banner_image}
@@ -23,7 +50,10 @@ export default function OpportunityCard({ opportunity: opp, onEdit, onDelete }: 
             style={{ maxWidth: "400px" }}
           />
         </div>
+      ) : (
+        fallbackBanner()
       )}
+
       <h3 className="text-lg font-semibold tracking-tight mt-0.5 text-primary text-center">
         <Link href={`/organization/opportunities/${opp.id}`}>{opp.title}</Link>
       </h3>

@@ -65,7 +65,7 @@ export default function StudiesPage() {
   return (
     <div className="min-h-screen bg-gradient-sm pb-0">
       <Navbar />
-      <div className="max-w-5xl mx-auto space-y-16">
+      <div className="max-w-5xl mx-auto space-y-16 px-2">
 
         {/* Titlu */}
         <div className="text-center mt-12">

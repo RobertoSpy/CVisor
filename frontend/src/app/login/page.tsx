@@ -27,21 +27,22 @@ export default function LoginPage() {
     setLoading(true);
     try {
       
-      const res = await fetch("http://localhost:5000/api/auth/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, role }),
         credentials: "include", 
       });
       const data = await res.json();
+      console.log("RASPUNS LOGIN:", data);
       if (!res.ok) {
         setError(data.message || "Login failed");
       } else {
         //salveaza token
          if (data.token) localStorage.setItem("token", data.token);
           // Salvează rolul
-      if (data.role) localStorage.setItem("role", data.role);
-
+      if (data.user?.role) localStorage.setItem("role", data.user.role);
+      if (data.user?.full_name) localStorage.setItem("full_name", data.user.full_name);
         // Redirect în funcție de rol
         if (role === "admin") router.push("/admin");
         else if (role === "student") router.push("/student");
@@ -55,7 +56,7 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen bg-gradient-hero">
+    <main className="flex flex-col items-center justify-center min-h-screen bg-gradient-sm">
       <form
         onSubmit={handleSubmit}
         className="bg-white bg-opacity-80 p-8 rounded-xl shadow-2xl flex flex-col gap-4 w-full max-w-md backdrop-blur"

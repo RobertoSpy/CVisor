@@ -13,7 +13,6 @@ export function useOpportunityHandlers({
   setEditBannerFile,
   setEditPromoFile,
   setEditGalleryFiles,
-  API_URL,
   form,
   bannerFile,
   promoFile,
@@ -32,7 +31,6 @@ export function useOpportunityHandlers({
   setEditBannerFile: any,
   setEditPromoFile: any,
   setEditGalleryFiles: any,
-  API_URL: string,
   form: any,
   bannerFile: any,
   promoFile: any,
@@ -49,7 +47,7 @@ export function useOpportunityHandlers({
     const data = new FormData();
     data.append("file", file);
 
-    fetch(`http://localhost:5000/api/upload`, {
+    fetch("/api/upload", {
       method: "POST",
       credentials: "include",
       headers: {
@@ -70,7 +68,7 @@ export function useOpportunityHandlers({
     const data = new FormData();
     data.append("file", file);
 
-    fetch(`http://localhost:5000/api/upload`, {
+    fetch("/api/upload", {
       method: "POST",
       credentials: "include",
       headers: {
@@ -91,7 +89,7 @@ export function useOpportunityHandlers({
       files.map((file) => {
         const data = new FormData();
         data.append("file", file);
-        return fetch(`http://localhost:5000/api/upload`, {
+        return fetch("/api/upload", {
           method: "POST",
           credentials: "include",
           headers: {
@@ -137,7 +135,7 @@ export function useOpportunityHandlers({
     }
 
     const payload = buildPayload(form);
-    fetch(`http://localhost:5000/api/organizations/opportunities`, {
+    fetch("/api/organizations/opportunities", {
       method: "POST",
       credentials: "include",
       headers: {
@@ -183,7 +181,7 @@ export function useOpportunityHandlers({
     const data = new FormData();
     data.append("file", file);
 
-    fetch(`http://localhost:5000/api/upload`, {
+    fetch("/api/upload", {
       method: "POST",
       credentials: "include",
       headers: {
@@ -204,7 +202,7 @@ export function useOpportunityHandlers({
     const data = new FormData();
     data.append("file", file);
 
-    fetch(`http://localhost:5000/api/upload`, {
+    fetch(`/api/upload`, {
       method: "POST",
       credentials: "include",
       headers: {
@@ -225,7 +223,7 @@ export function useOpportunityHandlers({
       files.map((file) => {
         const data = new FormData();
         data.append("file", file);
-        return fetch(`http://localhost:5000/api/upload`, {
+        return fetch(`/api/upload`, {
           method: "POST",
           credentials: "include",
           headers: {
@@ -283,7 +281,7 @@ export function useOpportunityHandlers({
   available_spots: editForm.available_spots ? parseInt(editForm.available_spots) : 1,
 };
 
-    fetch(`http://localhost:5000/api/organizations/opportunities/${editId}`, {
+    fetch(`/api/organizations/opportunities/${editId}`, {
       method: "PUT",
       credentials: "include",
       headers: {
@@ -325,7 +323,7 @@ export function useOpportunityHandlers({
   // Ștergere oportunitate
   function handleDelete(id: number) {
     if (!confirm("Sigur vrei să ștergi oportunitatea?")) return;
-    fetch(`http://localhost:5000/api/organizations/opportunities/${id}`, {
+    fetch(`/api/organizations/opportunities/${id}`, {
       method: "DELETE",
       credentials: "include",
       headers: {

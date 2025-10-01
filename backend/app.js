@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT;
 
 // Middleware
-app.use(cors({
+/*app.use(cors({
   origin: [
     "http://localhost:3000", // pentru dezvoltare
     "https://cvisor.com",    // pentru producție
@@ -16,6 +16,8 @@ app.use(cors({
   ],
   credentials: true
 }));
+*/
+
 app.use(express.json());
 
 // PostgreSQL connection pool este importat din db.js
@@ -55,6 +57,22 @@ app.use("/api/applications", appsRoutes);
 const uploadRouter = require("./routes/upload");
 app.use("/api/upload", uploadRouter);
 
+const allStudentsRoutes = require("./routes/students/users");
+app.use("/api/users", allStudentsRoutes);
+
+
+//org
+const orgBadges = require("./routes/organizations/badges");
+app.use("/api/organizations", orgBadges);
+
+const orgPoints = require("./routes/organizations/points");
+app.use("/api/organizations", orgPoints);
+
+const orgStats = require("./routes/organizations/stats");
+app.use("/api/organizations/stats", orgStats);
+
+
+
 
 // --- NEW: Rute pentru ORGANIZAȚII
 const orgUsersRoutes = require("./routes/organizations/users");
@@ -62,6 +80,7 @@ app.use("/api/organizations/users", orgUsersRoutes);
 
 const orgOppRoutes = require("./routes/organizations/opportunities");
 app.use("/api/organizations/opportunities", orgOppRoutes);
+
 /*
 const orgTimelineRoutes = require("./routes/organizations/timeline");
 app.use("/api/organizations/timeline", orgTimelineRoutes);
@@ -75,19 +94,25 @@ app.use("/api/organizations/skills", orgSkillsRoutes);
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // Noua structură
-const studentAnalytics = require("./routes/students/analytics");
-app.use("/api/students/analytics", studentAnalytics);
+const studentAnalytics = require("./routes/students/stats");
+app.use("/api/students/stats", studentAnalytics);
+
+
+
+app.use("/api/analytics/student", studentAnalytics); // ← Adaugă asta!
 
 const orgAnalytics = require("./routes/organizations/analytics");
-app.use("/api/organizations/analytics", orgAnalytics);
-
-// Alias-uri compatibile cu ce ai deja în frontend:
-app.use("/api/analytics/student", studentAnalytics); // => /api/analytics/student/logins
-app.use("/api/analytics/orgs", orgAnalytics);        // => /api/analytics/orgs/posts
+app.use("/api/analytics/orgs", orgAnalytics); // ← Și asta pentru orgs
 
 
 const contactRoutes = require("./routes/contact/contact");
 app.use("/api/contact", contactRoutes);
+
+const pointsRoutes = require('./routes/students/points');
+app.use('/api/students', pointsRoutes);
+
+const badgesRoutes = require('./routes/students/badges');
+app.use('/api/students', badgesRoutes);
 
 app.use((err, req, res, next) => {
   console.error("[GLOBAL ERROR]", err);
