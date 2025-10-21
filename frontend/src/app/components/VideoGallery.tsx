@@ -11,7 +11,7 @@ export default function VideoGallery() {
         {/* Card central cu gradient */}
         <div className="max-w-6xl mx-auto bg-gradient-to-r from-blue-500 via-primary to-pink-400 rounded-3xl shadow-lg p-8 hover: scale-105 transition cursor-pointer border-b-4 border-primary/30 ">
           <h2 className="text-3xl font-bold text-center text-white mb-8 drop-shadow-lg">
-            Am întrebat mulți studenți despre ce cred ei despre aplicație, ne-am documentat, am modificat după placerile lor, așa că nu am putut să nu punem și câteva testimoniale video cu ei
+           Aplicația s-a dezvoltat pe baza feedback-ului studenților. Descoperă și testimoniale video cu ei!
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {videos.map((video) => (

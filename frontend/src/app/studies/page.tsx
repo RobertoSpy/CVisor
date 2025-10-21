@@ -69,7 +69,7 @@ export default function StudiesPage() {
 
         {/* Titlu */}
         <div className="text-center mt-12">
-          <h1 className="text-5xl font-extrabold text-primary mb-4 drop-shadow"> Studii & Statistici CVISOR 📊</h1>
+          <h1 className="text-5xl font-extrabold text-white mb-4 drop-shadow"> Studii & Statistici CVISOR 📊</h1>
           <p className="text-2xl text-white/90 font-medium drop-shadow max-w-3xl mx-auto">
            <span className="bg-clip-text text-white font-bold">
             Date reale și vizualizări moderne despre oportunitățile studențești și petreceri din Iași și România.
@@ -77,7 +77,7 @@ export default function StudiesPage() {
           </p>
         </div>
 
-          {/* Carduri pe orizontală (side-by-side) */}
+        {/* Carduri pe orizontală (side-by-side) */}
         <div className="flex flex-col md:flex-row gap-12 justify-center items-stretch">
           {/* Oportunități pe asociații */}
           <div className="flex-1 flex flex-col items-center rounded-2xl shadow-lg hover:scale-105 transition bg-white cursor-pointer border-b-4 border-primary/30 px-8 py-10 max-w-md mx-auto">
@@ -128,7 +128,7 @@ export default function StudiesPage() {
                 />
               </div>
             </div>
-            <div className="mt-4 text-lg text-pink-600 font-bold text-center">
+            <div className="mt-4 text-lg text-blue-600 font-bold text-center">
               <span>
                 Creștere de la {opportunitiesEvolution.datasets[0].data[0]} în 2021 la {opportunitiesEvolution.datasets[0].data[4]} în 2025!
               </span>
@@ -171,30 +171,27 @@ export default function StudiesPage() {
           </div>
         </section>
 
-      
-         {/* Imagine + concluzie */}
-{/* Imagine + concluzie */}
-<div className="flex flex-col items-center justify-center mt-8 mb-24">
-  {/* Textul deasupra cardului */}
-  <div className="text-center text-lg text-primary font-semibold mb-6">
-    Cu CVISOR vezi rapid toate oportunitățile și evenimentele din oraș!
-  </div>
-  {/* Cardul doar cu imaginea */}
-  <div className="rounded-2xl shadow-lg hover:scale-105 transition bg-white cursor-pointer border-b-4 border-primary/30 p-6 max-w-xl w-full flex flex-col items-center">
-    <Image
-      src="/tel.jpg"
-      alt="Statistici vizuale"
-      width={400}
-      height={260}
-      className="rounded-2xl shadow-md object-cover border-2 border-white"
-    />
-  </div>
-</div>
+        {/* Card final: imagine + text integrat pe fundal albastru */}
+        <div className="flex flex-col items-center justify-center mt-8 mb-24">
+          <div className="rounded-2xl shadow-lg hover:scale-105 transition bg-white cursor-pointer border-b-4 border-primary/30 p-8 max-w-xl w-full flex flex-col items-center">
+            {/* Text integrat în card, alb pe albastru */}
+            <div className="text-center text-lg font-semibold text-blue-600 mb-4">
+              Cu <span className="font-extrabold">CVISOR</span> vezi rapid toate oportunitățile și evenimentele din oraș!
+            </div>
+            {/* Imagine */}
+            <Image
+              src="/tel.jpg"
+              alt="Statistici vizuale"
+              width={400}
+              height={260}
+              className="rounded-2xl shadow-md object-cover border-2 border-white"
+            />
+          </div>
+        </div>
         
-       
       </div>
-        <section>...</section>
-    <div className="mb-24" />
+      <section>...</section>
+      <div className="mb-24" />
       <Footer />
     </div>
   );

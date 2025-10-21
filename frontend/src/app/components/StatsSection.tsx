@@ -18,8 +18,8 @@ const infoCards = [
     question: "Ce tipuri de oportunități găsesc?",
     answer: (
       <>
-        <span className="font-bold text-orange-600">Party</span> – petreceri legendare, evenimente, distracție non-stop.<br />
-        <span className="font-bold text-blue-700">Self-development</span> – workshopuri, conferințe, hackathoane, inspirație la pachet pentru fiecare student.
+        <span className="font-bold text-blue-600">Party</span> – petreceri legendare, evenimente, distracție non-stop.<br />
+        <span className="font-bold text-blue-600">Self-development</span> – workshopuri, conferințe, hackathoane, inspirație la pachet pentru fiecare student.
       </>
     ),
   },
@@ -28,7 +28,7 @@ const infoCards = [
     question: "Cum aleg unde merg?",
     answer: (
       <>
-        Nu vă mai limitați doar la petrecerile din cadrul facultății voastre! Acum aveți pe tavă <span className="font-bold">TOATE</span> petrecerile care se întâmplă în Iași, ca să alegeți unde vreți să mergeți.
+        Nu vă mai limitați doar la petrecerile din cadrul facultății voastre! Acum aveți in fata<span className="font-bold text-blue-600">TOATE</span> petrecerile care se întâmplă în Iași, ca să alegeți unde vreți să mergeți.
       </>
     ),
   },
@@ -37,7 +37,7 @@ const infoCards = [
     question: "Ce e special la self-development?",
     answer: (
       <>
-        Afli instant ce oportunități există pe <span className="font-bold text-primary">nisa ta</span>, dar și ce se întâmplă pe celelalte nise — <span className="font-bold text-accent">TOTUL GRATUIT!</span>
+        Afli instant ce oportunități există pe <span className="font-bold text-blue-600">nisa ta</span>, dar și ce se întâmplă pe celelalte nise — <span className="font-bold text-blue-600 text-accent">TOTUL GRATUIT!</span>
       </>
     ),
   },
@@ -46,8 +46,8 @@ const infoCards = [
     question: "De ce să folosesc CVISOR?",
     answer: (
       <>
-        <span className="font-bold text-pink-600">CVISOR</span> e locul unde studenții și asociațiile se întâlnesc, râd, învață și creează amintiri.<br />
-        <span className="text-accent font-semibold">Ce mai astepti? Fa-ti cont si descopera!</span>
+        <span className="font-bold text-blue-600">CVISOR</span> e locul unde studenții și asociațiile se întâlnesc, râd, învață și creează amintiri.<br />
+        <span className="text-blue-600 font-semibold">Ce mai astepti? Fa-ti cont si descopera!</span>
       </>
     ),
   },

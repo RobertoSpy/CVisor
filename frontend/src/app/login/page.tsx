@@ -34,7 +34,6 @@ export default function LoginPage() {
         credentials: "include", 
       });
       const data = await res.json();
-      console.log("RASPUNS LOGIN:", data);
       if (!res.ok) {
         setError(data.message || "Login failed");
       } else {

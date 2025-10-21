@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-// Importă componenta!
 import StudentProfilePreview from "../../../student/profile/StudentProfilePreview"; 
 
 export default function OrganizationStudentProfilePage() {

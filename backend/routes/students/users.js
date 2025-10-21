@@ -15,14 +15,15 @@ router.get("/me", verifyToken, async (req, res) => {
               avatar_url AS "avatarUrl",
               skills,
               social,
-              location
+              location,
+              opportunity_refs
        FROM profiles WHERE user_id=$1`,
       [uid]
     );
 
     const prof = p.rows[0] || {
       name: "", headline: "", bio: "",
-      avatarUrl: "", skills: [], social: {}, location: ""
+      avatarUrl: "", skills: [], social: {}, location: "", opportunity_refs: []
     };
 
     const edu = await pool.query(
@@ -51,6 +52,7 @@ router.get("/me", verifyToken, async (req, res) => {
       avatarDataUrl: prof.avatarUrl || "",
       skills: prof.skills || [],
       location: prof.location || "",
+       opportunityRefs: prof.opportunity_refs || [],
       education: edu.rows,
       experience: exp.rows,
       portfolioMedia: media.rows
@@ -70,7 +72,8 @@ router.put("/me", verifyToken, async (req, res) => {
     skills = [], social = {},
     education = [], experience = [],
     portfolioMedia = [],
-    location = ""
+    location = "",
+   opportunityRefs = []
   } = body;
 
   const avatar = avatarUrl || avatarDataUrl || null;
@@ -80,8 +83,8 @@ router.put("/me", verifyToken, async (req, res) => {
     await client.query("BEGIN");
 
     await client.query(
-      `INSERT INTO profiles (user_id, name, headline, bio, avatar_url, skills, social, location, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now())
+      `INSERT INTO profiles (user_id, name, headline, bio, avatar_url, skills, social, location, opportunity_refs,updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, now())
        ON CONFLICT (user_id) DO UPDATE SET
          name=EXCLUDED.name,
          headline=EXCLUDED.headline,
@@ -90,8 +93,10 @@ router.put("/me", verifyToken, async (req, res) => {
          skills=EXCLUDED.skills,
          social=EXCLUDED.social,
          location=EXCLUDED.location,
+        opportunity_refs=EXCLUDED.opportunity_refs,
          updated_at=now()`,
-      [uid, name || null, headline || null, bio || null, avatar, skills, social, location || null]
+         
+      [uid, name || null, headline || null, bio || null, avatar, skills, social, location || null, JSON.stringify(opportunityRefs)]
     );
 
     await client.query("DELETE FROM education WHERE user_id=$1", [uid]);
@@ -159,7 +164,8 @@ router.get("/:id", verifyToken, async (req, res) => {
               p.avatar_url AS "avatarUrl",
               p.skills,
               p.social,
-              p.location
+              p.location,
+              opportunity_refs
        FROM users u
        LEFT JOIN profiles p ON p.user_id = u.id
        WHERE u.id = $1`,
@@ -194,6 +200,7 @@ router.get("/:id", verifyToken, async (req, res) => {
       ...prof,
       skills: prof.skills || [],
       location: prof.location || "",
+       opportunityRefs: prof.opportunity_refs || [],
       education: edu.rows,
       experience: exp.rows,
       portfolioMedia: media.rows

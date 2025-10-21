@@ -99,7 +99,7 @@ app.use("/api/students/stats", studentAnalytics);
 
 
 
-app.use("/api/analytics/student", studentAnalytics); // ← Adaugă asta!
+app.use("/api/analytics/student", studentAnalytics); 
 
 const orgAnalytics = require("./routes/organizations/analytics");
 app.use("/api/analytics/orgs", orgAnalytics); // ← Și asta pentru orgs

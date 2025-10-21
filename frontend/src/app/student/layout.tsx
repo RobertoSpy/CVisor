@@ -54,8 +54,9 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
               {[
                 { href: "/student", label: "Dashboard" },
                 { href: "/student/opportunities", label: "Oportunități" },
-                { href: "/student/applications", label: "Aplicațiile mele" },
+                { href: "/student/applications", label: "Aplicatiile mele" },
                 { href: "/student/profile", label: "Profil" },
+                 { href: "/student/organizations", label: "Organizații" },
               ].map(({ href, label }) => (
                 <Link
                   key={href}

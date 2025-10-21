@@ -11,7 +11,7 @@ export default function AboutPage() {
       <div className="max-w-7xl mx-auto px-2 pt-10 space-y-16">
         {/* Titlu & Slogan */}
         <section className="text-center pb-8">
-          <h1 className="text-5xl font-extrabold text-primary mb-4 drop-shadow">Fii specialist! 🏆</h1>
+          <h1 className="text-5xl font-extrabold text-white mb-4 drop-shadow">Fii specialist! 🏆</h1>
           <p className="text-2xl font-medium drop-shadow mb-4 text-white">
             <span className="bg-clip-text text-white font-bold">
               Cine suntem noi?
@@ -70,11 +70,11 @@ export default function AboutPage() {
               className="rounded-2xl shadow-md object-cover border-2 border-primary"
             />
             <div className="mt-4 text-lg font-semibold text-center">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 via-primary to-pink-400 font-bold">
+              <span className=" text-blue-600 bg-clip-text  font-bold">
                 Este prima platformă din România care oferă acest lucru pentru studenți
               </span>
             </div>
-            <div className="mt-1 text-gray-600 text-center max-w-lg">
+            <div className="mt-1 text-grey-600 text-center max-w-lg">
               Am vorbit cu mulți profesori, studenți și asociații și ne-au dat verdictul. Începem în Iași și continuăm în cele mai mari orașe din România.
             </div>
           </div>
@@ -82,7 +82,7 @@ export default function AboutPage() {
           {/* Card misiune */}
           <div className="bg-white/90 rounded-2xl px-8 py-10 text-center shadow  flex flex-col justify-center hover:scale-105 transition cursor-pointer border-b-4 border-primary/30 ">
             <h2 className="text-2xl font-bold mb-3">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 via-primary to-pink-400 font-bold">
+              <span className=" text-blue-600 bg-clip-text font-bold">
                 De ce CVISOR?
               </span>
             </h2>
@@ -91,17 +91,17 @@ export default function AboutPage() {
             </p>
             <ul className="list-disc mt-2 ml-8 text-left text-md text-primary">
               <li>
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 via-primary to-pink-400 font-bold">
+                <span className=" text-blue-600 bg-clip-text font-bold">
                   Oportunități de tip self-development
                 </span> (workshopuri, traininguri, activități, stagii, etc)
               </li>
               <li>
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 via-primary to-pink-400 font-bold">
+                <span className=" text-blue-600 bg-clip-text font-bold">
                   Toate petrecerile
                 </span> de la diverse facultăți și asociații, într-un singur loc
               </li>
               <li>
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 via-primary to-pink-400 font-bold">
+                <span className=" text-blue-600  bg-clip-text font-bold">
                   Profil student personalizat & CV digital
                 </span>
               </li>

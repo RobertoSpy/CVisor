@@ -14,12 +14,14 @@ module.exports = {
         dark: "#1e293b", // dark blue-gray
         success: "#22c55e", // green
         warning: "#facc15", // yellow
+        third: "#60a5fa",
       },
       backgroundImage: {
         'gradient-primary': 'linear-gradient(90deg, #2563eb 0%, #ff6b6b 100%)',
-        'gradient-sm': 'linear-gradient(90deg, #2563eb 0%, #ffffff 100%)',
+        'gradient-sm': 'linear-gradient(90deg, #2563eb 0%, #60a5fa 50%, #f9e0ea 100%)',
         'gradient-hero': 'linear-gradient(180deg, #2563eb 0%, #fcaf45 100%)',
          'gradient-video': 'linear-gradient(180deg, #fcaf45 0%, #2563eb 100%)',
+         'gradient-sm-dark': 'linear-gradient(90deg, #60a5fa 0%, #f3a6bc 100%)',
       },
     },
   },
