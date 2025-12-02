@@ -7,7 +7,7 @@ type Props = { opportunity: Opportunity };
 export default function StudentOpportunityCard({ opportunity: opp }: Props) {
   return (
     <li className="bg-card rounded-2xl p-5 ring-1 ring-black/5 shadow-[0_6px_24px_rgba(0,0,0,0.06)] flex flex-col justify-between">
-       {/* Imagine banner */}
+      {/* Imagine banner */}
       {opp.banner_image && (
         <div className="w-full flex justify-center mb-4">
           <img
@@ -21,6 +21,12 @@ export default function StudentOpportunityCard({ opportunity: opp }: Props) {
       <h3 className="text-lg font-semibold tracking-tight mt-0.5 text-primary">
         <Link href={`/student/opportunities/${opp.id}`}>{opp.title}</Link>
       </h3>
+
+      {opp.orgName && (
+        <div className="text-sm font-medium text-gray-500 mb-1">
+          {opp.orgName}
+        </div>
+      )}
 
       <div className="text-xs mt-1">
         Tip: <span className="font-medium text-secondary">{opp.type}</span>

@@ -1,58 +1,71 @@
 "use client";
 import { fmtDate } from "./utils";
 
+export type GapInfo = { start: string; end: string; length: number } | null;
+
 // Sursa unică pentru badges și milestone-uri
 export const BADGES = [
   {
     code: "novice",
-    label: "Novice",
-    emoji: "🟢",
+    label: "LVL 1",
+    emoji: "🌱",
     streak: 0,
     feature: "Început de drum",
     description: "Ai acces la funcționalitățile de bază: creare profil, vizualizare oportunități și organizații."
   },
   {
     code: "incepator",
-    label: "Începător",
-    emoji: "🟡",
+    label: "LVL 2",
+    emoji: "🌿",
     streak: 7,
     feature: "Puncte și experiență",
     description: "Te-ai obișnuit cu platforma. Acum poți acumula puncte, care vor fi utile pentru viitoare upgrade-uri și aplicații."
   },
   {
     code: "incepator+",
-    label: "Începător+",
-    emoji: "🔥",
+    label: "LVL 3",
+    emoji: "🌳",
     streak: 30,
     feature: "Aplicații Directe",
     description: "Ai ajuns la un nivel superior! Ai acces la o pagină nouă de aplicare și poți aplica direct la organizații din platformă."
   },
   {
     code: "intermediar",
-    label: "Intermediar",
-    emoji: "💎",
+    label: "LVL 4",
+    emoji: "🍎",
     streak: 90,
     feature: "Acces Premium",
     description: "Primești acces premium: vezi oportunități exclusive, primești notificări prioritare și poți conversa cu organizațiile."
   },
   {
     code: "advance",
-    label: "Old",
-    emoji: "💎",
+    label: "LVL 5",
+    emoji: "👑",
     streak: 150,
     feature: "Acces All",
     description: "Ești veteran! Ai deblocat toate funcționalitățile platformei, inclusiv statistici avansate și mentorat personalizat."
   }
 ];
-// Derivate pentru funcțiile legacy și compatibilitate
+
+export const MAP_NODES = [
+  { streak: 0, type: "badge", label: "LVL 1" },
+  { streak: 3, type: "step", label: "3 Zile" },
+  { streak: 7, type: "badge", label: "LVL 2" },
+  { streak: 14, type: "step", label: "14 Zile" },
+  { streak: 30, type: "badge", label: "LVL 3" },
+  { streak: 60, type: "step", label: "60 Zile" },
+  { streak: 90, type: "badge", label: "LVL 4" },
+  { streak: 120, type: "step", label: "120 Zile" },
+  { streak: 150, type: "badge", label: "LVL 5" },
+  { streak: 999, type: "soon", label: "SOON" },
+];
+
 export const STREAK_MILESTONES = BADGES.map(b => b.streak) as number[];
 export const MILESTONE_LABELS: Record<number, string> = Object.fromEntries(
   BADGES.map(b => [b.streak, b.label])
 );
 
 export const nextMilestoneFor = (n: number) => STREAK_MILESTONES.find((m) => m > n) ?? null;
-
-export type GapInfo = { start: string; end: string; length: number } | null;
 
 export const LS_KEYS = {
   patchedDays: "streak:patchedDays",
@@ -78,16 +91,16 @@ export function patchDays(daysISO: string[]) {
 
 /** RAW (fără patched) */
 export function deriveRawPresence(map: Record<string, number>) {
-  const today = new Date(); today.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
   const visitedRaw = (d: Date) => ((map[fmtDate(d)] ?? 0) > 0) ? 1 : 0;
 
   const todayVisited = visitedRaw(today) === 1;
 
-  const startOfWeek = (d: Date) => { const t = new Date(d); const dow = (t.getDay()+6)%7; t.setDate(t.getDate()-dow); t.setHours(0,0,0,0); return t; };
+  const startOfWeek = (d: Date) => { const t = new Date(d); const dow = (t.getDay() + 6) % 7; t.setDate(t.getDate() - dow); t.setHours(0, 0, 0, 0); return t; };
   const weekStart = startOfWeek(today);
   let weekCount = 0;
   for (let i = 0; i < 7; i++) {
-    const d = new Date(weekStart); d.setDate(weekStart.getDate()+i);
+    const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
     if (d > today) break;
     weekCount += visitedRaw(d);
   }
@@ -103,7 +116,7 @@ export function deriveRawPresence(map: Record<string, number>) {
 
 /** Derivate cu zile patchuite */
 export function derivePresenceMetrics(map: Record<string, number>) {
-  const today = new Date(); today.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
   const patched = typeof window !== "undefined" ? getPatchedSet() : new Set<string>();
 
   const visited = (d: Date) => {
@@ -114,7 +127,7 @@ export function derivePresenceMetrics(map: Record<string, number>) {
 
   let currentStreak = 0;
   const cur = new Date(today);
-  while (visited(cur)) { currentStreak++; cur.setDate(cur.getDate()-1); }
+  while (visited(cur)) { currentStreak++; cur.setDate(cur.getDate() - 1); }
 
   const dates = Object.keys(map || {}).sort();
   let bestStreak = 0, run = 0;
@@ -123,11 +136,11 @@ export function derivePresenceMetrics(map: Record<string, number>) {
     if (v) { run++; bestStreak = Math.max(bestStreak, run); } else run = 0;
   }
 
-  const startOfWeek = (d: Date) => { const t = new Date(d); const dow = (t.getDay()+6)%7; t.setDate(t.getDate()-dow); t.setHours(0,0,0,0); return t; };
+  const startOfWeek = (d: Date) => { const t = new Date(d); const dow = (t.getDay() + 6) % 7; t.setDate(t.getDate() - dow); t.setHours(0, 0, 0, 0); return t; };
   const weekStart = startOfWeek(today);
   let weekCount = 0;
   for (let i = 0; i < 7; i++) {
-    const d = new Date(weekStart); d.setDate(weekStart.getDate()+i);
+    const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
     if (d > today) break;
     weekCount += visited(d);
   }
@@ -144,7 +157,7 @@ export function derivePresenceMetrics(map: Record<string, number>) {
 
 /** Auto-freeze + detect gap (2+) + streak cu patched */
 export function computeStreakAuto(map: Record<string, number>) {
-  const today = new Date(); today.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
 
   const patched = getPatchedSet();
   const visitedRaw = (d: Date) => (map[fmtDate(d)] ?? 0) > 0;

@@ -23,6 +23,17 @@ router.post("/badges/unlock", verifyToken, async (req, res) => {
     "INSERT INTO user_badges (user_id, badge_code, unlocked_at) VALUES ($1, $2, NOW())",
     [uid, badge_code]
   );
+
+  // [NEW] Award 5 bonus points
+  await pool.query(
+    "INSERT INTO user_points (user_id, points, updated_at) VALUES ($1, 5, NOW()) " +
+    "ON CONFLICT (user_id) DO UPDATE SET points = user_points.points + 5, updated_at = NOW()",
+    [uid]
+  );
+  await pool.query(
+    "INSERT INTO user_point_events (user_id, points_delta, reason) VALUES ($1, $2, $3)",
+    [uid, 5, `badge:${badge_code} `]
+  );
   res.json({ ok: true });
 });
 

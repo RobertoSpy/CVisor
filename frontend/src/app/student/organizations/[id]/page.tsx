@@ -10,18 +10,17 @@ export default function OrganizationProfilePage() {
 
   useEffect(() => {
     if (!id) return;
-    const token = localStorage.getItem("token");
-    fetch(`/api/organizations/users/${id}`, {
-      credentials: "include",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      }
-    })
-      .then(r => r.json())
-      .then(data => setProfile(data))
-      .finally(() => setLoading(false));
+    fetch(`/api/organizations/users/${id}`, { credentials: "include" })
+      .then(res => res.json())
+      .then(data => {
+        setProfile(data.profile || data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
   }, [id]);
-
   if (loading) return <div className="py-10 text-center text-primary font-semibold text-lg">Se încarcă profilul...</div>;
   if (!profile) return <div className="py-10 text-center text-red-500 font-semibold text-lg">Nu s-au găsit date de profil.</div>;
 

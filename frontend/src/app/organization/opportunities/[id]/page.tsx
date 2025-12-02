@@ -2,25 +2,23 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-
-// Poți pune orice icon din HeroIcons sau react-icons!
 import { FaMapMarkerAlt, FaCalendarAlt, FaUsers, FaMoneyBillWave, FaListUl, FaStar, FaPlay } from "react-icons/fa";
 
-export default function OpportunityDetailPage() {
+export default function OrganizationOpportunityDetailsPage() {
   const { id } = useParams();
   const [opp, setOpp] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/organizations/opportunities/${id}`, {
-      credentials: "include",
-      headers: {
-        "Authorization": `Bearer ${localStorage.getItem("token")}`,
-      }
-    })
+    if (!id) return;
+    fetch(`/api/opportunities/${id}`, { credentials: "include" })
       .then(res => res.json())
       .then(data => {
         setOpp(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
         setLoading(false);
       });
   }, [id]);
@@ -128,81 +126,81 @@ export default function OpportunityDetailPage() {
         </div>
 
         {/* Galerie */}
-       
-{opp.gallery && Array.isArray(opp.gallery) && opp.gallery.length > 0 && (
-  <div className="mb-8">
-    <h3 className="text-primary font-bold mb-3 flex items-center gap-2"><FaListUl /> Galerie</h3>
-    <div className="flex gap-2 flex-wrap">
-      {opp.gallery.map((url: string, i: number) => (
-        <img
-          key={url + i}
-          src={url}
-          alt={`galerie-full-${i}`}
-          className="w-32 h-32 object-cover rounded-lg shadow hover:scale-105 transition-all duration-200 border border-primary/20"
-        />
-      ))}
-    </div>
-  </div>
-)}
-{typeof opp.gallery === "string" && opp.gallery.length > 0 && (
-  <div className="mb-8">
-    <h3 className="text-primary font-bold mb-3 flex items-center gap-2"><FaListUl /> Galerie</h3>
-    <div className="flex gap-2 flex-wrap">
-      {opp.gallery.split(",").map((url: string, i: number) => (
-        <img
-          key={url.trim() + i}
-          src={url.trim()}
-          alt={`galerie-full-${i}`}
-          className="w-32 h-32 object-cover rounded-lg shadow hover:scale-105 transition-all duration-200 border border-primary/20"
-        />
-      ))}
-    </div>
-  </div>
-)}
+
+        {opp.gallery && Array.isArray(opp.gallery) && opp.gallery.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-primary font-bold mb-3 flex items-center gap-2"><FaListUl /> Galerie</h3>
+            <div className="flex gap-2 flex-wrap">
+              {opp.gallery.map((url: string, i: number) => (
+                <img
+                  key={url + i}
+                  src={url}
+                  alt={`galerie-full-${i}`}
+                  className="w-32 h-32 object-cover rounded-lg shadow hover:scale-105 transition-all duration-200 border border-primary/20"
+                />
+              ))}
+            </div>
+          </div>
+        )}
+        {typeof opp.gallery === "string" && opp.gallery.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-primary font-bold mb-3 flex items-center gap-2"><FaListUl /> Galerie</h3>
+            <div className="flex gap-2 flex-wrap">
+              {opp.gallery.split(",").map((url: string, i: number) => (
+                <img
+                  key={url.trim() + i}
+                  src={url.trim()}
+                  alt={`galerie-full-${i}`}
+                  className="w-32 h-32 object-cover rounded-lg shadow hover:scale-105 transition-all duration-200 border border-primary/20"
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Video promo */}
-       {opp.promo_video && (
-  <div className="mb-8">
-    <div className="font-bold mb-2 text-primary text-lg">Check this out</div>
-    <div className="rounded-xl overflow-hidden bg-black flex items-center justify-center aspect-video max-w-xl mx-auto">
-      <video
-        controls
-        src={opp.promo_video}
-        className="w-full h-full object-contain"
-        style={{ maxHeight: "400px", maxWidth: "100%" }}
-      >
-        Video promo
-      </video>
-    </div>
-  </div>
-)}
+        {opp.promo_video && (
+          <div className="mb-8">
+            <div className="font-bold mb-2 text-primary text-lg">Check this out</div>
+            <div className="rounded-xl overflow-hidden bg-black flex items-center justify-center aspect-video max-w-xl mx-auto">
+              <video
+                controls
+                src={opp.promo_video}
+                className="w-full h-full object-contain"
+                style={{ maxHeight: "400px", maxWidth: "100%" }}
+              >
+                Video promo
+              </video>
+            </div>
+          </div>
+        )}
 
-      {/* Call to Action */}
-<div className="text-center mt-12">
-  {opp.cta_url ? (
-    <a
-      href={opp.cta_url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-block bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-white font-bold px-8 py-3 rounded-2xl shadow-lg text-lg transition-all duration-200 hover:scale-105"
-    >
-      Aplică acum și descoperă oportunitatea!
-    </a>
-  ) : (
-    <button
-      className="bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-white font-bold px-8 py-3 rounded-2xl shadow-lg text-lg transition-all duration-200 hover:scale-105"
-      disabled
-      title="Momentan nu poți aplica direct"
-    >
-      Aplică acum și descoperă oportunitatea!
-    </button>
-  )}
-  <div className="mt-2 text-xs text-gray-500">
-    {opp.cta_url
-      ? "* Vei fi redirecționat către pagina oficială a organizației."
-      : "* Pentru mai multe detalii, contactează organizația."}
-  </div>
-</div>
+        {/* Call to Action */}
+        <div className="text-center mt-12">
+          {opp.cta_url ? (
+            <a
+              href={opp.cta_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-white font-bold px-8 py-3 rounded-2xl shadow-lg text-lg transition-all duration-200 hover:scale-105"
+            >
+              Aplică acum și descoperă oportunitatea!
+            </a>
+          ) : (
+            <button
+              className="bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-white font-bold px-8 py-3 rounded-2xl shadow-lg text-lg transition-all duration-200 hover:scale-105"
+              disabled
+              title="Momentan nu poți aplica direct"
+            >
+              Aplică acum și descoperă oportunitatea!
+            </button>
+          )}
+          <div className="mt-2 text-xs text-gray-500">
+            {opp.cta_url
+              ? "* Vei fi redirecționat către pagina oficială a organizației."
+              : "* Pentru mai multe detalii, contactează organizația."}
+          </div>
+        </div>
       </div>
     </div>
   );

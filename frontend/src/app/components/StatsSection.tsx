@@ -1,20 +1,19 @@
 "use client";
-import { FiStar, FiUserCheck, FiHelpCircle, FiSmile, FiUsers, FiBriefcase, FiHelpCircle as FiQuestion } from "react-icons/fi";
-
+import { FiStar, FiHelpCircle, FiSmile, FiUsers, FiBriefcase } from "react-icons/fi";
 
 const infoCards = [
   {
-    icon: <FiStar className="text-3xl text-primary" />,
+    icon: <FiStar className="text-4xl text-secondary" />,
     question: "Ce este CVISOR?",
     answer: (
       <>
-        <span className="font-bold text-primary">CVISOR</span> e ca un festival digital unde energia studenților și pasiunea pentru cunoaștere se întâlnesc!  
+        <span className="font-bold text-primary">CVISOR</span> e ca un festival digital unde energia studenților și pasiunea pentru cunoaștere se întâlnesc!
         Dacă toate asociațiile din oraș s-ar aduna pe o singură scenă, iar tu ai fi liber să alegi: dansezi la petreceri sau descoperi ceva nou la un workshop?
       </>
     ),
   },
   {
-    icon: <FiHelpCircle className="text-3xl text-blue-700" />,
+    icon: <FiHelpCircle className="text-4xl text-blue-500" />,
     question: "Ce tipuri de oportunități găsesc?",
     answer: (
       <>
@@ -24,16 +23,16 @@ const infoCards = [
     ),
   },
   {
-    icon: <FiSmile className="text-3xl text-pink-600" />,
+    icon: <FiSmile className="text-4xl text-pink-500" />,
     question: "Cum aleg unde merg?",
     answer: (
       <>
-        Nu vă mai limitați doar la petrecerile din cadrul facultății voastre! Acum aveți in fata<span className="font-bold text-blue-600">TOATE</span> petrecerile care se întâmplă în Iași, ca să alegeți unde vreți să mergeți.
+        Nu vă mai limitați doar la petrecerile din cadrul facultății voastre! Acum aveți in fata <span className="font-bold text-blue-600">TOATE</span> petrecerile care se întâmplă în Iași, ca să alegeți unde vreți să mergeți.
       </>
     ),
   },
   {
-    icon: <FiUsers className="text-3xl text-green-600" />,
+    icon: <FiUsers className="text-4xl text-green-500" />,
     question: "Ce e special la self-development?",
     answer: (
       <>
@@ -42,7 +41,7 @@ const infoCards = [
     ),
   },
   {
-    icon: <FiBriefcase className="text-3xl text-yellow-600" />,
+    icon: <FiBriefcase className="text-4xl text-yellow-500" />,
     question: "De ce să folosesc CVISOR?",
     answer: (
       <>
@@ -55,23 +54,26 @@ const infoCards = [
 
 export default function StatsSection() {
   return (
-    <section id="stats" className="w-full flex flex-col items-center justify-center gap-10">
-      {/* Info Cards - 2 coloane pe tabletă/deskop */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 w-full max-w-6xl">
+    <section id="stats" className="w-full py-20 bg-white flex flex-col items-center justify-center gap-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-6xl px-4">
         {infoCards.map((card, idx) => {
-          // Centrare ultimul card dacă e singur pe rând
           const isLastOdd = idx === infoCards.length - 1 && infoCards.length % 2 !== 0;
           return (
             <div
               key={idx}
-              className={`flex items-start gap-5 p-6 rounded-2xl shadow-lg hover:scale-105 transition bg-white cursor-pointer border-b-4 border-primary/30
-                ${isLastOdd ? "sm:col-span-2 sm:justify-self-center sm:max-w-xl" : ""}
+              className={`group relative p-8 rounded-3xl bg-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-gray-100 overflow-hidden
+                ${isLastOdd ? "md:col-span-2 md:justify-self-center md:max-w-2xl" : ""}
               `}
             >
-              <div>{card.icon}</div>
-              <div>
-                <div className="font-bold text-primary text-lg mb-2">{card.question}</div>
-                <div className="text-gray-700 text-md">{card.answer}</div>
+              <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-primary to-secondary group-hover:w-full group-hover:opacity-10 transition-all duration-500"></div>
+              <div className="flex items-start gap-6 relative z-10">
+                <div className="p-4 bg-gray-50 rounded-2xl group-hover:bg-white group-hover:scale-110 transition-all duration-300 shadow-sm">
+                  {card.icon}
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-primary text-xl mb-3 group-hover:text-blue-700 transition-colors">{card.question}</h3>
+                  <div className="text-gray-600 text-base leading-relaxed">{card.answer}</div>
+                </div>
               </div>
             </div>
           );

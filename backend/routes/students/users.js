@@ -52,7 +52,7 @@ router.get("/me", verifyToken, async (req, res) => {
       avatarDataUrl: prof.avatarUrl || "",
       skills: prof.skills || [],
       location: prof.location || "",
-       opportunityRefs: prof.opportunity_refs || [],
+      opportunityRefs: prof.opportunity_refs || [],
       education: edu.rows,
       experience: exp.rows,
       portfolioMedia: media.rows
@@ -73,7 +73,7 @@ router.put("/me", verifyToken, async (req, res) => {
     education = [], experience = [],
     portfolioMedia = [],
     location = "",
-   opportunityRefs = []
+    opportunityRefs = []
   } = body;
 
   const avatar = avatarUrl || avatarDataUrl || null;
@@ -95,7 +95,7 @@ router.put("/me", verifyToken, async (req, res) => {
          location=EXCLUDED.location,
         opportunity_refs=EXCLUDED.opportunity_refs,
          updated_at=now()`,
-         
+
       [uid, name || null, headline || null, bio || null, avatar, skills, social, location || null, JSON.stringify(opportunityRefs)]
     );
 
@@ -152,6 +152,24 @@ router.get("/all", verifyToken, async (req, res) => {
   }
 });
 
+// GET /api/users/basic
+router.get("/basic", verifyToken, async (req, res) => {
+  const uid = req.user.id;
+  try {
+    const result = await pool.query(
+      `SELECT id, email, role, full_name
+       FROM users
+       WHERE id=$1`, [uid]
+    );
+    if (!result.rows[0]) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json(result.rows[0]);
+  } catch (e) {
+    res.status(500).json({ message: "DB error", error: e.message });
+  }
+});
+
 // GET /api/users/:id
 router.get("/:id", verifyToken, async (req, res) => {
   const userId = req.params.id;
@@ -200,7 +218,7 @@ router.get("/:id", verifyToken, async (req, res) => {
       ...prof,
       skills: prof.skills || [],
       location: prof.location || "",
-       opportunityRefs: prof.opportunity_refs || [],
+      opportunityRefs: prof.opportunity_refs || [],
       education: edu.rows,
       experience: exp.rows,
       portfolioMedia: media.rows
@@ -212,22 +230,6 @@ router.get("/:id", verifyToken, async (req, res) => {
 
 
 
-// GET /api/users/basic
-router.get("/basic", verifyToken, async (req, res) => {
-  const uid = req.user.id;
-  try {
-    const result = await pool.query(
-      `SELECT id, email, role, full_name
-       FROM users
-       WHERE id=$1`, [uid]
-    );
-    if (!result.rows[0]) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    res.json(result.rows[0]);
-  } catch (e) {
-    res.status(500).json({ message: "DB error", error: e.message });
-  }
-});
+
 
 module.exports = router;

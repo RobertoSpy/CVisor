@@ -24,9 +24,27 @@ async function setUserVerified(email) {
   );
 }
 
+// [NEW] Set verification code for password reset
+async function setVerificationCode(email, code) {
+  return pool.query(
+    "UPDATE users SET email_verification_code = $1 WHERE email = $2",
+    [code, email]
+  );
+}
+
+// [NEW] Update password
+async function updatePassword(email, hashedPassword) {
+  return pool.query(
+    "UPDATE users SET password = $1, email_verification_code = NULL WHERE email = $2",
+    [hashedPassword, email]
+  );
+}
+
 module.exports = {
   getUserByEmail,
   saveUser,
   pool,
   setUserVerified,
+  setVerificationCode,
+  updatePassword
 };

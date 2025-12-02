@@ -1,9 +1,9 @@
 
 export type Opportunity = {
-  id: number;
+  id: string;
   title: string;
   deadline: string;
-   type: "party" | "self-development";
+  type: "party" | "self-development";
   skills: string[];
   available_spots: number;
   price: number;
@@ -18,4 +18,6 @@ export type Opportunity = {
   reviews?: string;
   description: string;
   cta_url: string;
+  organization_name?: string;
+  orgName?: string;
 };

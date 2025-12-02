@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 type OrgBar = { label: string; value: number };
 
 export default function useStudentAnalytics(
- 
   trigger = true
 ) {
   const STUDENT_ANALYTICS = "/api/students/stats";
@@ -16,12 +15,10 @@ export default function useStudentAnalytics(
   useEffect(() => {
     if (!trigger) return;
     let ignore = false;
-    const token = localStorage.getItem("token") || "";
-    const auth = { Authorization: `Bearer ${token}` };
 
     (async () => {
       try {
-        const pres = await fetch(`${STUDENT_ANALYTICS}/presence?days=35`, { credentials: "include", headers: auth });
+        const pres = await fetch(`${STUDENT_ANALYTICS}/presence?days=35`, { credentials: "include" });
         if (pres.ok) {
           const payload = await pres.json();
           // dacă backendul întoarce { map, createdAt }
@@ -35,7 +32,7 @@ export default function useStudentAnalytics(
             }
           }
         }
-        const org = await fetch(`${ORG_ANALYTICS}/posts?weeks=8`, { credentials: "include", headers: auth });
+        const org = await fetch(`${ORG_ANALYTICS}/posts?weeks=8`, { credentials: "include" });
         if (org.ok) {
           const payload: OrgBar[] = await org.json();
           if (!ignore) setOrgBars(payload || []);

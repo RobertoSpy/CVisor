@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
@@ -41,7 +42,6 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      // Înregistrează userul și trimite codul pe email
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -51,7 +51,7 @@ export default function RegisterPage() {
       if (!res.ok) {
         setError(data.message || "Eroare la înregistrare");
       } else {
-        setSuccess("Cont creat! Verifică emailul pentru codul de confirmare.");
+        setSuccess("Înregistrare reușită! Verifică emailul pentru codul de validare.");
         setShowCodeInput(true);
       }
     } catch (err: any) {
@@ -130,16 +130,8 @@ export default function RegisterPage() {
             onChange={e => setConfirmPassword(e.target.value)}
             required
           />
-          <label className="font-semibold text-primary">Rol:</label>
-          <select
-            value={role}
-            onChange={e => setRole(e.target.value)}
-            className="border p-2 rounded w-full"
-          >
-            <option value="admin">Admin</option>
-            <option value="student">Student</option>
-            <option value="organization">Organization</option>
-          </select>
+          {/* Role selection removed - defaulting to student */}
+
           <button
             type="submit"
             className="bg-primary text-white py-2 rounded font-semibold hover:bg-secondary transition"

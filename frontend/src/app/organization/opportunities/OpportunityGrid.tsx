@@ -5,10 +5,11 @@ type Props = {
   opportunities: Opportunity[];
   loading: boolean;
   onEdit: (opp: Opportunity) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
+  readOnly?: boolean;
 };
 
-export default function OpportunityGrid({ opportunities, loading, onEdit, onDelete }: Props) {
+export default function OpportunityGrid({ opportunities, loading, onEdit, onDelete, readOnly }: Props) {
   if (loading) {
     return (
       <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -39,15 +40,16 @@ export default function OpportunityGrid({ opportunities, loading, onEdit, onDele
   }
 
   return (
-  <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-  {opportunities.map((opp, idx) => (
-    <OpportunityCard
-      key={opp.id ?? `opp-${idx}`}
-      opportunity={opp}
-      onEdit={onEdit}
-      onDelete={onDelete}
-    />
-  ))}
-</ul>
+    <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {opportunities.map((opp, idx) => (
+        <OpportunityCard
+          key={opp.id ?? `opp-${idx}`}
+          opportunity={opp}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          readOnly={readOnly}
+        />
+      ))}
+    </ul>
   );
 }

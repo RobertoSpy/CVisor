@@ -4,10 +4,11 @@ import { Opportunity } from "./types";
 type Props = {
   opportunity: Opportunity;
   onEdit: (opp: Opportunity) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
+  readOnly?: boolean;
 };
 
-export default function OpportunityCard({ opportunity: opp, onEdit, onDelete }: Props) {
+export default function OpportunityCard({ opportunity: opp, onEdit, onDelete, readOnly }: Props) {
   // Gradient și mesaje pentru fallback
   const fallbackBanner = () => {
     if (opp.type === "party") {
@@ -36,10 +37,7 @@ export default function OpportunityCard({ opportunity: opp, onEdit, onDelete }: 
   };
 
   return (
-    <li
-      key={opp.id}
-      className="bg-card rounded-2xl p-5 ring-1 ring-black/5 shadow flex flex-col justify-between relative overflow-visible"
-    >
+    <li className="bg-card rounded-2xl p-5 ring-1 ring-black/5 shadow flex flex-col justify-between relative overflow-visible">
       {/* Banner sau fallback */}
       {opp.banner_image ? (
         <div className="w-full flex justify-center mb-4">
@@ -54,40 +52,51 @@ export default function OpportunityCard({ opportunity: opp, onEdit, onDelete }: 
         fallbackBanner()
       )}
 
-      <h3 className="text-lg font-semibold tracking-tight mt-0.5 text-primary text-center">
-        <Link href={`/organization/opportunities/${opp.id}`}>{opp.title}</Link>
-      </h3>
-      <div className="text-xs mt-1 text-center">
-        Tip: <span className="font-medium text-secondary">{opp.type === "party" ? "Party" : "Self-development"}</span>
+      {/* Titlu & descriere */}
+      <div className="text-center">
+        <h3 className="text-lg font-bold text-gray-900 mb-2 hover:text-blue-600 transition-colors">
+          <Link href={readOnly ? `/organization/explore/${opp.id}` : `/organization/opportunities/${opp.id}`}>
+            {opp.title}
+          </Link>
+        </h3>
+        {opp.organization_name && (
+          <div className="text-sm font-bold text-blue-600 mb-2">
+            {opp.organization_name}
+          </div>
+        )}
+        {opp.description && <p className="text-sm text-gray-600 mb-3 line-clamp-2">{opp.description}</p>}
       </div>
-      <div className="text-xs mt-1 text-gray-600 text-center">
-        Deadline: {opp.deadline ? new Date(opp.deadline).toLocaleDateString() : '-'}
-      </div>
+
+      {/* Skills */}
       <div className="flex flex-wrap gap-1.5 mt-3 justify-center">
         {Array.isArray(opp.skills) &&
           opp.skills.map((s, i) => (
             <span
-              key={s + i}
+              key={`${s}-${i}`}
               className="text-xs px-2 py-1 rounded-md bg-primary/10 text-primary font-medium"
             >
               {s}
             </span>
           ))}
       </div>
-      <div className="mt-4 flex gap-2 justify-center">
-        <button
-          className="px-3 py-1 rounded-lg bg-accent text-white hover:bg-primary transition shadow text-sm"
-          onClick={() => onEdit(opp)}
-        >
-          Editează
-        </button>
-        <button
-          className="px-3 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 transition shadow text-sm"
-          onClick={() => onDelete(opp.id)}
-        >
-          Șterge
-        </button>
-      </div>
+
+      {/* Acțiuni */}
+      {!readOnly && (
+        <div className="mt-4 flex gap-2 justify-center">
+          <button
+            className="px-3 py-1 rounded-lg bg-accent text-white hover:bg-primary transition shadow text-sm"
+            onClick={() => onEdit(opp)}
+          >
+            Editează
+          </button>
+          <button
+            className="px-3 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 transition shadow text-sm"
+            onClick={() => onDelete(opp.id)}
+          >
+            Șterge
+          </button>
+        </div>
+      )}
     </li>
   );
 }

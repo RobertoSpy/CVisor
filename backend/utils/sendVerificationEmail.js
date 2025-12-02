@@ -22,4 +22,16 @@ async function sendVerificationEmail(to, code) {
   });
 }
 
-module.exports = sendVerificationEmail;
+/**
+ * [NEW] Trimite email cu codul de resetare a parolei.
+ */
+async function sendResetEmail(to, code) {
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to,
+    subject: "Resetare Parolă CVISOR",
+    text: `Salut! Ai solicitat resetarea parolei.\n\nCodul tău de verificare este: ${code}\n\nDacă nu ai solicitat acest lucru, ignoră acest email.`,
+  });
+}
+
+module.exports = { sendVerificationEmail, sendResetEmail };

@@ -9,21 +9,25 @@ type OrganizationProfile = {
   headline?: string;
 };
 
-export default function OrganizationListPage() {
+export default function StudentOrganizationsPage() {
   const [orgs, setOrgs] = useState<OrganizationProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    fetch("/api/organizations/users/all", {
-      credentials: "include",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      }
-    })
-      .then(r => r.json())
-      .then(data => setOrgs(data.organizations ?? data))
-      .finally(() => setLoading(false));
+    fetch("/api/organizations/users/all", { credentials: "include" })
+      .then(res => res.json())
+      .then(data => {
+        if (data.organizations && Array.isArray(data.organizations)) {
+          setOrgs(data.organizations);
+        } else if (Array.isArray(data)) {
+          setOrgs(data);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
   }, []);
 
   if (loading) return <div className="p-8 text-center text-lg">Se încarcă organizațiile...</div>;

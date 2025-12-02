@@ -1,22 +1,20 @@
-import Link from "next/link";
-
-import Navbar from "./components/Navbar"
-import HeroSection from "./components/HeroSection"
-import VideoGallery from "./components/VideoGallery"
-import Testimonials from "./components/Testimonials"
-import StatsSection from "./components/StatsSection"
-import Footer from "./components/Footer"
+"use client";
+import Navbar from "./components/Navbar";
+import HeroSection from "./components/HeroSection";
+import VideoGallery from "./components/VideoGallery";
+import Testimonials from "./components/Testimonials";
+import StatsSection from "./components/StatsSection";
+import Footer from "./components/Footer";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-sm via-blue-300 to-pink-200 px-4 flex flex-col pb-0">
+    <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
-      <main className="flex-1 flex flex-col gap-8">
+      <main className="flex-1 w-full">
         <HeroSection />
         <StatsSection />
         <Testimonials />
         <VideoGallery />
-        
       </main>
       <Footer />
     </div>

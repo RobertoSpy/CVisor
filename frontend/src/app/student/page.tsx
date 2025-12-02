@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
+import confetti from "canvas-confetti";
 
 import Stat from "./components/dashboard/Stat";
 import GentleBanner from "./components/dashboard/GentleBanner";
@@ -11,9 +13,7 @@ import ActivityHeatmap from "./components/charts/ActivityHeatmap";
 import OrgPostsBar from "./components/charts/OrgPostsBar";
 import StreakHeroCard from "./components/streak/StreakHeroCard";
 
-
-
-import useStudentAnalytics from "./hooks/useStudentAnalytics";
+import useStudentData from "./hooks/useStudentData"; // [NEW] SWR Hook
 import {
   BADGES,
   STREAK_MILESTONES,
@@ -25,8 +25,6 @@ import {
   LS_KEYS,
 } from "./lib/streak";
 
-
-
 export default function StudentHome() {
 
   // ===== local state ====
@@ -34,63 +32,88 @@ export default function StudentHome() {
   const [lastFreezeUsed, setLastFreezeUsed] = useState<string | null>(null);
   const [hasLoggedPageview, setHasLoggedPageview] = useState(false);
   const [lsTick, setLsTick] = useState(0); // forțează re-calc după patch/repair
-const { heatmapData, orgBars, createdAt } = useStudentAnalytics(hasLoggedPageview);
-const [lastRepairUsed, setLastRepairUsed] = useState<string | null>(null);
 
-const filteredHeatmap = useMemo(() => {
-  if (!createdAt) return heatmapData;
-  const cDate = new Date(createdAt);
-  return Object.fromEntries(
-    Object.entries(heatmapData).filter(
-      ([day, _]) => new Date(day) >= cDate
-    )
-  );
-}, [heatmapData, createdAt]);
+  // [FIX] Use SWR Hook instead of manual fetch
+  const {
+    points,
+    badges,
+    heatmapData,
+    orgBars,
+    createdAt,
+    mutatePoints,
+    mutateBadges,
+    mutatePresence
+  } = useStudentData();
 
-useEffect(() => {
-  if (typeof window === "undefined") return;
-  setLastRepairUsed(localStorage.getItem(LS_KEYS.lastRepairUsed));
-}, []);
+  const [lastRepairUsed, setLastRepairUsed] = useState<string | null>(null);
+
+  const filteredHeatmap = useMemo(() => {
+    if (!createdAt) return heatmapData;
+    const cDate = new Date(createdAt);
+    return Object.fromEntries(
+      Object.entries(heatmapData).filter(
+        ([day, _]) => new Date(day) >= cDate
+      )
+    );
+  }, [heatmapData, createdAt]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setLastRepairUsed(localStorage.getItem(LS_KEYS.lastRepairUsed));
+  }, []);
 
   // ===== calcule =====
-const presence = useMemo(() => computeStreakAuto(filteredHeatmap), [filteredHeatmap, lsTick]);
-const metrics = useMemo(() => derivePresenceMetrics(filteredHeatmap), [filteredHeatmap, lsTick]);
-const raw = useMemo(() => deriveRawPresence(filteredHeatmap), [filteredHeatmap]);
+  const presence = useMemo(() => computeStreakAuto(filteredHeatmap), [filteredHeatmap, lsTick]);
+  const metrics = useMemo(() => derivePresenceMetrics(filteredHeatmap), [filteredHeatmap, lsTick]);
+  const raw = useMemo(() => deriveRawPresence(filteredHeatmap), [filteredHeatmap]);
 
-
-  const displayStreak = presence.currentStreak; // include auto-patch
+  const displayStreak = presence.currentStreak;
   const nextMilestone = useMemo(() => nextMilestoneFor(displayStreak), [displayStreak]);
   const streakGoalForUI = nextMilestone ?? 3;
   const WEEK_GOAL = 5;
 
-
-useEffect(() => {
-  fetch("/api/students/stats/pageview", {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${localStorage.getItem("token")}`
-    },
-  })
-    .then(() => setHasLoggedPageview(true))
-    .catch(() => setHasLoggedPageview(true));
-}, []);
-
-
-
-  // milestone modal (o singură dată per valoare)
   useEffect(() => {
-    if (STREAK_MILESTONES.includes(displayStreak as any)) {
-      const key = `streak:celebrated:${displayStreak}`;
-      if (!localStorage.getItem(key)) {
-        setCelebrate(displayStreak);
-        localStorage.setItem(key, "1");
-      }
+    if (presence.usedAutoFreezeNow && typeof window !== "undefined") {
+      setLastFreezeUsed(localStorage.getItem(LS_KEYS.lastFreezeUsed));
+      setLsTick((t) => t + 1);
     }
-  }, [displayStreak]);
+  }, [presence.usedAutoFreezeNow]);
 
+  // [NEW] Daily Points & Pageview
+  const pageviewLogged = React.useRef(false);
+  useEffect(() => {
+    if (pageviewLogged.current) return;
+    pageviewLogged.current = true;
 
+    fetch("/api/students/stats/pageview", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then(r => r.json())
+      .then(d => {
+        setHasLoggedPageview(true);
+        if (d.points_awarded) {
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+          });
+          toast.success("Ai primit 5 puncte pentru login-ul de azi! 💎", {
+            duration: 5000,
+            icon: '💎',
+          });
+          // Refresh points via SWR
+          mutatePoints();
+        }
+      })
+      .catch((e) => {
+        console.error(e);
+        setHasLoggedPageview(true);
+      });
+  }, []);
 
   // === REQUEST pentru puncte bonus la milestone ===
   useEffect(() => {
@@ -101,57 +124,17 @@ useEffect(() => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
         },
         credentials: "include",
-        body: JSON.stringify({ badge_code: `streak_${celebrate}` }) // sau codul real al badge-ului
+        body: JSON.stringify({ badge_code: `streak_${celebrate}` })
       });
     }
   }, [celebrate]);
 
-  // citește & actualizează info freeze/repair
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setLastFreezeUsed(localStorage.getItem(LS_KEYS.lastFreezeUsed));
-  }, []);
-  useEffect(() => {
-    if (presence.usedAutoFreezeNow && typeof window !== "undefined") {
-      setLastFreezeUsed(localStorage.getItem(LS_KEYS.lastFreezeUsed));
-      setLsTick((t) => t + 1);
-    }
-  }, [presence.usedAutoFreezeNow]);
-
-  // ====== POINTS AND BADGES ======
-// ====== POINTS AND BADGES ======
-const [points, setPoints] = useState(0);
-const [badges, setBadges] = useState<string[]>([]);
-
-useEffect(() => {
-  
-  const token = localStorage.getItem("token");
-  if (!token) return;
-
-  fetch("/api/students/points", {
-    credentials: 'include',
-    headers: {
-      "Authorization": `Bearer ${token}`,
-    }
-  })
-    .then(r => r.json())
-    .then(d => setPoints(d.points));
-
-  fetch("/api/students/badges", {
-    credentials: 'include',
-    headers: {
-      "Authorization": `Bearer ${token}`,
-    }
-  })
-    .then(r => r.json())
-    .then(d => setBadges(Array.isArray(d.badges) ? d.badges : []))
-    .catch(() => setBadges([]));
-}, []);
   // ====== BADGE AUTO-UNLOCK LOGIC ======
   useEffect(() => {
+    if (displayStreak === 0) return;
+
     BADGES.forEach(badge => {
       if (
         displayStreak >= badge.streak &&
@@ -159,56 +142,76 @@ useEffect(() => {
       ) {
         fetch("/api/students/badges/unlock", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
+          headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({ badge_code: badge.code })
-        }).then(() => {
-          // Refetch badges list to refresh UI
-          fetch("/api/students/badges", { 
-            credentials: 'include', 
-            headers: {
-    "Authorization": `Bearer ${localStorage.getItem("token")}`,
-  }
-           })
-            .then(r => r.json())
-            .then(d => setBadges(d.badges));
-        });
+        })
+          .then(r => r.json())
+          .then(d => {
+            if (d.ok) {
+              // Success!
+              confetti({
+                particleCount: 150,
+                spread: 100,
+                origin: { y: 0.6 },
+                colors: ['#FFD700', '#FFA500'] // Gold colors
+              });
+              toast.success(`Felicitări! Ai deblocat badge-ul "${badge.label}" și ai primit 5 puncte! 🏅`, {
+                duration: 6000,
+                icon: '🏆',
+              });
+              // Refresh via SWR
+              mutateBadges();
+              mutatePoints();
+            }
+          })
+          .catch(console.error);
       }
     });
   }, [displayStreak, badges]);
 
   const handleRepair = () => {
-  if (points < 20) {
-    alert("Nu ai suficiente puncte pentru repair!");
-    return;
-  }
-  fetch("/api/students/points/add", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${localStorage.getItem("token")}`
-    },
-    body: JSON.stringify({
-      points_delta: -20,
-      reason: "repair"
-    })
-  })
-  .then(r => r.json())
-  .then(d => {
-    setPoints(d.points); // actualizează punctele local
-    repairGap(presence.gapInfo, 20); // marchează gap-ul ca patch-uit
-    setLsTick(t => t + 1);
-  });
-};
+    if (points < 20) {
+      toast.error("Nu ai suficiente puncte pentru repair!");
+      return;
+    }
 
-// Găsește badge-ul cu streak maxim pe care îl deține userul
-const bestBadge = useMemo(() => {
-  if (!Array.isArray(badges) || badges.length === 0) return null;
-  // Caută badge-ul cu streak maxim deținut (din BADGES, ca să iei emoji/label corect)
-  const userBadges = BADGES.filter(b => badges.includes(b.code));
-  if (userBadges.length === 0) return null;
-  return userBadges.reduce((acc, b) => (b.streak > acc.streak ? b : acc), userBadges[0]);
-}, [badges]);
+    if (!presence.gapInfo) return;
+    const dateToRepair = presence.gapInfo.start;
+
+    fetch("/api/students/points/add", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        points_delta: -20,
+        reason: "repair",
+        repaired_date: dateToRepair
+      })
+    })
+      .then(r => r.json())
+      .then(d => {
+        // Refresh via SWR
+        mutatePoints();
+        mutatePresence();
+
+        repairGap(presence.gapInfo, 20); // marchează gap-ul ca patch-uit local (visual feedback)
+        setLsTick(t => t + 1);
+        toast.success("Streak reparat cu succes! 🛠️");
+      })
+      .catch(() => toast.error("Eroare la reparare"));
+  };
+
+  // Găsește badge-ul cu streak maxim pe care îl deține userul
+  const bestBadge = useMemo(() => {
+    if (!Array.isArray(badges) || badges.length === 0) return null;
+    // Caută badge-ul cu streak maxim deținut (din BADGES, ca să iei emoji/label corect)
+    const userBadges = BADGES.filter(b => badges.includes(b.code));
+    if (userBadges.length === 0) return null;
+    return userBadges.reduce((acc, b) => (b.streak > acc.streak ? b : acc), userBadges[0]);
+  }, [badges]);
 
 
   return (
@@ -217,22 +220,20 @@ const bestBadge = useMemo(() => {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
         <Stat title="Puncte" value={points} />
         <Stat title="Badge-uri" value={Array.isArray(badges) ? badges.length : 0} />
- <Stat 
-  title="Badge-ul tău actual"
-  value={
-    bestBadge
-      ? `${bestBadge.label} ${bestBadge.emoji}`
-      : "Niciun badge de streak deblocat"
-  }
-/>
-     <Link
-  href="/student/map"
-  className="inline-flex items-center gap-2 bg-emerald-200 hover:bg-emerald-400 px-4 py-2 rounded transition"
->
-  🗺️ Mapa progres
-</Link>
-          
-        
+        <Stat
+          title="Badge-ul tău actual"
+          value={
+            bestBadge
+              ? `${bestBadge.label} ${bestBadge.emoji}`
+              : "Niciun badge de streak deblocat"
+          }
+        />
+        <Link
+          href="/student/map"
+          className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-900 to-blue-500 text-white hover:opacity-90 px-4 py-2 rounded transition shadow-md"
+        >
+          🗺️ Mapa progres
+        </Link>
       </div>
 
       {/* gamification row */}
@@ -260,20 +261,20 @@ const bestBadge = useMemo(() => {
             <GentleBanner>
               Ai avut o pauză de <b>{presence.gapInfo.length}</b> zile ({presence.gapInfo.start} → {presence.gapInfo.end}).{" "}
               Poți repara streakul:
-            <button
-  onClick={handleRepair}
-  className="ml-2 px-2 py-1 rounded-md bg-amber-600 text-white"
->
-  Repară pentru 20 puncte
-</button>
+              <button
+                onClick={handleRepair}
+                className="ml-2 px-2 py-1 rounded-md bg-amber-600 text-white hover:bg-amber-700 transition"
+              >
+                Repară pentru 20 puncte
+              </button>
             </GentleBanner>
           )}
 
-        <div className="text-[11px] text-gray-500">
-  Ultimul auto-freeze: {lastFreezeUsed ?? "—"}
-  <span className="text-gray-400"> • </span>
-  Ultimul repair: {lastRepairUsed ?? "—"}
-</div>
+          <div className="text-[11px] text-gray-500">
+            Ultimul auto-freeze: {lastFreezeUsed ?? "—"}
+            <span className="text-gray-400"> • </span>
+            Ultimul repair: {lastRepairUsed ?? "—"}
+          </div>
         </div>
 
         {/* Ținta săptămânală și activitatea pe 14 zile — bazate pe RAW */}
@@ -287,17 +288,89 @@ const bestBadge = useMemo(() => {
         <OrgPostsBar data={orgBars} />
       </div>
 
-      {/* recomandate */}
-      <section className="bg-card rounded-2xl p-6 ring-1 ring-black/5 shadow">
-        <h2 className="text-lg font-semibold tracking-tight mb-2">Oportunități recomandate</h2>
-        <p className="text-sm text-gray-600 mb-4">Vezi lista completă și aplică rapid.</p>
-        <Link
-          href="/student/opportunities"
-          className="inline-flex items-center gap-2 bg-secondary text-white px-4 py-2 rounded-lg hover:bg-accent transition shadow"
-        >
-          Vezi oportunități <span>→</span>
-        </Link>
-      </section>
+      {/* oportunități de azi */}
+      <TodaysOpportunities />
     </div>
+  );
+}
+
+function TodaysOpportunities() {
+  const [opps, setOpps] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/opportunities?period=today", { credentials: "include" })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setOpps(data.slice(0, 5)); // Top 5
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="p-4 text-center text-gray-500">Se încarcă oportunitățile de azi...</div>;
+
+  if (opps.length === 0) {
+    return (
+      <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        <h2 className="text-lg font-bold text-gray-800 mb-2">Oportunități noi astăzi</h2>
+        <p className="text-gray-500 text-sm">Nu au fost postate oportunități noi astăzi. Revino mâine!</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center justify-between px-1">
+        <h2 className="text-xl font-bold text-gray-800">🔥 Oportunități postate azi</h2>
+        <Link href="/student/opportunities" className="text-sm text-primary font-semibold hover:underline">
+          Vezi toate
+        </Link>
+      </div>
+
+      <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+        {opps.map((opp) => (
+          <Link
+            key={opp.id}
+            href={`/student/opportunities/${opp.id}`}
+            className="min-w-[280px] md:min-w-[320px] snap-center bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group"
+          >
+            <div className="h-32 bg-gray-200 relative">
+              {opp.banner_image ? (
+                <img src={opp.banner_image} alt={opp.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
+                  No Image
+                </div>
+              )}
+              <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-primary shadow-sm">
+                {opp.type}
+              </div>
+            </div>
+            <div className="p-4">
+              <h3 className="font-bold text-gray-900 line-clamp-1 group-hover:text-primary transition">{opp.title}</h3>
+              <p className="text-sm text-gray-500 mb-3">{opp.orgName}</p>
+
+              <div className="flex flex-wrap gap-1 mb-3">
+                {(opp.skills || []).slice(0, 2).map((skill: string) => (
+                  <span key={skill} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                    {skill}
+                  </span>
+                ))}
+                {(opp.skills || []).length > 2 && (
+                  <span className="text-[10px] bg-gray-50 text-gray-400 px-2 py-1 rounded-full">
+                    +{opp.skills.length - 2}
+                  </span>
+                )}
+              </div>
+
+              <div className="text-xs text-gray-400">
+                Deadline: {new Date(opp.deadline).toLocaleDateString("ro-RO")}
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }

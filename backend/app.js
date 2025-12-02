@@ -2,13 +2,17 @@ const express = require('express');
 const cors = require('cors');
 const { pool } = require('./db');
 require('dotenv').config();
-const path = require("path"); 
+const path = require("path");
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const PORT = process.env.PORT;
 
-// Middleware
-/*app.use(cors({
+app.use(express.json());
+app.use(cookieParser());
+
+// Middleware CORS
+app.use(cors({
   origin: [
     "http://localhost:3000", // pentru dezvoltare
     "https://cvisor.com",    // pentru producție
@@ -16,22 +20,12 @@ const PORT = process.env.PORT;
   ],
   credentials: true
 }));
-*/
-
-app.use(express.json());
-
-// PostgreSQL connection pool este importat din db.js
-
-// Basic test route
-app.get('/', (req, res) => {
-  res.send('Backend is working!');
-});
 
 // API: Hello (reads current time from Postgres)
 app.get('/hello', async (req, res) => {
   try {
     const result = await pool.query('SELECT NOW() as time');
-    res.json({ 
+    res.json({
       message: 'Hello from backend!',
       time: result.rows[0].time,
     });
@@ -44,8 +38,8 @@ const authRoutes = require("./routes/auth");
 app.use("/api/auth", authRoutes);
 
 
-const usersRoutes = require("./routes/students/users");  
-app.use("/api/users", usersRoutes);       
+const usersRoutes = require("./routes/students/users");
+app.use("/api/users", usersRoutes);
 
 const oppRoutes = require("./routes/students/opportunities");
 app.use("/api/opportunities", oppRoutes);
@@ -99,7 +93,7 @@ app.use("/api/students/stats", studentAnalytics);
 
 
 
-app.use("/api/analytics/student", studentAnalytics); 
+app.use("/api/analytics/student", studentAnalytics);
 
 const orgAnalytics = require("./routes/organizations/analytics");
 app.use("/api/analytics/orgs", orgAnalytics); // ← Și asta pentru orgs

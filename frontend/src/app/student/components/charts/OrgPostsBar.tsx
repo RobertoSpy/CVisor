@@ -19,17 +19,19 @@ export default function OrgPostsBar({
     text: "",
   });
 
-  const showEvery = useMemo(() => {
-    if (data.length <= 6) return 1;
-    return Math.ceil(data.length / 6);
-  }, [data.length]);
+  const safeData = Array.isArray(data) ? data : [];
 
-  const max = useMemo(() => Math.max(1, ...data.map((d) => d.value)), [data]);
+  const showEvery = useMemo(() => {
+    if (safeData.length <= 6) return 1;
+    return Math.ceil(safeData.length / 6);
+  }, [safeData.length]);
+
+  const max = useMemo(() => Math.max(1, ...safeData.map((d) => d.value)), [safeData]);
   const avg = useMemo(() => {
-    if (!data.length) return 0;
-    const v = data.reduce((s, d) => s + d.value, 0) / data.length;
+    if (!safeData.length) return 0;
+    const v = safeData.reduce((s, d) => s + d.value, 0) / safeData.length;
     return Math.round(v * 10) / 10;
-  }, [data]);
+  }, [safeData]);
 
   const barW = 26;
   const gap = 12;
@@ -38,7 +40,7 @@ export default function OrgPostsBar({
   const LABEL_PAD = 32;
   const TOP_PAD = 18;
   const innerH = height - (LABEL_PAD + TOP_PAD);
-  const width = LEFT_PAD + RIGHT_PAD + data.length * barW + (data.length - 1) * gap;
+  const width = LEFT_PAD + RIGHT_PAD + safeData.length * barW + (safeData.length - 1) * gap;
 
   const avgH = Math.round((avg / max) * innerH);
   const ticks = [0.25, 0.5, 0.75];
@@ -50,7 +52,7 @@ export default function OrgPostsBar({
     >
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
-        <span className="text-xs text-gray-500">ultimele {data.length} săpt.</span>
+        <span className="text-xs text-gray-500">ultimele {safeData.length} săpt.</span>
       </div>
 
       <div className="w-full overflow-x-auto" style={{ height }}>
@@ -80,12 +82,12 @@ export default function OrgPostsBar({
             avg {avg}
           </text>
 
-          {data.map((d, i) => {
+          {safeData.map((d, i) => {
             const h = Math.round((d.value / max) * innerH);
             const x = LEFT_PAD + i * (barW + gap);
             const y = height - LABEL_PAD - h;
 
-            const showLabel = i % showEvery === 0 || i === data.length - 1;
+            const showLabel = i % showEvery === 0 || i === safeData.length - 1;
             const label = String(d.label).replace("Săpt.", "S").replace(/\s+/g, " ").trim();
 
             return (
@@ -115,7 +117,7 @@ export default function OrgPostsBar({
         </svg>
       </div>
 
-      {isAllZeroBars(data) && (
+      {isAllZeroBars(safeData) && (
         <div className="absolute inset-0 rounded-2xl bg-white/70 flex items-center justify-center">
           <div className="text-center">
             <div className="text-base font-semibold">Încă nu sunt postări</div>

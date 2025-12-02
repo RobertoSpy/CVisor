@@ -1,4 +1,5 @@
 import { Opportunity } from "../types";
+import toast from "react-hot-toast";
 
 // Toate funcțiile de handler pentru OpportunitiesPage
 export function useOpportunityHandlers({
@@ -39,7 +40,7 @@ export function useOpportunityHandlers({
   editId: any,
 }) {
 
- 
+
   // Pentru banner - adăugare
   function handleBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -50,14 +51,11 @@ export function useOpportunityHandlers({
     fetch("/api/upload", {
       method: "POST",
       credentials: "include",
-      headers: {
-        "Authorization": `Bearer ${localStorage.getItem("token")}`,
-      },
       body: data,
     })
       .then((res) => res.json())
       .then((data) => {
-        setForm((f) => ({ ...f, banner_image: data.url }));
+        setForm((f: any) => ({ ...f, banner_image: data.url }));
       });
   }
 
@@ -71,14 +69,11 @@ export function useOpportunityHandlers({
     fetch("/api/upload", {
       method: "POST",
       credentials: "include",
-      headers: {
-        "Authorization": `Bearer ${localStorage.getItem("token")}`,
-      },
       body: data,
     })
       .then((res) => res.json())
       .then((data) => {
-        setForm((f) => ({ ...f, promo_video: data.url }));
+        setForm((f: any) => ({ ...f, promo_video: data.url }));
       });
   }
 
@@ -92,9 +87,6 @@ export function useOpportunityHandlers({
         return fetch("/api/upload", {
           method: "POST",
           credentials: "include",
-          headers: {
-            "Authorization": `Bearer ${localStorage.getItem("token")}`,
-          },
           body: data,
         })
           .then((res) => res.json())
@@ -109,45 +101,48 @@ export function useOpportunityHandlers({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    function buildPayload(form: any) {
-      return {
-        ...form,
-        skills: form.skills
-          ? form.skills.split(",").map((s: string) => s.trim()).filter((s: string) => s)
-          : [],
-        tags: form.tags
-          ? form.tags.split(",").map((t: string) => t.trim()).filter((t: string) => t)
-          : [],
-        gallery: form.gallery
-          ? Array.isArray(form.gallery)
-            ? form.gallery
-            : typeof form.gallery === "string"
-              ? form.gallery.split(",").map((u: string) => u.trim()).filter((u: string) => u)
-              : []
-          : [],
-        agenda: form.agenda && typeof form.agenda === "string" ? { text: form.agenda } : form.agenda || {},
-        faq: form.faq && typeof form.faq === "string" ? [{ text: form.faq }] : form.faq || [],
-        reviews: form.reviews && typeof form.reviews === "string" ? [{ text: form.reviews }] : form.reviews || [],
-        participants: [],
-        price: form.price ? parseInt(form.price) : 0,
-        available_spots: form.available_spots ? parseInt(form.available_spots) : 1,
-      };
-    }
+    const payload = {
+      ...form,
+      skills: form.skills
+        ? form.skills.split(",").map((s: string) => s.trim()).filter((s: string) => s)
+        : [],
+      tags: form.tags
+        ? form.tags.split(",").map((t: string) => t.trim()).filter((t: string) => t)
+        : [],
+      gallery: form.gallery
+        ? Array.isArray(form.gallery)
+          ? form.gallery
+          : typeof form.gallery === "string"
+            ? form.gallery.split(",").map((u: string) => u.trim()).filter((u: string) => u)
+            : []
+        : [],
+      agenda: form.agenda && typeof form.agenda === "string" ? { text: form.agenda } : form.agenda || {},
+      faq: form.faq && typeof form.faq === "string" ? [{ text: form.faq }] : form.faq || [],
+      reviews: form.reviews && typeof form.reviews === "string" ? [{ text: form.reviews }] : form.reviews || [],
+      participants: [],
+    };
 
-    const payload = buildPayload(form);
     fetch("/api/organizations/opportunities", {
       method: "POST",
-      credentials: "include",
       headers: {
-        "Authorization": `Bearer ${localStorage.getItem("token")}`,
         "Content-Type": "application/json",
       },
+      credentials: "include",
       body: JSON.stringify(payload),
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Eroare la creare");
+        return res.json();
+      })
       .then((data) => {
-        setOpportunities((prev: Opportunity[]) => [data, ...(Array.isArray(prev) ? prev : [])]);
-        setShowForm(false);
+        if (data.pointsAdded) {
+          toast.success(`Felicitări! Ai primit ${data.pointsAdded} puncte pentru crearea oportunității! 🌟`, {
+            duration: 5000,
+            icon: '🚀',
+          });
+        } else {
+          toast.success("Oportunitate creată cu succes!");
+        }
 
         // RESET
         setForm({
@@ -171,6 +166,13 @@ export function useOpportunityHandlers({
         setBannerFile(null);
         setPromoFile(null);
         setGalleryFiles([]);
+        setShowForm(false);
+        // Refresh list
+        setOpportunities((prev: any) => [...prev, data.opportunity || data]);
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("Eroare la creare oportunitate");
       });
   }
 
@@ -184,9 +186,6 @@ export function useOpportunityHandlers({
     fetch("/api/upload", {
       method: "POST",
       credentials: "include",
-      headers: {
-        "Authorization": `Bearer ${localStorage.getItem("token")}`,
-      },
       body: data,
     })
       .then((res) => res.json())
@@ -202,17 +201,14 @@ export function useOpportunityHandlers({
     const data = new FormData();
     data.append("file", file);
 
-    fetch(`/api/upload`, {
+    fetch("/api/upload", {
       method: "POST",
       credentials: "include",
-      headers: {
-        "Authorization": `Bearer ${localStorage.getItem("token")}`,
-      },
       body: data,
     })
       .then((res) => res.json())
       .then((data) => {
-        setEditForm((f) => ({ ...f, promo_video: data.url }));
+        setEditForm((f: any) => ({ ...f, promo_video: data.url }));
       });
   }
 
@@ -223,12 +219,9 @@ export function useOpportunityHandlers({
       files.map((file) => {
         const data = new FormData();
         data.append("file", file);
-        return fetch(`/api/upload`, {
+        return fetch("/api/upload", {
           method: "POST",
           credentials: "include",
-          headers: {
-            "Authorization": `Bearer ${localStorage.getItem("token")}`,
-          },
           body: data,
         })
           .then((res) => res.json())
@@ -236,13 +229,13 @@ export function useOpportunityHandlers({
       })
     ).then((urls) => {
       setEditForm((f: any) => ({
-  ...f,
-  gallery: Array.isArray(f.gallery)
-    ? [...f.gallery, ...urls]
-    : (typeof f.gallery === "string" && f.gallery.length > 0)
-      ? [...f.gallery.split(",").map((u: string) => u.trim()), ...urls]
-      : urls,
-}));
+        ...f,
+        gallery: Array.isArray(f.gallery)
+          ? [...f.gallery, ...urls]
+          : (typeof f.gallery === "string" && f.gallery.length > 0)
+            ? [...f.gallery.split(",").map((u: string) => u.trim()), ...urls]
+            : urls,
+      }));
     });
   }
 
@@ -251,50 +244,47 @@ export function useOpportunityHandlers({
     e.preventDefault();
     if (!editId) return;
 
-   const payload = {
-  ...editForm,
-  skills: editForm.skills
-    ? editForm.skills.split(",").map((s: string) => s.trim()).filter((s: string) => s)
-    : [],
-  tags: editForm.tags
-    ? editForm.tags.split(",").map((t: string) => t.trim()).filter((t: string) => t)
-    : [],
-  gallery: Array.isArray(editForm.gallery)
-  ? editForm.gallery
-  : (typeof editForm.gallery === "string" && editForm.gallery.length > 0)
-    ? editForm.gallery.split(",").map((u: string) => u.trim()).filter((u: string) => u)
-    : [],
-  agenda: editForm.agenda && typeof editForm.agenda === "string"
-    ? { text: editForm.agenda }
-    : editForm.agenda || {},
-  faq: editForm.faq && typeof editForm.faq === "string"
-    ? editForm.faq.split("\n").map((text: string) => ({ text }))
-    : editForm.faq || [],
-  reviews: editForm.reviews && typeof editForm.reviews === "string"
-    ? editForm.reviews.split("\n").map((text: string) => ({ text }))
-    : editForm.reviews || [],
-  mentors: editForm.mentors && typeof editForm.mentors === "string"
-    ? JSON.parse(editForm.mentors)
-    : editForm.mentors || [],
-  participants: [],
-  price: editForm.price ? parseInt(editForm.price) : 0,
-  available_spots: editForm.available_spots ? parseInt(editForm.available_spots) : 1,
-};
+    const payload = {
+      ...editForm,
+      skills: editForm.skills
+        ? editForm.skills.split(",").map((s: string) => s.trim()).filter((s: string) => s)
+        : [],
+      tags: editForm.tags
+        ? editForm.tags.split(",").map((t: string) => t.trim()).filter((t: string) => t)
+        : [],
+      gallery: Array.isArray(editForm.gallery)
+        ? editForm.gallery
+        : (typeof editForm.gallery === "string" && editForm.gallery.length > 0)
+          ? editForm.gallery.split(",").map((u: string) => u.trim()).filter((u: string) => u)
+          : [],
+      agenda: editForm.agenda && typeof editForm.agenda === "string"
+        ? { text: editForm.agenda }
+        : editForm.agenda || {},
+      faq: editForm.faq && typeof editForm.faq === "string"
+        ? editForm.faq.split("\n").map((text: string) => ({ text }))
+        : editForm.faq || [],
+      reviews: editForm.reviews && typeof editForm.reviews === "string"
+        ? editForm.reviews.split("\n").map((text: string) => ({ text }))
+        : editForm.reviews || [],
+      mentors: editForm.mentors && typeof editForm.mentors === "string"
+        ? JSON.parse(editForm.mentors)
+        : editForm.mentors || [],
+    };
 
     fetch(`/api/organizations/opportunities/${editId}`, {
       method: "PUT",
-      credentials: "include",
       headers: {
-        "Authorization": `Bearer ${localStorage.getItem("token")}`,
         "Content-Type": "application/json",
       },
+      credentials: "include",
       body: JSON.stringify(payload),
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Eroare la editare");
+        return res.json();
+      })
       .then((data) => {
-        setOpportunities((prev: Opportunity[]) =>
-          prev.map((item) => item.id === editId ? data : item)
-        );
+        toast.success("Oportunitate actualizată!");
         setEditId(null);
         setEditForm({
           title: "",
@@ -312,33 +302,39 @@ export function useOpportunityHandlers({
           agenda: "",
           faq: "",
           reviews: "",
-           cta_url: form.cta_url || "",
+          cta_url: form.cta_url || "",
         });
         setEditBannerFile(null);
         setEditPromoFile(null);
         setEditGalleryFiles([]);
+
+        // Update list
+        setOpportunities((prev: any[]) => prev.map(o => o.id === editId ? (data.opportunity || data) : o));
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("Eroare la actualizare");
       });
   }
 
   // Ștergere oportunitate
-  function handleDelete(id: number) {
-    if (!confirm("Sigur vrei să ștergi oportunitatea?")) return;
+  function handleDelete(id: string) {
+    if (!confirm("Sigur vrei să ștergi această oportunitate?")) return;
     fetch(`/api/organizations/opportunities/${id}`, {
       method: "DELETE",
       credentials: "include",
-      headers: {
-        "Authorization": `Bearer ${localStorage.getItem("token")}`,
-      },
-    }).then((res) => {
-      if (res.ok) {
-        setOpportunities((prev: Opportunity[]) => prev.filter((item) => item.id !== id));
-      }
-    });
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Eroare la ștergere");
+        setOpportunities((prev: any[]) => prev.filter((o) => o.id !== id));
+        toast.success("Oportunitate ștearsă");
+      })
+      .catch(() => toast.error("Eroare la ștergere"));
   }
 
   // Deschide modal editare
   function openEditModal(opp: Opportunity) {
-     setEditId(opp.id);
+    setEditId(opp.id);
     // Convertim deadline la formatul YYYY-MM-DD
     let deadlineValue = "";
     if (opp.deadline) {
@@ -350,39 +346,26 @@ export function useOpportunityHandlers({
       }
     }
     setEditForm({
-    title: opp.title || "",
-    deadline: deadlineValue,
-  type: opp.type || "",
-  skills: Array.isArray(opp.skills) ? opp.skills.join(", ") : (opp.skills || ""),
-  available_spots: opp.available_spots?.toString() ?? "",
-  price: opp.price?.toString() ?? "",
-  location: opp.location ?? "",
-  description: opp.description ?? "",
-  banner_image: opp.banner_image ?? "",
-  promo_video: opp.promo_video ?? "",
-  gallery: Array.isArray(opp.gallery)
-  ? opp.gallery // păstrează array-ul!!!
-  : typeof opp.gallery === "string" && opp.gallery.length > 0
-    ? opp.gallery.split(",").map((u: string) => u.trim())
-    : [],
-  tags: Array.isArray(opp.tags) ? opp.tags.join(",") : (opp.tags || ""),
-  // Pentru câmpurile complexe:
-  agenda: typeof opp.agenda === "object" && opp.agenda !== null
-    ? opp.agenda.text || ""
-    : (opp.agenda || ""),
-  faq: Array.isArray(opp.faq)
-    ? opp.faq.map((f: any) => f.text).join("\n")
-    : (opp.faq || ""),
-  reviews: Array.isArray(opp.reviews)
-    ? opp.reviews.map((r: any) => r.text).join("\n")
-    : (opp.reviews || ""),
-});
+      title: opp.title || "",
+      deadline: deadlineValue,
+      type: opp.type || "",
+      skills: Array.isArray(opp.skills) ? opp.skills.join(", ") : (opp.skills || ""),
+      available_spots: opp.available_spots?.toString() ?? "",
+      price: opp.price?.toString() ?? "",
+      location: opp.location ?? "",
+      faq: Array.isArray(opp.faq)
+        ? opp.faq.map((f: any) => f.text).join("\n")
+        : (opp.faq || ""),
+      reviews: Array.isArray(opp.reviews)
+        ? opp.reviews.map((r: any) => r.text).join("\n")
+        : (opp.reviews || ""),
+    });
     setEditBannerFile(null);
     setEditPromoFile(null);
     setEditGalleryFiles([]);
   }
 
-   return {
+  return {
     handleBannerChange,
     handlePromoChange,
     handleGalleryChange,

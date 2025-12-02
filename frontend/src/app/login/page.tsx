@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("student");
+  // Role state removed
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -26,25 +27,24 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, role }),
-        credentials: "include", 
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
       });
       const data = await res.json();
+
       if (!res.ok) {
         setError(data.message || "Login failed");
       } else {
-        //salveaza token
-         if (data.token) localStorage.setItem("token", data.token);
-          // Salvează rolul
-      if (data.user?.role) localStorage.setItem("role", data.user.role);
-      if (data.user?.full_name) localStorage.setItem("full_name", data.user.full_name);
+        // Salvează rolul (token-ul e în cookie)
+        if (data.user?.role) localStorage.setItem("role", data.user.role);
+        if (data.user?.full_name) localStorage.setItem("full_name", data.user.full_name);
+
         // Redirect în funcție de rol
-        if (role === "admin") router.push("/admin");
-        else if (role === "student") router.push("/student");
+        if (data.user.role === "admin") router.push("/admin");
+        else if (data.user.role === "student") router.push("/student");
         else router.push("/organization");
       }
     } catch (err: any) {
@@ -62,16 +62,9 @@ export default function LoginPage() {
       >
         <h1 className="text-3xl font-extrabold mb-2 text-center text-primary drop-shadow">Autentificare</h1>
         {error && <div className="bg-red-100 text-red-700 px-4 py-2 rounded">{error}</div>}
-        <label className="font-semibold text-primary">Rol:</label>
-        <select
-          value={role}
-          onChange={e => setRole(e.target.value)}
-          className="border p-2 rounded w-full"
-        >
-          <option value="admin">Admin</option>
-          <option value="student">Student</option>
-          <option value="asociatie">Organization</option>
-        </select>
+
+        {/* Role selection removed */}
+
         <input
           type="email"
           placeholder="Email"
@@ -88,6 +81,11 @@ export default function LoginPage() {
           onChange={e => setPassword(e.target.value)}
           required
         />
+        <div className="text-right">
+          <Link href="/forgot-password" className="text-sm text-primary font-bold hover:underline">
+            Ai uitat parola?
+          </Link>
+        </div>
         <button
           type="submit"
           className="bg-primary text-white py-2 rounded font-semibold hover:bg-secondary transition"

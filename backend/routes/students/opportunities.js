@@ -6,11 +6,18 @@ const router = express.Router();
 // GET /api/opportunities?q=...
 router.get("/", async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      `SELECT id, title, org_name AS "orgName", type, skills, deadline, banner_image
-       FROM opportunities
-       ORDER BY id DESC`
-    );
+    let query = `SELECT o.id, o.title, u.full_name AS "orgName", o.type, o.skills, o.deadline, o.banner_image, o.created_at
+       FROM opportunities o
+       JOIN users u ON o.user_id = u.id`;
+    const params = [];
+
+    if (req.query.period === 'today') {
+      query += ` WHERE o.created_at >= CURRENT_DATE`;
+    }
+
+    query += ` ORDER BY o.id DESC`;
+
+    const { rows } = await pool.query(query, params);
     const q = (req.query.q || "").toString().toLowerCase();
     if (!q) return res.json(rows);
 

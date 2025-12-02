@@ -25,7 +25,15 @@ router.get("/posts", verifyToken, async (req, res) => {
       ORDER BY b.offset DESC;
     `;
     const { rows } = await pool.query(sql, [weeks]);
-    res.json(rows.map(r => ({ label: r.offset === 0 ? "azi" : `-${r.offset}`, value: Number(r.cnt) })));
+    res.json(rows.map(r => {
+      let label = "";
+      if (r.offset === 0) label = "Săpt. asta";
+      else if (r.offset === 1) label = "1 săpt.";
+      else if (r.offset === 4) label = "1 lună";
+      else label = `${r.offset} săpt.`;
+
+      return { label, value: Number(r.cnt) };
+    }));
   } catch (e) {
     res.status(500).json({ error: "DB error", details: e.message });
   }

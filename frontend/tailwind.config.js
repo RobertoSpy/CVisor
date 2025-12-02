@@ -20,8 +20,24 @@ module.exports = {
         'gradient-primary': 'linear-gradient(90deg, #2563eb 0%, #ff6b6b 100%)',
         'gradient-sm': 'linear-gradient(90deg, #2563eb 0%, #60a5fa 50%, #f9e0ea 100%)',
         'gradient-hero': 'linear-gradient(180deg, #2563eb 0%, #fcaf45 100%)',
-         'gradient-video': 'linear-gradient(180deg, #fcaf45 0%, #2563eb 100%)',
-         'gradient-sm-dark': 'linear-gradient(90deg, #60a5fa 0%, #f3a6bc 100%)',
+        'gradient-video': 'linear-gradient(180deg, #fcaf45 0%, #2563eb 100%)',
+        'gradient-sm-dark': 'linear-gradient(90deg, #60a5fa 0%, #f3a6bc 100%)',
+      },
+      animation: {
+        float: "float 6s ease-in-out infinite",
+        blob: "blob 7s infinite",
+      },
+      keyframes: {
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-20px)" },
+        },
+        blob: {
+          "0%": { transform: "translate(0px, 0px) scale(1)" },
+          "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+          "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+          "100%": { transform: "translate(0px, 0px) scale(1)" },
+        },
       },
     },
   },

@@ -15,7 +15,7 @@ type OrgProfilePayload = {
   headline?: string;
   bio?: string;
   avatarUrl?: string;
-  bannerUrl?: string; 
+  bannerUrl?: string;
   location?: string;
   volunteers: number;
   social: SocialLinks;
@@ -127,7 +127,7 @@ function AvatarUploader({ value, onChange }: { value?: string; onChange: (dataUr
   async function handleFile(file: File) {
     const formData = new FormData();
     formData.append("file", file);
-    const resp = await fetch("/api/upload", { method: "POST", body: formData });
+    const resp = await fetch("/api/upload", { method: "POST", credentials: "include", body: formData });
     const data = await resp.json();
     onChange(data.url);
   }
@@ -154,7 +154,7 @@ function MediaEditor({ media, setMedia }: { media: Media[]; setMedia: (v: Media[
     for (const f of Array.from(files)) {
       const formData = new FormData();
       formData.append("file", f);
-      const resp = await fetch("/api/upload", { method: "POST", body: formData });
+      const resp = await fetch("/api/upload", { method: "POST", credentials: "include", body: formData });
       const data = await resp.json();
       const url = data.url;
       const isVideo = /video/.test(f.type) || /\.(mp4|webm|ogg)$/i.test(f.name);
@@ -204,7 +204,10 @@ export default function OrganizationProfileWizard() {
     media: [],
   });
 
-  // Completion map for stepper
+  const handleChange = (field: keyof OrgProfilePayload, value: any) => {
+    setProfile(prev => ({ ...prev, [field]: value }));
+  };
+
   const completeMap = useMemo(() => {
     const m: Record<StepKey, boolean> = { basics: false, events: false, people: false, contact: false, media: false, review: false };
     (Object.keys(m) as StepKey[]).forEach(k => (m[k] = validateStep(k, profile)));
@@ -213,26 +216,17 @@ export default function OrganizationProfileWizard() {
 
   // Autosave local
   useEffect(() => { try { localStorage.setItem("orgProfileDraft", JSON.stringify(profile)); } catch { } }, [profile]);
-  useEffect(() => { try { const raw = localStorage.getItem("orgProfileDraft"); if (raw) setProfile(JSON.parse(raw)); } catch { } }, []);
 
-  function handleChange<K extends keyof OrgProfilePayload>(key: K, value: OrgProfilePayload[K]) {
-    setProfile(prev => ({ ...prev, [key]: value }));
-  }
-
-
-    useEffect(() => {
+  useEffect(() => {
     async function fetchProfile() {
       try {
-        const token = localStorage.getItem("token");
         const resp = await fetch("/api/organizations/users/profile", {
-          headers: {
-            ...(token && { "Authorization": `Bearer ${token}` })
-          }
+          credentials: "include"
         });
         if (resp.ok) {
           const data = await resp.json();
-          setProfile({
-            ...profile,
+          setProfile(prev => ({
+            ...prev,
             ...data,
             keyPeople: data.keyPeople ?? data.key_people ?? [],
             contactPersons: data.contactPersons ?? data.contact_persons ?? [],
@@ -241,32 +235,50 @@ export default function OrganizationProfileWizard() {
             social: data.social ?? {},
             avatarUrl: data.avatar_url ?? data.avatarUrl ?? "",
             bannerUrl: data.banner_url ?? data.bannerUrl ?? "",
-          });
+          }));
+
+          if (!data.name) {
+            fetchAuthName();
+          }
         } else {
+          fetchAuthName();
           const raw = localStorage.getItem("orgProfileDraft");
           if (raw) setProfile(JSON.parse(raw));
         }
       } catch {
+        fetchAuthName();
         const raw = localStorage.getItem("orgProfileDraft");
         if (raw) setProfile(JSON.parse(raw));
       }
     }
+
+    async function fetchAuthName() {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+        if (res.ok) {
+          const user = await res.json();
+          if (user.full_name) {
+            setProfile(prev => ({ ...prev, name: user.full_name }));
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch auth name", e);
+      }
+    }
+
     fetchProfile();
   }, []);
-
 
   async function save() {
     setSaving(true);
     setMsg(null);
-    const token = localStorage.getItem("token");
     try {
-        console.log("Profile trimis la backend:", profile);
       await fetch("/api/organizations/users/profile", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token && { "Authorization": `Bearer ${token}` })
         },
+        credentials: "include",
         body: JSON.stringify(profile)
       });
       setMsg("Salvat!");
@@ -335,7 +347,7 @@ export default function OrganizationProfileWizard() {
                   <TextInput
                     type="number"
                     min={0}
-                  value={profile.volunteers ? profile.volunteers.toString() : ""}
+                    value={profile.volunteers ? profile.volunteers.toString() : ""}
                     onChange={e => {
                       const val = e.target.value.replace(/^0+/, "");
                       handleChange("volunteers", val === "" ? 0 : Number(val));
@@ -353,9 +365,9 @@ export default function OrganizationProfileWizard() {
                 <Field label="Avatar organizație" required>
                   <AvatarUploader value={profile.avatarUrl} onChange={v => handleChange("avatarUrl", v)} />
                 </Field>
-           <Field label="Banner organizație">
-  <BannerUploader value={profile.bannerUrl} onChange={v => handleChange("bannerUrl", v)} />
-</Field>
+                <Field label="Banner organizație">
+                  <BannerUploader value={profile.bannerUrl} onChange={v => handleChange("bannerUrl", v)} />
+                </Field>
                 <Card>
                   <div className="text-sm font-medium mb-2">Ce trebuie să bifezi aici</div>
                   <ul className="text-sm text-gray-600 list-disc ml-4 space-y-1">
@@ -372,27 +384,27 @@ export default function OrganizationProfileWizard() {
         {step === "events" && (
           <Card>
             <div className="space-y-3">
-            {profile.events.map(ev => (
-  <div key={ev.id} className="grid grid-cols-1 md:grid-cols-3 gap-3">
-    <TextInput
-      value={ev.title}
-      onChange={e => handleChange("events", profile.events.map(x => x.id === ev.id ? { ...x, title: e.target.value } : x))}
-      placeholder="Titlu oportunitate/Eveniment"
-    />
-    <TextInput
-      type="month"
-      value={ev.date}
-      onChange={e => handleChange("events", profile.events.map(x => x.id === ev.id ? { ...x, date: e.target.value } : x))}
-      placeholder="Lună/An"
-    />
-    <TextInput
-      value={ev.description || ""}
-      onChange={e => handleChange("events", profile.events.map(x => x.id === ev.id ? { ...x, description: e.target.value } : x))}
-      placeholder="Descriere"
-    />
-  </div>
-))}
-<Button onClick={() => handleChange("events", [...profile.events, { id: uid(), title: "", date: "", description: "" }])}>+ Adaugă oportunitate/eveniment</Button>
+              {profile.events.map(ev => (
+                <div key={ev.id} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <TextInput
+                    value={ev.title}
+                    onChange={e => handleChange("events", profile.events.map(x => x.id === ev.id ? { ...x, title: e.target.value } : x))}
+                    placeholder="Titlu oportunitate/Eveniment"
+                  />
+                  <TextInput
+                    type="month"
+                    value={ev.date}
+                    onChange={e => handleChange("events", profile.events.map(x => x.id === ev.id ? { ...x, date: e.target.value } : x))}
+                    placeholder="Lună/An"
+                  />
+                  <TextInput
+                    value={ev.description || ""}
+                    onChange={e => handleChange("events", profile.events.map(x => x.id === ev.id ? { ...x, description: e.target.value } : x))}
+                    placeholder="Descriere"
+                  />
+                </div>
+              ))}
+              <Button onClick={() => handleChange("events", [...profile.events, { id: uid(), title: "", date: "", description: "" }])}>+ Adaugă oportunitate/eveniment</Button>
             </div>
             <Button className="mt-6" onClick={next}>Continuă</Button>
           </Card>

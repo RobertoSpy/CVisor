@@ -30,7 +30,7 @@ export default function ActivityHeatmap({
     }
     return arr;
   }, [data, days]);
- 
+
   const level = (v: number) => {
     if (v === 0) return 0;
     if (v < 2) return 1;
@@ -96,17 +96,7 @@ export default function ActivityHeatmap({
         ))}
       </div>
 
-      {isAllZeroMap(data) && (
-        <div className="absolute inset-0 rounded-2xl bg-white/70 backdrop-blur-[1px] flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-base font-semibold">Încă nu avem activitate</div>
-            <div className="text-sm text-gray-600 mt-1">Revino mâine sau completează-ți profilul.</div>
-            <a href="/student/cv" className="inline-flex mt-3 px-3 py-1.5 rounded-lg bg-secondary text-white">
-              Completează CV
-            </a>
-          </div>
-        </div>
-      )}
+
 
       <CursorTooltip show={tt.show} x={tt.x} y={tt.y}>
         {tt.text}

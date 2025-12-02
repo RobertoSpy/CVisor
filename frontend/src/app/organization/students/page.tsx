@@ -15,17 +15,13 @@ export default function OrganizationStudentsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  const token = localStorage.getItem("token");
-  fetch("/api/users/all", {
-    credentials: "include",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    }
-  })
-    .then(r => r.json())
-    .then(data => setStudents(data.students ?? data))
-    .finally(() => setLoading(false));
-}, []);
+    fetch("/api/users/all", {
+      credentials: "include"
+    })
+      .then(r => r.json())
+      .then(data => setStudents(data.students ?? data))
+      .finally(() => setLoading(false));
+  }, []);
 
   if (loading) return <div className="p-8 text-center text-lg">Se încarcă studenții...</div>;
   if (!students.length) return <div className="p-8 text-center text-lg text-red-500">Niciun student găsit.</div>;
@@ -47,7 +43,7 @@ export default function OrganizationStudentsPage() {
           </div>
           <div className="font-bold text-lg text-primary mb-1">{student.name}</div>
           <div className="text-sm text-gray-500 mb-2">{student.headline}</div>
-          <div className="text-xs text-center text-gray-600">{student.bio?.substring(0, 80)}{student.bio?.length > 80 ? "..." : ""}</div>
+          <div className="text-xs text-center text-gray-600"> {(typeof student.bio === "string" ? student.bio.slice(0, 80) : "")}{typeof student.bio === "string" && student.bio.length > 80 ? "..." : ""}</div>
         </Link>
       ))}
     </div>

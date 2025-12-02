@@ -70,7 +70,7 @@ router.post("/pageview", verifyToken, async (req, res) => {
       }
     }
 
-    res.json({ ok: true });
+    res.json({ ok: true, points_awarded: alreadyGotPoints === 0 });
   } catch (e) {
     console.error("[pageview] error:", e.message, e.stack);
     res.status(500).json({ error: "DB error", details: e.message });
@@ -96,7 +96,7 @@ router.get("/presence", verifyToken, async (req, res) => {
     const queryStart = new Date(
       Math.max(
         new Date(createdAt).getTime(),
-        new Date(new Date().setHours(0,0,0,0) - (days - 1) * 24 * 60 * 60 * 1000).getTime()
+        new Date(new Date().setHours(0, 0, 0, 0) - (days - 1) * 24 * 60 * 60 * 1000).getTime()
       )
     );
     // În format YYYY-MM-DD
@@ -113,16 +113,24 @@ router.get("/presence", verifyToken, async (req, res) => {
           AND event_type = 'login'
           AND created_at >= $1::date
         GROUP BY 1
+      ),
+      repairs AS (
+        SELECT repaired_date AS d, 1 AS cnt
+        FROM user_streak_repairs
+        WHERE user_id = $2
+          AND repaired_date >= $1::date
       )
-      SELECT to_char(s.d, 'YYYY-MM-DD') AS day, COALESCE(c.cnt, 0) AS count
+      SELECT to_char(s.d, 'YYYY-MM-DD') AS day, 
+             COALESCE(c.cnt, 0) + COALESCE(r.cnt, 0) AS count
       FROM series s
       LEFT JOIN counts c ON c.d = s.d
+      LEFT JOIN repairs r ON r.d = s.d
       ORDER BY s.d;
     `;
     const { rows } = await pool.query(sql, [sqlStart, uid]);
     const map = {};
     rows.forEach(r => { map[r.day] = Number(r.count); });
-    return res.json(map);
+    return res.json({ map, createdAt });
   } catch (e) {
     console.error("[presence] error:", e);
     return res.status(500).json({ error: "DB error", details: e.message });

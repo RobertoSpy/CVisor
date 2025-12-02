@@ -1,7 +1,8 @@
 "use client";
 import React from "react";
+import { FaGithub, FaLinkedin, FaInstagram, FaGlobe } from "react-icons/fa";
 
-type SocialLinks = { github?: string; linkedin?: string; website?: string };
+type SocialLinks = { github?: string; linkedin?: string; website?: string; instagram?: string };
 type EducationItem = { id?: string; school: string; degree: string; start: string; end?: string; details?: string };
 type ExperienceItem = { id?: string; role: string; company: string; start: string; end?: string; details?: string };
 type Media = { id?: string; kind: "image" | "video"; url: string; caption?: string };
@@ -19,11 +20,13 @@ type ProfilePayload = {
   experience: ExperienceItem[];
   portfolioMedia: Media[];
   opportunityRefs: OppRef[];
-  videoUrl?: string; 
+  videoUrl?: string;
 };
 
-export default function StudentProfilePreview({ profile }: { profile: ProfilePayload | null }) {
+export default function StudentProfilePreview({ profile, points = 0, badges = [] }: { profile: ProfilePayload | null, points?: number, badges?: any[] }) {
   if (!profile) return <div className="py-10 text-center text-red-500 font-semibold text-lg">Nu s-au găsit date de profil.</div>;
+
+  const level = Math.floor(points / 100) + 1;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -44,7 +47,7 @@ export default function StudentProfilePreview({ profile }: { profile: ProfilePay
         {/* Locație */}
         {profile.location && (
           <div className="text-gray-500 flex items-center gap-2 mb-4">
-            <span className="material-icons">location_on</span>
+            <span className="text-xl">📍</span>
             {profile.location}
           </div>
         )}
@@ -56,23 +59,57 @@ export default function StudentProfilePreview({ profile }: { profile: ProfilePay
         <div className="flex gap-3 flex-wrap justify-center mt-3 mb-5">
           {profile.social.github && (
             <a href={profile.social.github} target="_blank" rel="noopener noreferrer"
-              className="text-gray-800 hover:text-primary flex items-center gap-1 px-4 py-1 rounded bg-primary/10">
-              <span className="material-icons">code</span> GitHub
+              className="text-gray-800 hover:text-black flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition font-medium">
+              <FaGithub className="text-xl" /> GitHub
             </a>
           )}
           {profile.social.linkedin && (
             <a href={profile.social.linkedin} target="_blank" rel="noopener noreferrer"
-              className="text-blue-700 hover:text-primary flex items-center gap-1 px-4 py-1 rounded bg-primary/10">
-              <span className="material-icons">business_center</span> LinkedIn
+              className="text-blue-700 hover:text-blue-800 flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 transition font-medium">
+              <FaLinkedin className="text-xl" /> LinkedIn
+            </a>
+          )}
+          {profile.social.instagram && (
+            <a href={profile.social.instagram} target="_blank" rel="noopener noreferrer"
+              className="text-pink-600 hover:text-pink-700 flex items-center gap-2 px-4 py-2 rounded-xl bg-pink-50 hover:bg-pink-100 transition font-medium">
+              <FaInstagram className="text-xl" /> Instagram
             </a>
           )}
           {profile.social.website && (
             <a href={profile.social.website} target="_blank" rel="noopener noreferrer"
-              className="text-gray-700 hover:text-primary flex items-center gap-1 px-4 py-1 rounded bg-primary/10">
-              <span className="material-icons">public</span> Website
+              className="text-emerald-600 hover:text-emerald-700 flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 transition font-medium">
+              <FaGlobe className="text-xl" /> Website
             </a>
           )}
         </div>
+
+        {/* Gamification Stats */}
+        <div className="flex gap-6 mb-8 bg-gradient-to-r from-primary/5 to-accent/5 px-8 py-4 rounded-2xl border border-primary/10">
+          <div className="text-center">
+            <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Nivel</div>
+            <div className="text-2xl font-bold text-primary">Lvl {level}</div>
+          </div>
+          <div className="w-px bg-primary/10"></div>
+          <div className="text-center">
+            <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Puncte</div>
+            <div className="text-2xl font-bold text-accent">{points} XP</div>
+          </div>
+        </div>
+
+        {/* Badges Showcase */}
+        {badges && badges.length > 0 && (
+          <div className="mb-8 w-full">
+            <div className="font-semibold text-gray-800 mb-4 text-center">Insigne Deblocate</div>
+            <div className="flex flex-wrap gap-4 justify-center">
+              {badges.map((b: any) => (
+                <div key={b.id || b.code} className="flex flex-col items-center p-3 bg-white rounded-xl shadow-sm border border-gray-100 w-24" title={b.name}>
+                  <div className="text-3xl mb-1">{b.icon || "🏅"}</div>
+                  <div className="text-[10px] text-center font-medium leading-tight text-gray-600">{b.name}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Video principal student */}
         {profile.videoUrl && (
