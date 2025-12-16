@@ -32,3 +32,28 @@ coverage/
 *.swp
 *.swo
 *.bak
+
+# ========================================
+# SECURITATE - Fișiere sensibile
+# ========================================
+
+# Documentație securitate (conține detalii despre vulnerabilități)
+*SECURITATE*.md
+*VULNERABILIT*.md
+FIX-*.md
+TESTE-*.md
+
+# Scripts de testare/deployment locale
+*.bat
+*.ps1
+
+# ========================================
+# USER UPLOADS - Date personale (GDPR)
+# ========================================
+
+# Folder uploads (imagini user)
+uploads/
+**/uploads/
+
+# Păstrează doar placeholder-ul
+!backend/uploads/.gitkeep

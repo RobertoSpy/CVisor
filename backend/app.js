@@ -4,20 +4,50 @@ const { pool } = require('./db');
 require('dotenv').config();
 const path = require("path");
 const cookieParser = require('cookie-parser');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
+
+// Security: Helmet.js - Adaugă header-uri de securitate
+app.use(helmet({
+  contentSecurityPolicy: false, // Dezactivat temporar pentru compatibilitate Next.js
+  crossOriginEmbedderPolicy: false
+}));
+
+// Rate limiting global - Protecție DDoS și abuse
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minute
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 100 requests în producție, 1000 în dev
+  message: 'Prea multe cereri de la acest IP, te rugăm să încerci mai târziu.'
+});
+app.use(limiter);
+
+// Rate limiting strict pentru autentificare - Protecție brute force
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minute
+  max: 5, // maxim 5 încercări de login
+  message: 'Prea multe încercări de autentificare. Te rugăm să aștepți 15 minute.',
+  skipSuccessfulRequests: true // Nu contorizează login-urile reușite
+});
 
 app.use(express.json());
 app.use(cookieParser());
 
-// Middleware CORS
+// Middleware CORS - configurabil via ALLOWED_ORIGINS
+const defaultOrigins = [
+  "http://localhost:3000",
+  "https://cvisor.com",
+  "https://api.cvisor.com"
+];
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : defaultOrigins;
+
 app.use(cors({
-  origin: [
-    "http://localhost:3000", // pentru dezvoltare
-    "https://cvisor.com",    // pentru producție
-    "https://api.cvisor.com" // pentru producție
-  ],
+  origin: allowedOrigins,
   credentials: true
 }));
 
@@ -35,7 +65,7 @@ app.get('/hello', async (req, res) => {
 });
 
 const authRoutes = require("./routes/auth");
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authLimiter, authRoutes); // Aplică rate limiting pe auth routes
 
 
 const usersRoutes = require("./routes/students/users");
@@ -111,11 +141,19 @@ app.use('/api/students', badgesRoutes);
 app.use((err, req, res, next) => {
   console.error("[GLOBAL ERROR]", err);
   if (res.headersSent) return next(err);
-  res.status(500).json({
-    error: "Internal Server Error",
-    details: err?.message || "unknown",
-    stack: err?.stack || null,
-  });
+
+  // SECURITATE: Nu expune stack trace în producție
+  const response = {
+    error: "Internal Server Error"
+  };
+
+  // Detalii doar în development
+  if (process.env.NODE_ENV !== 'production') {
+    response.details = err?.message || "unknown";
+    response.stack = err?.stack || null;
+  }
+
+  res.status(500).json(response);
 });
 
 

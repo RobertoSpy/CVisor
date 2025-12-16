@@ -5,5 +5,8 @@ RUN npm install
 COPY . .
 EXPOSE 3000
 
+# Build pentru producție
+RUN npm run build
 
-CMD ["npm", "run", "dev"]
+# Rulează în production mode
+CMD ["npm", "run", "start"]

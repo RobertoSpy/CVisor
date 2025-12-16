@@ -137,26 +137,4 @@ router.get("/presence", verifyToken, async (req, res) => {
   }
 });
 
-
-
-// — doar temporar, pentru debug —
-router.get("/whoami", verifyToken, (req, res) => {
-  console.log(`[whoami]`, {
-    method: req.method,
-    url: req.originalUrl,
-    userId: req.user?.id
-  });
-  res.json({ user: req.user });
-});
-router.get("/diag", verifyToken, async (req, res) => {
-  console.log(`[diag]`, {
-    method: req.method,
-    url: req.originalUrl,
-    userId: req.user?.id
-  });
-  const { rows } = await pool.query("SELECT NOW() AS now");
-  console.log(`[diag] DB rows:`, rows.length);
-  res.json({ ok: true, user: req.user, db_time: rows[0].now });
-});
-
 module.exports = router;

@@ -16,8 +16,8 @@ export default function HeroSection() {
         {/* Left Column: Text */}
         <div className="text-center lg:text-left text-white space-y-6 order-2 lg:order-1">
           <h1 className="text-4xl lg:text-6xl font-extrabold leading-tight drop-shadow-lg">
-            Descopera <br />
-            <span className="text-secondary">Oportunitatile</span>
+            Descoperă <br />
+            <span className="text-secondary">Oportunitățile</span>
           </h1>
           <p className="text-lg lg:text-xl text-blue-100 font-light max-w-md mx-auto lg:mx-0">
             Prima platformă din România pentru studenți de acest gen.

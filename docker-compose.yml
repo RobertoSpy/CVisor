@@ -1,47 +1,83 @@
 version: '3.8'
 
 services:
-  backend:
-    build: ./backend
-    ports:
-      - "5000:5000"
-    env_file:
-      - ./backend/.env
-    depends_on:
-      - postgres
-    volumes:
-      - ./backend/uploads:/app/uploads
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://backend:5000
-    depends_on:
-      - backend
-
-  nginx:
-    build: ./nginx
-    ports:
-      - "80:80"
-    depends_on:
-      - frontend
-      - backend
-    volumes:
-    - ./backend/uploads:/app/uploads
-
-
+  # PostgreSQL Database - pornește primul
   postgres:
     image: postgres:15
-    restart: always
+    container_name: cvisor_postgres
+    restart: unless-stopped
     env_file:
       - .env
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      
+      - ./backend/migrations:/docker-entrypoint-initdb.d  # Auto-run migrations la primul start
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cvisor-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cvisor_backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      postgres:
+        condition: service_healthy  # Așteaptă ca postgres să fie gata 100%
+    volumes:
+      - ./backend/uploads:/app/uploads
+    networks:
+      - cvisor-network
+    command: node app.js
+
+  # Frontend Next.js
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cvisor_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000  # Pentru browser
+      - API_URL=http://backend:5000  # Pentru server-side
+    depends_on:
+      - backend
+    networks:
+      - cvisor-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    build: ./nginx
+    container_name: cvisor_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"  # Pentru HTTPS în viitor
+    depends_on:
+      - frontend
+      - backend
+    volumes:
+      - ./backend/uploads:/app/uploads
+    networks:
+      - cvisor-network
+
+networks:
+  cvisor-network:
+    driver: bridge
 
 volumes:
   pgdata:
+    driver: local

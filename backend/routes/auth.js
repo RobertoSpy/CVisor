@@ -13,16 +13,16 @@ const { pool } = require("../db");
 const crypto = require("crypto");
 const { sendVerificationEmail, sendResetEmail } = require("../utils/sendVerificationEmail");
 const verifyToken = require("../middleware/verifyToken");
+const { validate, registerSchema, loginSchema } = require("../middleware/validation");
+const { awardSignupPoints } = require("../utils/pointsManager");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   console.warn("Warning: JWT_SECRET is not set in environment variables.");
 }
 
-router.post("/register", async (req, res) => {
+router.post("/register", validate(registerSchema), async (req, res) => {
   const { fullName, email, password } = req.body;
-  if (!fullName || !email || !password)
-    return res.status(400).json({ message: "Toate câmpurile sunt necesare" });
 
   try {
     const existingUser = await getUserByEmail(email);
@@ -47,19 +47,12 @@ router.post("/register", async (req, res) => {
       console.error("Failed to send verification email:", mailErr);
     }
 
-    // Bonus de bun venit: 10 puncte (dacă tabela există)
+    // Bonus de bun venit: 10 puncte (via pointsManager)
     let pointsAdded = 0;
     try {
       const newUser = await getUserByEmail(email);
       if (newUser) {
-        await pool.query(
-          "INSERT INTO user_points (user_id, points, updated_at) VALUES ($1, 10, NOW())",
-          [newUser.id]
-        );
-        await pool.query(
-          "INSERT INTO user_point_events (user_id, points_delta, reason) VALUES ($1, 10, 'signup_bonus')",
-          [newUser.id]
-        );
+        await awardSignupPoints(newUser.id);
         pointsAdded = 10;
       }
     } catch (ptsErr) {
@@ -68,8 +61,8 @@ router.post("/register", async (req, res) => {
 
     res.json({ message: "Înregistrare reușită, verifică emailul.", pointsAdded, reason: "signup_bonus" });
   } catch (err) {
-    console.error("ERROR /register:", err);
-    res.status(500).json({ message: "Eroare internă", error: err.message });
+    console.error("[register] Error:", err.message);
+    res.status(500).json({ message: "Eroare internă" });
   }
 });
 
@@ -79,18 +72,28 @@ router.post("/verify-email", async (req, res) => {
 
   try {
     const user = await getUserByEmail(email);
-    console.log("User găsit:", user);
-    console.log("Cod primit:", code, "Cod din DB:", user?.email_verification_code);
 
-    if (!user) return res.status(404).json({ message: "User inexistent" });
-    if (user.is_verified) return res.status(400).json({ message: "Email deja verificat" });
-    if (user.email_verification_code !== code) return res.status(400).json({ message: "Cod greșit" });
+    // SECURITATE: Verificări în ordinea corectă pentru a preveni user enumeration
+    if (!user || user.is_verified || !user.email_verification_code) {
+      // Răspuns generic pentru toate cazurile
+      return res.status(400).json({ message: "Cod de verificare invalid sau expirat" });
+    }
+
+    // SECURITATE: Timing-safe comparison pentru cod
+    const isCodeValid = crypto.timingSafeEqual(
+      Buffer.from(user.email_verification_code),
+      Buffer.from(code)
+    );
+
+    if (!isCodeValid) {
+      return res.status(400).json({ message: "Cod de verificare invalid sau expirat" });
+    }
 
     await setUserVerified(email);
     res.json({ message: "Email validat cu succes" });
   } catch (err) {
-    console.error("EROARE la /verify-email:", err);
-    res.status(500).json({ message: "Eroare internă", error: err.message });
+    console.error("[verify-email] Error:", err.message);
+    res.status(500).json({ message: "Eroare internă" });
   }
 });
 
@@ -101,21 +104,25 @@ router.post("/forgot-password", async (req, res) => {
 
   try {
     const user = await getUserByEmail(email);
-    if (!user) return res.status(404).json({ message: "Utilizator inexistent" });
 
-    const code = crypto.randomInt(100000, 999999).toString();
-    await setVerificationCode(email, code);
+    // SECURITATE: Trimite ACELAȘI răspuns indiferent dacă user-ul există
+    // Previne user enumeration
+    if (user) {
+      const code = crypto.randomInt(100000, 999999).toString();
+      await setVerificationCode(email, code);
 
-    try {
-      await sendResetEmail(email, code);
-    } catch (mailErr) {
-      console.error("Failed to send reset email:", mailErr);
+      try {
+        await sendResetEmail(email, code);
+      } catch (mailErr) {
+        console.error("[forgot-password] Failed to send reset email:", mailErr.message);
+      }
     }
 
+    // Răspuns IDENTIC indiferent dacă user-ul există sau nu
     res.json({ message: "Dacă emailul există, ai primit un cod pentru resetare." });
   } catch (err) {
-    console.error("ERROR /forgot-password:", err);
-    res.status(500).json({ message: "Eroare internă", error: err.message });
+    console.error("[forgot-password] Error:", err.message);
+    res.status(500).json({ message: "Eroare internă" });
   }
 });
 
@@ -126,30 +133,35 @@ router.post("/reset-password", async (req, res) => {
 
   try {
     const user = await getUserByEmail(email);
-    if (!user) return res.status(404).json({ message: "Utilizator inexistent" });
 
-    if (user.email_verification_code !== code) return res.status(400).json({ message: "Cod incorect" });
+    // SECURITATE: Verificări în ordinea corectă pentru a preveni user enumeration
+    if (!user || !user.email_verification_code) {
+      return res.status(400).json({ message: "Cod de resetare invalid sau expirat" });
+    }
+
+    // SECURITATE: Timing-safe comparison
+    const isCodeValid = crypto.timingSafeEqual(
+      Buffer.from(user.email_verification_code),
+      Buffer.from(code)
+    );
+
+    if (!isCodeValid) {
+      return res.status(400).json({ message: "Cod de resetare invalid sau expirat" });
+    }
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     await updatePassword(email, hashedPassword);
 
-    try {
-      await setVerificationCode(email, null);
-    } catch (e) {
-      console.warn("Could not clear verification code:", e);
-    }
-
     res.json({ message: "Parola a fost resetată cu succes!" });
   } catch (err) {
-    console.error("ERROR /reset-password:", err);
-    res.status(500).json({ message: "Eroare internă", error: err.message });
+    console.error("[reset-password] Error:", err.message);
+    res.status(500).json({ message: "Eroare internă" });
   }
 });
 
 // Login: permite doar useri verificați!
-router.post("/login", async (req, res) => {
+router.post("/login", validate(loginSchema), async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ message: "Email și parolă necesare" });
 
   try {
     const user = await getUserByEmail(email);
@@ -179,8 +191,8 @@ router.post("/login", async (req, res) => {
       user: { id: user.id, email: user.email, role: user.role, full_name: user.full_name },
     });
   } catch (err) {
-    console.error("ERROR /login:", err);
-    res.status(500).json({ message: "Eroare internă", error: err.message });
+    console.error("[login] Error:", err.message);
+    res.status(500).json({ message: "Eroare internă" });
   }
 });
 

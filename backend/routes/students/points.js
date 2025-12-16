@@ -1,48 +1,76 @@
 const express = require("express");
 const { pool } = require("../../db");
 const verifyToken = require("../../middleware/verifyToken");
+const { processStreakRepair, getUserPoints } = require("../../utils/pointsManager");
 
 const router = express.Router();
 
+/**
+ * Endpoint pentru streak repair (SINGURA operație permisă clientului)
+ * SECURIZAT: Accept doar repair-uri valide, nu permit manipulare arbitrară a punctelor
+ */
 router.post("/points/add", verifyToken, async (req, res) => {
-  const { points_delta, reason } = req.body;
-  const uid = req.user.id;
-  // Fetch current
-  const { rows } = await pool.query("SELECT points FROM user_points WHERE user_id=$1", [uid]);
-  let current = rows[0]?.points ?? 0;
-  let newPoints = Math.max(current + points_delta, 0);
-  await pool.query(
-    `INSERT INTO user_points (user_id, points, updated_at) VALUES ($1, $2, NOW())
-    ON CONFLICT (user_id) DO UPDATE SET points = $2, updated_at = NOW()`,
-    [uid, newPoints]
-  );
-  await pool.query(
-    "INSERT INTO user_point_events (user_id, points_delta, reason) VALUES ($1, $2, $3)",
-    [uid, points_delta, reason]
-  );
+  try {
+    const { points_delta, reason, repaired_date } = req.body;
+    const uid = req.user.id;
 
-  // [NEW] Dacă e repair, salvează și în user_streak_repairs
-  if (reason === "repair") {
-    // Presupunem că repair-ul se face pentru ziua curentă sau o zi specifică.
-    // Dar momentan frontend-ul trimite doar "repair". 
-    // Ideal ar fi să trimită și data.
-    // Dacă frontend-ul nu trimite data, nu putem salva exact ce zi s-a reparat.
-    // Voi modifica să accepte și `repaired_date` în body.
-    const { repaired_date } = req.body;
-    if (repaired_date) {
-      await pool.query(
-        "INSERT INTO user_streak_repairs (user_id, repaired_date) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-        [uid, repaired_date]
-      );
+    // SECURITATE: Accept DOAR streak repair cu validare strictă
+    if (reason !== "repair") {
+      return res.status(403).json({
+        error: "Forbidden",
+        message: "Punctele pot fi modificate doar prin acțiuni validate de sistem."
+      });
     }
+
+    // Validare: repair trebuie să fie exact -20 puncte
+    if (points_delta !== -20) {
+      return res.status(400).json({
+        error: "Invalid repair cost",
+        message: "Costul unui repair este fix 20 puncte."
+      });
+    }
+
+    // Validare: repaired_date obligatoriu
+    if (!repaired_date) {
+      return res.status(400).json({
+        error: "Missing repaired_date",
+        message: "Data reparată este obligatorie."
+      });
+    }
+
+    // Procesare repair prin sistemul securizat
+    const result = await processStreakRepair(uid, repaired_date);
+
+    res.json({ points: result.newPoints, repaired_date: result.repairedDate });
+  } catch (error) {
+    console.error("[points/add] Error:", error);
+
+    if (error.message === 'Insufficient points for repair') {
+      return res.status(400).json({
+        error: "Insufficient points",
+        message: "Nu ai suficiente puncte pentru repair."
+      });
+    }
+
+    res.status(500).json({
+      error: "Server error",
+      message: error.message
+    });
   }
-  res.json({ points: newPoints });
 });
 
+/**
+ * Obține punctele curente ale user-ului
+ */
 router.get("/points", verifyToken, async (req, res) => {
-  const uid = req.user.id;
-  const { rows } = await pool.query("SELECT points FROM user_points WHERE user_id=$1", [uid]);
-  res.json({ points: rows[0]?.points ?? 0 });
+  try {
+    const uid = req.user.id;
+    const points = await getUserPoints(uid);
+    res.json({ points });
+  } catch (error) {
+    console.error("[points GET] Error:", error);
+    res.status(500).json({ error: "Server error", message: error.message });
+  }
 });
 
 module.exports = router;
