@@ -16,6 +16,10 @@ export const metadata: Metadata = {
   title: "CVISOR",
   description: "Platforma ta de carieră și oportunități",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/albastru.svg",
+    apple: "/icon-192.png", // Fallback for iOS
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

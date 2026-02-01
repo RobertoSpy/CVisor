@@ -93,13 +93,13 @@ router.post("/profile", verifyToken, async (req, res) => {
 router.get("/all", verifyToken, async (req, res) => {
   try {
     const { rows } = await pool.query(
-  `SELECT op.user_id AS id, op.name, op.headline, op.bio, op.avatar_url AS "avatarUrl"
+      `SELECT op.user_id AS id, op.name, op.headline, op.bio, op.avatar_url AS "avatarUrl"
    FROM organization_profiles op
    JOIN users u ON u.id = op.user_id
    WHERE u.role = 'organization'
    ORDER BY op.updated_at DESC`
-);
-res.json({ organizations: rows });
+    );
+    res.json({ organizations: rows });
   } catch (e) {
     res.status(500).json({ message: "DB error", error: e.message });
   }
@@ -108,9 +108,33 @@ res.json({ organizations: rows });
 router.get("/:id", verifyToken, async (req, res) => {
   const id = req.params.id;
   try {
-    const { rows } = await pool.query("SELECT * FROM organization_profiles WHERE user_id = $1", [id]);
-    if (!rows[0]) return res.status(404).json({ message: "Organizație negăsită" });
-    res.json(rows[0]);
+    const { rows: profileRows } = await pool.query("SELECT * FROM organization_profiles WHERE user_id = $1", [id]);
+    if (!profileRows[0]) return res.status(404).json({ message: "Organizație negăsită" });
+
+    // Fetch opportunities
+    const { rows: oppRows } = await pool.query(
+      `SELECT * FROM opportunities 
+       WHERE user_id = $1 
+       ORDER BY created_at DESC 
+       LIMIT 3`,
+      [id]
+    );
+
+    // [FIX] Fetch points
+    let points = 0;
+    const { rows: pointRows } = await pool.query("SELECT points FROM user_points WHERE user_id = $1", [id]);
+    if (pointRows.length > 0) points = pointRows[0].points;
+
+    // [FIX] Fetch badges
+    const { rows: badgeRows } = await pool.query("SELECT badge_code FROM user_badges WHERE user_id = $1", [id]);
+    const badges = badgeRows.map(r => r.badge_code);
+
+    res.json({
+      ...profileRows[0],
+      opportunities: oppRows,
+      points, // [NEW] Return points
+      badges  // [NEW] Return badges
+    });
   } catch (e) {
     res.status(500).json({ message: "DB error", error: e.message });
   }

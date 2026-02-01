@@ -5,9 +5,9 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
 const contactData = [
-  { icon: <FiMail className="text-3xl text-primary" />, title: "Email", value: "echipa@cvisor.ro", link: "mailto:echipa@cvisor.ro" },
-  { icon: <FiInstagram className="text-3xl text-pink-600" />, title: "Instagram", value: "@cvisor", link: "https://instagram.com/cvisor" },
-  { icon: <FiPhone className="text-3xl text-green-600" />, title: "Telefon", value: "+40 712 345 678", link: "tel:+40712345678" },
+  { icon: <FiMail className="text-3xl text-primary" />, title: "Email", value: "echipa@cvisor.ro", link: "mailto:cvisor.contact@gmail.com" },
+  { icon: <FiInstagram className="text-3xl text-pink-600" />, title: "Instagram", value: "@cvisor_official", link: "https://www.instagram.com/cvisor_official?igsh=OXM2aWVjYjlyZGtn" },
+  { icon: <FiPhone className="text-3xl text-green-600" />, title: "Telefon", value: "+40763524042", link: "tel:+40763524042" },
 ];
 
 export default function ContactPage() {

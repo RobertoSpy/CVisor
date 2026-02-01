@@ -22,6 +22,6 @@ export default function OrganizationStudentProfilePage() {
   if (!profile) return <div className="py-10 text-center text-red-500 font-semibold text-lg">Nu s-au găsit date de profil.</div>;
 
   return (
-    <StudentProfilePreview profile={profile} />
+    <StudentProfilePreview profile={profile} points={profile.points} badges={profile.badges} />
   );
 }

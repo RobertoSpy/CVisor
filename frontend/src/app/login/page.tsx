@@ -7,6 +7,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   // Role state removed
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -20,17 +21,15 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
 
-    if (!validatePassword(password)) {
-      setError("Parola trebuie să aibă minim 8 caractere, o literă, o cifră și un simbol!");
-      return;
-    }
+    // Skip complicated validation for login, let backend handle it, or just length
+    // (User might have old password that doesnt match new criteria)
 
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
         credentials: "include",
       });
       const data = await res.json();
@@ -81,7 +80,18 @@ export default function LoginPage() {
           onChange={e => setPassword(e.target.value)}
           required
         />
-        <div className="text-right">
+
+        <div className="flex items-center justify-between">
+          <label className="flex items-center space-x-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 text-primary rounded focus:ring-primary"
+            />
+            <span className="text-sm text-gray-700 font-medium">Ține-mă minte</span>
+          </label>
+
           <Link href="/forgot-password" className="text-sm text-primary font-bold hover:underline">
             Ai uitat parola?
           </Link>

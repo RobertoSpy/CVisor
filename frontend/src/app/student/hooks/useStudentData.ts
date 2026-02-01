@@ -23,6 +23,7 @@ export default function useStudentData() {
     orgBars: Array.isArray(orgData) ? orgData : [],
     mutatePoints,
     mutateBadges,
-    mutatePresence
+    mutatePresence,
+    isLoading: !pointsData || !badgesData || !presenceData || !orgData
   };
 }

@@ -24,12 +24,6 @@ export default function HeroSection() {
             <span className="block mt-2 font-bold text-white">TOTUL GRATUIT 👀👇</span>
           </p>
           <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
-            <button className="bg-secondary hover:bg-white hover:text-primary text-white px-8 py-3 rounded-full font-bold shadow-lg transition-all transform hover:-translate-y-1">
-              Începe Acum
-            </button>
-            <button className="border-2 border-white text-white hover:bg-white hover:text-primary px-8 py-3 rounded-full font-bold transition-all">
-              Află Mai Multe
-            </button>
           </div>
         </div>
 

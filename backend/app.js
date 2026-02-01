@@ -6,8 +6,18 @@ const path = require("path");
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const RedisStore = require('rate-limit-redis').default || require('rate-limit-redis');
+const IORedis = require('ioredis');
+
+// Redis Client pentru Rate Limiting
+const redisClient = new IORedis({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: process.env.REDIS_PORT || 6379,
+  maxRetriesPerRequest: null
+});
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy (Nginx)
 const PORT = process.env.PORT || 5000;
 
 // Security: Helmet.js - Adaugă header-uri de securitate
@@ -16,30 +26,58 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
+app.use((req, res, next) => {
+  console.log(`[REQUEST] ${req.method} ${req.url}`);
+  next();
+});
+
 // Rate limiting global - Protecție DDoS și abuse
 const limiter = rateLimit({
+  store: new RedisStore({
+    sendCommand: (...args) => redisClient.call(...args),
+  }),
   windowMs: 15 * 60 * 1000, // 15 minute
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 100 requests în producție, 1000 în dev
-  message: 'Prea multe cereri de la acest IP, te rugăm să încerci mai târziu.'
+  max: 300, // 300 requests / 15 min - Sensible default
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    res.status(options.statusCode).json({
+      message: "Prea multe cereri de la acest IP, te rugăm să încerci mai târziu.",
+      error: "Too Many Requests"
+    });
+  }
 });
 app.use(limiter);
 
 // Rate limiting strict pentru autentificare - Protecție brute force
 const authLimiter = rateLimit({
+  store: new RedisStore({
+    sendCommand: (...args) => redisClient.call(...args),
+    prefix: 'rl:auth:' // Prefix separat pentru auth
+  }),
   windowMs: 15 * 60 * 1000, // 15 minute
   max: 5, // maxim 5 încercări de login
-  message: 'Prea multe încercări de autentificare. Te rugăm să aștepți 15 minute.',
-  skipSuccessfulRequests: true // Nu contorizează login-urile reușite
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Nu contorizează login-urile reușite
+  handler: (req, res, next, options) => {
+    res.status(options.statusCode).json({
+      message: "Prea multe încercări de autentificare. Te rugăm să aștepți 15 minute.",
+      error: "Too Many Requests"
+    });
+  }
 });
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 
 // Middleware CORS - configurabil via ALLOWED_ORIGINS
 const defaultOrigins = [
   "http://localhost:3000",
   "https://cvisor.com",
-  "https://api.cvisor.com"
+  "https://api.cvisor.com",
+  "http://192.168.0.170:3000"
 ];
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -116,7 +154,10 @@ const orgSkillsRoutes = require("./routes/organizations/skills");
 app.use("/api/organizations/skills", orgSkillsRoutes);
 */
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", (req, res, next) => {
+  console.log(`[Static] Serving file: ${req.url}`);
+  next();
+}, express.static(path.join(__dirname, "uploads")));
 // Noua structură
 const studentAnalytics = require("./routes/students/stats");
 app.use("/api/students/stats", studentAnalytics);
@@ -135,8 +176,18 @@ app.use("/api/contact", contactRoutes);
 const pointsRoutes = require('./routes/students/points');
 app.use('/api/students', pointsRoutes);
 
+const unsubRoutes = require('./routes/newsletter/unsubscribe');
+app.use('/api/newsletter', unsubRoutes);
+
 const badgesRoutes = require('./routes/students/badges');
 app.use('/api/students', badgesRoutes);
+
+const notificationsRoutes = require('./routes/notifications/push');
+const verifyTokenOptional = require('./middleware/verifyTokenOptional');
+app.use('/api/notifications', verifyTokenOptional, notificationsRoutes);
+
+// DEBUG ROUTES (Doar dacă vrei să le lași active)
+
 
 app.use((err, req, res, next) => {
   console.error("[GLOBAL ERROR]", err);
@@ -155,6 +206,11 @@ app.use((err, req, res, next) => {
 
   res.status(500).json(response);
 });
+
+
+// Jobs Scheduler
+const { startScheduler } = require('./jobs/newsletter');
+startScheduler();
 
 
 app.listen(PORT, () => {

@@ -1,0 +1,715 @@
+﻿[dotenv@17.2.1] injecting env (0) from .env -- tip: ≡ƒ¢á∩╕Å  run anywhere with `dotenvx run -- yourcommand`
+docker : node:interna
+l/modules/cjs/loader:
+1143
+At line:1 char:1
++ docker logs 
+cvisor_backend 2>&1 
+| Out-File -Encoding 
+utf8 combined_lo ...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (node:in   
+ ternal/modules/c    
+js/loader:1143:S    
+tring) [], Remot    
+eException
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+  throw err;
+  ^
+
+Error: Cannot find 
+module '../middleware
+/validation'
+Require stack:
+- /app/routes/contact
+/contact.js
+- /app/app.js
+    at Module._resolv
+eFilename (node:inter
+nal/modules/cjs/loade
+r:1140:15)
+    at Module._load (
+node:internal/modules
+/cjs/loader:981:27)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19)
+    at require (node:
+internal/modules/help
+ers:177:18)
+    at 
+Object.<anonymous> (/
+app/routes/contact/co
+ntact.js:3:37)
+    at 
+Module._compile (node
+:internal/modules/cjs
+/loader:1364:14)
+    at Module._extens
+ions..js (node:intern
+al/modules/cjs/loader
+:1422:10)
+    at Module.load (n
+ode:internal/modules/
+cjs/loader:1203:32)
+    at Module._load (
+node:internal/modules
+/cjs/loader:1019:12)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19) {
+  code: 
+'MODULE_NOT_FOUND',
+  requireStack: [ '/a
+pp/routes/contact/con
+tact.js', 
+'/app/app.js' ]
+}
+
+Node.js v18.20.8
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ΓÜÖ∩╕Å  suppress all logs with { quiet: true }
+node:internal/modules
+/cjs/loader:1143
+  throw err;
+  ^
+
+Error: Cannot find 
+module '../middleware
+/validation'
+Require stack:
+- /app/routes/contact
+/contact.js
+- /app/app.js
+    at Module._resolv
+eFilename (node:inter
+nal/modules/cjs/loade
+r:1140:15)
+    at Module._load (
+node:internal/modules
+/cjs/loader:981:27)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19)
+    at require (node:
+internal/modules/help
+ers:177:18)
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ≡ƒöÉ prevent committing .env to code: https://dotenvx.com/precommit
+    at 
+Object.<anonymous> (/
+app/routes/contact/co
+ntact.js:3:37)
+    at 
+Module._compile (node
+:internal/modules/cjs
+/loader:1364:14)
+    at Module._extens
+ions..js (node:intern
+al/modules/cjs/loader
+:1422:10)
+    at Module.load (n
+ode:internal/modules/
+cjs/loader:1203:32)
+    at Module._load (
+node:internal/modules
+/cjs/loader:1019:12)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19) {
+  code: 
+'MODULE_NOT_FOUND',
+  requireStack: [ '/a
+pp/routes/contact/con
+tact.js', 
+'/app/app.js' ]
+}
+
+Node.js v18.20.8
+node:internal/modules
+/cjs/loader:1143
+  throw err;
+  ^
+
+Error: Cannot find 
+module '../middleware
+/validation'
+Require stack:
+- /app/routes/contact
+/contact.js
+- /app/app.js
+    at Module._resolv
+eFilename (node:inter
+nal/modules/cjs/loade
+r:1140:15)
+    at Module._load (
+node:internal/modules
+/cjs/loader:981:27)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19)
+    at require (node:
+internal/modules/help
+ers:177:18)
+    at 
+Object.<anonymous> (/
+app/routes/contact/co
+ntact.js:3:37)
+    at 
+Module._compile (node
+:internal/modules/cjs
+/loader:1364:14)
+    at Module._extens
+ions..js (node:intern
+al/modules/cjs/loader
+:1422:10)
+    at Module.load (n
+ode:internal/modules/
+cjs/loader:1203:32)
+    at Module._load (
+node:internal/modules
+/cjs/loader:1019:12)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19) {
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ≡ƒ¢á∩╕Å  run anywhere with `dotenvx run -- yourcommand`
+  code: 
+'MODULE_NOT_FOUND',
+  requireStack: [ '/a
+pp/routes/contact/con
+tact.js', 
+'/app/app.js' ]
+}
+
+Node.js v18.20.8
+node:internal/modules
+/cjs/loader:1143
+  throw err;
+  ^
+
+Error: Cannot find 
+module '../middleware
+/validation'
+Require stack:
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ≡ƒôí auto-backup env with Radar: https://dotenvx.com/radar
+- /app/routes/contact
+/contact.js
+- /app/app.js
+    at Module._resolv
+eFilename (node:inter
+nal/modules/cjs/loade
+r:1140:15)
+    at Module._load (
+node:internal/modules
+/cjs/loader:981:27)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19)
+    at require (node:
+internal/modules/help
+ers:177:18)
+    at 
+Object.<anonymous> (/
+app/routes/contact/co
+ntact.js:3:37)
+    at 
+Module._compile (node
+:internal/modules/cjs
+/loader:1364:14)
+    at Module._extens
+ions..js (node:intern
+al/modules/cjs/loader
+:1422:10)
+    at Module.load (n
+ode:internal/modules/
+cjs/loader:1203:32)
+    at Module._load (
+node:internal/modules
+/cjs/loader:1019:12)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19) {
+  code: 
+'MODULE_NOT_FOUND',
+  requireStack: [ '/a
+pp/routes/contact/con
+tact.js', 
+'/app/app.js' ]
+}
+
+Node.js v18.20.8
+node:internal/modules
+/cjs/loader:1143
+  throw err;
+  ^
+
+Error: Cannot find 
+module '../middleware
+/validation'
+Require stack:
+- /app/routes/contact
+/contact.js
+- /app/app.js
+    at Module._resolv
+eFilename (node:inter
+nal/modules/cjs/loade
+r:1140:15)
+    at Module._load (
+node:internal/modules
+/cjs/loader:981:27)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19)
+    at require (node:
+internal/modules/help
+ers:177:18)
+    at 
+Object.<anonymous> (/
+app/routes/contact/co
+ntact.js:3:37)
+    at 
+Module._compile (node
+:internal/modules/cjs
+/loader:1364:14)
+    at Module._extens
+ions..js (node:intern
+al/modules/cjs/loader
+:1422:10)
+    at Module.load (n
+ode:internal/modules/
+cjs/loader:1203:32)
+    at Module._load (
+node:internal/modules
+/cjs/loader:1019:12)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19) {
+  code: 
+'MODULE_NOT_FOUND',
+  requireStack: [ '/a
+pp/routes/contact/con
+tact.js', 
+'/app/app.js' ]
+}
+
+Node.js v18.20.8
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ΓÜÖ∩╕Å  load multiple .env files with { path: ['.env.local', '.env'] }
+node:internal/modules
+/cjs/loader:1143
+  throw err;
+  ^
+
+Error: Cannot find 
+module '../middleware
+/validation'
+Require stack:
+- /app/routes/contact
+/contact.js
+- /app/app.js
+    at Module._resolv
+eFilename (node:inter
+nal/modules/cjs/loade
+r:1140:15)
+    at Module._load (
+node:internal/modules
+/cjs/loader:981:27)
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ≡ƒöÉ prevent building .env in docker: https://dotenvx.com/prebuild
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ΓÜÖ∩╕Å  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ΓÜÖ∩╕Å  load multiple .env files with { path: ['.env.local', '.env'] }
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ≡ƒ¢á∩╕Å  run anywhere with `dotenvx run -- yourcommand`
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ΓÜÖ∩╕Å  enable debug logging with { debug: true }
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ≡ƒöÉ prevent building .env in docker: https://dotenvx.com/prebuild
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19)
+    at require (node:
+internal/modules/help
+ers:177:18)
+    at 
+Object.<anonymous> (/
+app/routes/contact/co
+ntact.js:3:37)
+    at 
+Module._compile (node
+:internal/modules/cjs
+/loader:1364:14)
+    at Module._extens
+ions..js (node:intern
+al/modules/cjs/loader
+:1422:10)
+    at Module.load (n
+ode:internal/modules/
+cjs/loader:1203:32)
+    at Module._load (
+node:internal/modules
+/cjs/loader:1019:12)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19) {
+  code: 
+'MODULE_NOT_FOUND',
+  requireStack: [ '/a
+pp/routes/contact/con
+tact.js', 
+'/app/app.js' ]
+}
+
+Node.js v18.20.8
+node:internal/modules
+/cjs/loader:1143
+  throw err;
+  ^
+
+Error: Cannot find 
+module '../middleware
+/validation'
+Require stack:
+- /app/routes/contact
+/contact.js
+- /app/app.js
+    at Module._resolv
+eFilename (node:inter
+nal/modules/cjs/loade
+r:1140:15)
+    at Module._load (
+node:internal/modules
+/cjs/loader:981:27)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19)
+    at require (node:
+internal/modules/help
+ers:177:18)
+    at 
+Object.<anonymous> (/
+app/routes/contact/co
+ntact.js:3:37)
+    at 
+Module._compile (node
+:internal/modules/cjs
+/loader:1364:14)
+    at Module._extens
+ions..js (node:intern
+al/modules/cjs/loader
+:1422:10)
+    at Module.load (n
+ode:internal/modules/
+cjs/loader:1203:32)
+    at Module._load (
+node:internal/modules
+/cjs/loader:1019:12)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19) {
+  code: 
+'MODULE_NOT_FOUND',
+  requireStack: [ '/a
+pp/routes/contact/con
+tact.js', 
+'/app/app.js' ]
+}
+
+Node.js v18.20.8
+node:internal/modules
+/cjs/loader:1143
+  throw err;
+  ^
+
+Error: Cannot find 
+module '../middleware
+/validation'
+Require stack:
+- /app/routes/contact
+/contact.js
+- /app/app.js
+    at Module._resolv
+eFilename (node:inter
+nal/modules/cjs/loade
+r:1140:15)
+    at Module._load (
+node:internal/modules
+/cjs/loader:981:27)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19)
+    at require (node:
+internal/modules/help
+ers:177:18)
+    at 
+Object.<anonymous> (/
+app/routes/contact/co
+ntact.js:3:37)
+    at 
+Module._compile (node
+:internal/modules/cjs
+/loader:1364:14)
+    at Module._extens
+ions..js (node:intern
+al/modules/cjs/loader
+:1422:10)
+    at Module.load (n
+ode:internal/modules/
+cjs/loader:1203:32)
+    at Module._load (
+node:internal/modules
+/cjs/loader:1019:12)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19) {
+  code: 
+'MODULE_NOT_FOUND',
+  requireStack: [ '/a
+pp/routes/contact/con
+tact.js', 
+'/app/app.js' ]
+}
+
+Node.js v18.20.8
+node:internal/modules
+/cjs/loader:1143
+  throw err;
+  ^
+
+Error: Cannot find 
+module '../middleware
+/validation'
+Require stack:
+- /app/routes/contact
+/contact.js
+- /app/app.js
+    at Module._resolv
+eFilename (node:inter
+nal/modules/cjs/loade
+r:1140:15)
+    at Module._load (
+node:internal/modules
+/cjs/loader:981:27)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19)
+    at require (node:
+internal/modules/help
+ers:177:18)
+    at 
+Object.<anonymous> (/
+app/routes/contact/co
+ntact.js:3:37)
+    at 
+Module._compile (node
+:internal/modules/cjs
+/loader:1364:14)
+    at Module._extens
+ions..js (node:intern
+al/modules/cjs/loader
+:1422:10)
+    at Module.load (n
+ode:internal/modules/
+cjs/loader:1203:32)
+    at Module._load (
+node:internal/modules
+/cjs/loader:1019:12)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19) {
+  code: 
+'MODULE_NOT_FOUND',
+  requireStack: [ '/a
+pp/routes/contact/con
+tact.js', 
+'/app/app.js' ]
+}
+
+Node.js v18.20.8
+node:internal/modules
+/cjs/loader:1143
+  throw err;
+  ^
+
+Error: Cannot find 
+module '../middleware
+/validation'
+Require stack:
+- /app/routes/contact
+/contact.js
+- /app/app.js
+    at Module._resolv
+eFilename (node:inter
+nal/modules/cjs/loade
+r:1140:15)
+    at Module._load (
+node:internal/modules
+/cjs/loader:981:27)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19)
+    at require (node:
+internal/modules/help
+ers:177:18)
+    at 
+Object.<anonymous> (/
+app/routes/contact/co
+ntact.js:3:37)
+    at 
+Module._compile (node
+:internal/modules/cjs
+/loader:1364:14)
+    at Module._extens
+ions..js (node:intern
+al/modules/cjs/loader
+:1422:10)
+    at Module.load (n
+ode:internal/modules/
+cjs/loader:1203:32)
+    at Module._load (
+node:internal/modules
+/cjs/loader:1019:12)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19) {
+  code: 
+'MODULE_NOT_FOUND',
+  requireStack: [ '/a
+pp/routes/contact/con
+tact.js', 
+'/app/app.js' ]
+}
+
+Node.js v18.20.8
+node:internal/modules
+/cjs/loader:1143
+  throw err;
+  ^
+
+Error: Cannot find 
+module '../middleware
+/validation'
+Require stack:
+- /app/routes/contact
+/contact.js
+- /app/app.js
+    at Module._resolv
+eFilename (node:inter
+nal/modules/cjs/loade
+r:1140:15)
+    at Module._load (
+node:internal/modules
+/cjs/loader:981:27)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19)
+    at require (node:
+internal/modules/help
+ers:177:18)
+    at 
+Object.<anonymous> (/
+app/routes/contact/co
+ntact.js:3:37)
+    at 
+Module._compile (node
+:internal/modules/cjs
+/loader:1364:14)
+    at Module._extens
+ions..js (node:intern
+al/modules/cjs/loader
+:1422:10)
+    at Module.load (n
+ode:internal/modules/
+cjs/loader:1203:32)
+    at Module._load (
+node:internal/modules
+/cjs/loader:1019:12)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19) {
+  code: 
+'MODULE_NOT_FOUND',
+  requireStack: [ '/a
+pp/routes/contact/con
+tact.js', 
+'/app/app.js' ]
+}
+
+Node.js v18.20.8
+node:internal/modules
+/cjs/loader:1143
+  throw err;
+  ^
+
+Error: Cannot find 
+module '../middleware
+/validation'
+Require stack:
+- /app/routes/contact
+/contact.js
+- /app/app.js
+    at Module._resolv
+eFilename (node:inter
+nal/modules/cjs/loade
+r:1140:15)
+    at Module._load (
+node:internal/modules
+/cjs/loader:981:27)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19)
+    at require (node:
+internal/modules/help
+ers:177:18)
+    at 
+Object.<anonymous> (/
+app/routes/contact/co
+ntact.js:3:37)
+    at 
+Module._compile (node
+:internal/modules/cjs
+/loader:1364:14)
+    at Module._extens
+ions..js (node:intern
+al/modules/cjs/loader
+:1422:10)
+    at Module.load (n
+ode:internal/modules/
+cjs/loader:1203:32)
+    at Module._load (
+node:internal/modules
+/cjs/loader:1019:12)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1231:19) {
+  code: 
+'MODULE_NOT_FOUND',
+  requireStack: [ '/a
+pp/routes/contact/con
+tact.js', 
+'/app/app.js' ]
+}
+
+Node.js v18.20.8

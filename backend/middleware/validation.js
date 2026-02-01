@@ -24,28 +24,96 @@ const registerSchema = z.object({
   role: z.enum(['student', 'organization'], {
     errorMap: () => ({ message: "Rol invalid. Doar 'student' sau 'organization' sunt permise" })
   }).optional()
-});
+}).strict();
 
 const loginSchema = z.object({
   email: z.string()
     .email("Email invalid"),
 
   password: z.string()
-    .min(1, "Parola este obligatorie")
-});
+    .min(1, "Parola este obligatorie"),
+
+  rememberMe: z.boolean().optional()
+}).strict();
 
 const emailVerificationSchema = z.object({
   email: z.string().email("Email invalid"),
   code: z.string()
     .length(6, "Codul de verificare trebuie să aibă 6 cifre")
     .regex(/^\d{6}$/, "Codul trebuie să conțină doar cifre")
-});
+}).strict();
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Email invalid")
+}).strict();
 
 const passwordResetSchema = z.object({
   email: z.string().email("Email invalid"),
   code: z.string().length(6, "Cod invalid"),
   newPassword: z.string().min(8, "Parola nouă trebuie să aibă minim 8 caractere")
-});
+}).strict();
+
+// ==================== USER PROFILE SCHEMA ====================
+
+const socialSchema = z.object({
+  github: z.string().url().optional().or(z.literal("")),
+  linkedin: z.string().url().optional().or(z.literal("")),
+  website: z.string().url().optional().or(z.literal("")),
+  instagram: z.string().url().optional().or(z.literal(""))
+}).strict().optional();
+
+const educationSchema = z.object({
+  id: z.string(),
+  school: z.string(),
+  degree: z.string(),
+  start: z.string(),
+  end: z.string().optional().or(z.literal("")),
+  details: z.string().optional()
+}).strict();
+
+const experienceSchema = z.object({
+  id: z.string(),
+  role: z.string(),
+  company: z.string(),
+  start: z.string(),
+  end: z.string().optional().or(z.literal("")),
+  details: z.string().optional()
+}).strict();
+
+const mediaSchema = z.object({
+  id: z.string(),
+  kind: z.enum(['image', 'video']),
+  url: z.string().url(),
+  caption: z.string().optional()
+}).strict();
+
+const oppRefSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  role: z.string().optional(),
+  org: z.string().optional(),
+  date: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  rating: z.number().optional(),
+  testimonial: z.string().optional(),
+  cover: z.string().optional(),
+  media: z.array(mediaSchema).optional()
+}).strict();
+
+const userProfileSchema = z.object({
+  name: z.string().min(2).max(100),
+  headline: z.string().max(255).optional(),
+  bio: z.string().max(5000).optional(),
+  location: z.string().max(255).optional(),
+  avatarDataUrl: z.string().optional(), // Base64 sau URL
+  avatarUrl: z.string().url().optional(),
+  skills: z.array(z.string()),
+  social: socialSchema,
+  education: z.array(educationSchema),
+  experience: z.array(experienceSchema),
+  portfolioMedia: z.array(mediaSchema),
+  opportunityRefs: z.array(oppRefSchema)
+}).strict();
 
 // ==================== CONTACT SCHEMA ====================
 
@@ -56,10 +124,13 @@ const contactSchema = z.object({
 
   email: z.string().email("Email invalid"),
 
+  phone: z.string().optional(),
+  telefon: z.string().optional(),
+
   message: z.string()
     .min(10, "Mesajul trebuie să aibă minim 10 caractere")
     .max(2000, "Mesajul prea lung")
-});
+}).strict();
 
 // ==================== FILE UPLOAD SCHEMA ====================
 
@@ -74,13 +145,17 @@ const fileUploadSchema = z.object({
     'image/jpg',
     'image/png',
     'image/webp',
-    'image/gif'
+    'image/gif',
+    'video/mp4',
+    'video/webm',
+    'video/ogg',
+    'video/quicktime'
   ], {
-    errorMap: () => ({ message: "Tip fișier invalid. Doar imagini (JPEG, PNG, WebP, GIF) sunt permise" })
+    errorMap: () => ({ message: "Tip fișier invalid. Doar imagini și video sunt permise" })
   }),
 
   size: z.number()
-    .max(20 * 1024 * 1024, "Fișier prea mare. Maxim 20MB")
+    .max(100 * 1024 * 1024, "Fișier prea mare. Maxim 100MB")
     .positive("Fișier invalid")
 });
 
@@ -107,7 +182,7 @@ const opportunitySchema = z.object({
   location: z.string().max(255, "Locație prea lungă").optional(),
 
   price: z.number().min(0, "Prețul nu poate fi negativ").optional()
-});
+}).strict();
 
 // ==================== MIDDLEWARE FUNCTIONS ====================
 
@@ -164,10 +239,11 @@ function validateFile(schema) {
       const result = schema.safeParse(req.file);
 
       if (!result.success) {
-        const errors = result.error.errors.map(err => ({
+        console.error("[File Validation] Failed:", result.error);
+        const errors = result.error.errors ? result.error.errors.map(err => ({
           field: err.path.join('.'),
           message: err.message
-        }));
+        })) : [{ message: "Invalid file data" }];
 
         return res.status(400).json({
           error: "File validation error",
@@ -194,7 +270,9 @@ module.exports = {
   registerSchema,
   loginSchema,
   emailVerificationSchema,
+  forgotPasswordSchema,
   passwordResetSchema,
+  userProfileSchema,
   contactSchema,
   fileUploadSchema,
   opportunitySchema,

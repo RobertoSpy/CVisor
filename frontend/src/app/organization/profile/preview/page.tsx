@@ -69,12 +69,7 @@ export default function Page() {
       const resp = await fetch("/api/organizations/opportunities", { credentials: "include" });
       if (resp.ok) {
         const data = await resp.json();
-        // Sort: Pinned first
-        const sorted = Array.isArray(data) ? data.sort((a: any, b: any) => {
-          if (a.is_pinned_on_profile === b.is_pinned_on_profile) return 0;
-          return a.is_pinned_on_profile ? -1 : 1;
-        }) : [];
-        setOpportunities(sorted);
+        setOpportunities(data);
       }
     } catch (e) {
       console.error(e);
@@ -105,28 +100,6 @@ export default function Page() {
     Promise.all([fetchProfile(), fetchOpportunities(), fetchGamification()]).finally(() => setLoading(false));
   }, []);
 
-  const handleTogglePin = async (oppId: string, currentStatus: boolean) => {
-    const newStatus = !currentStatus;
-    try {
-      const res = await fetch(`/api/organizations/opportunities/${oppId}/pin`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ is_pinned: newStatus })
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        toast.error(err.message || "Eroare la fixare");
-        return;
-      }
-
-      toast.success(newStatus ? "Oportunitate fixată!" : "Oportunitate scoasă de la profil");
-      fetchOpportunities(); // Refresh list
-    } catch (e) {
-      toast.error("A apărut o eroare");
-    }
-  };
 
   if (loading) return <div className="py-10 text-center">Se încarcă…</div>;
 
@@ -135,7 +108,6 @@ export default function Page() {
       profile={profile as OrgProfilePayload}
       opportunities={opportunities}
       isOwner={true}
-      onTogglePin={handleTogglePin}
       points={points}
       badges={badges}
     />

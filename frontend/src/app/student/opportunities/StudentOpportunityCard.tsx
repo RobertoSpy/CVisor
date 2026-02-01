@@ -1,14 +1,81 @@
 "use client";
 import Link from "next/link";
-import type { Opportunity } from "../../organization/opportunities/types";
+import { Opportunity } from "../../organization/opportunities/types";
+import { useEffect, useRef, useState } from "react";
 
-type Props = { opportunity: Opportunity };
+type Props = {
+  opportunity: Opportunity;
+};
 
 export default function StudentOpportunityCard({ opportunity: opp }: Props) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Detect mobile/touch device
+    const mq = window.matchMedia("(hover: none) and (pointer: coarse)");
+    setIsMobile(mq.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
+  }, []);
+
+  useEffect(() => {
+    // Mobile: Autoplay on scroll/intersection
+    // FIX: Don't check !opp.banner_image anymore since Video has priority
+    if (!isMobile || !videoRef.current || !opp.promo_video) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting) {
+          videoRef.current?.play().catch(() => { });
+        } else {
+          videoRef.current?.pause();
+        }
+      },
+      { threshold: 0.6 } // 60% visible
+    );
+
+    observer.observe(videoRef.current);
+    return () => observer.disconnect();
+  }, [isMobile, opp.promo_video]);
+
+  const handleMouseEnter = () => {
+    if (!isMobile && videoRef.current) {
+      videoRef.current.play().catch(() => { });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!isMobile && videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0; // Reset to start
+    }
+  };
+
   return (
     <li className="bg-card rounded-2xl p-5 ring-1 ring-black/5 shadow-[0_6px_24px_rgba(0,0,0,0.06)] flex flex-col justify-between">
-      {/* Imagine banner */}
-      {opp.banner_image && (
+      {/* Imagine banner sau Video */}
+      {/* Video sau Banner */}
+      {opp.promo_video ? (
+        <div
+          className="w-full flex justify-center mb-4"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <video
+            ref={videoRef}
+            src={opp.promo_video}
+            className="object-cover rounded-xl max-h-48 w-full bg-black"
+            muted
+            loop
+            playsInline
+            style={{ maxWidth: "400px" }}
+          />
+        </div>
+      ) : opp.banner_image ? (
         <div className="w-full flex justify-center mb-4">
           <img
             src={opp.banner_image}
@@ -17,7 +84,7 @@ export default function StudentOpportunityCard({ opportunity: opp }: Props) {
             style={{ maxWidth: "400px" }}
           />
         </div>
-      )}
+      ) : null}
       <h3 className="text-lg font-semibold tracking-tight mt-0.5 text-primary">
         <Link href={`/student/opportunities/${opp.id}`}>{opp.title}</Link>
       </h3>

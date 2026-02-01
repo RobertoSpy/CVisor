@@ -6,7 +6,19 @@ import Testimonials from "./components/Testimonials";
 import StatsSection from "./components/StatsSection";
 import Footer from "./components/Footer";
 
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+
 export default function HomePage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const role = localStorage.getItem("role");
+    if (role === "student") router.push("/student");
+    else if (role === "organization") router.push("/organization");
+    else if (role === "admin") router.push("/admin");
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <Navbar />

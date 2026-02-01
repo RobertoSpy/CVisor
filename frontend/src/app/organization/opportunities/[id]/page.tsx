@@ -87,76 +87,74 @@ export default function OrganizationOpportunityDetailsPage() {
           <p className="text-gray-700 text-base leading-relaxed">{opp.description}</p>
         </div>
 
-        {/* Agenda, FAQ, Reviews - secțiuni creative */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white/70 rounded-xl shadow-sm p-5 border border-primary/10 animate-fade-in">
-            <h3 className="text-primary font-bold mb-2 flex items-center gap-2"><FaListUl /> Agenda</h3>
-            <div className="text-gray-700 text-sm">
-              {opp.agenda
-                ? typeof opp.agenda === "object"
-                  ? opp.agenda.text ?? JSON.stringify(opp.agenda)
-                  : opp.agenda
-                : <span className="italic text-gray-400">-</span>}
+        {/* Agenda & FAQ - Vertical Full Width Layout */}
+        <div className="flex flex-col gap-8 mb-10 w-full">
+          {/* Agenda */}
+          <div className="bg-white/80 rounded-2xl shadow-sm p-6 border border-primary/10 animate-fade-in w-full">
+            <h3 className="text-primary text-xl font-bold mb-4 flex items-center gap-2 border-b border-primary/10 pb-2">
+              <FaListUl /> Agenda
+            </h3>
+            <div className="flex flex-col gap-4 w-full">
+              {opp.agenda ? (
+                Array.isArray(opp.agenda) ? (
+                  opp.agenda.map((item: any, i: number) => (
+                    <div key={i} className="w-full bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 hover:shadow-md transition-shadow">
+                      <div className="font-bold text-secondary text-lg min-w-[100px] flex-shrink-0 border-r md:border-r-0 md:border-b border-gray-100 pb-2 md:pb-0 md:pr-4">
+                        {item.time || `Etapa ${i + 1}`}
+                      </div>
+                      <div className="text-gray-700 text-base leading-relaxed break-words whitespace-pre-wrap flex-grow">
+                        <div className="font-semibold text-gray-900 mb-1">{item.title}</div>
+                        {item.text || item.description || (typeof item === 'string' ? item : JSON.stringify(item))}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-gray-700 text-base leading-relaxed break-words whitespace-pre-wrap bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                    {typeof opp.agenda === "object" ? opp.agenda.text ?? JSON.stringify(opp.agenda) : opp.agenda}
+                  </div>
+                )
+              ) : (
+                <div className="text-gray-400 italic p-4 text-center bg-gray-50 rounded-xl">Nu există agendă specificată.</div>
+              )}
             </div>
           </div>
-          <div className="bg-white/70 rounded-xl shadow-sm p-5 border border-primary/10 animate-fade-in">
-            <h3 className="text-primary font-bold mb-2 flex items-center gap-2"><FaListUl /> FAQ</h3>
-            <div className="text-gray-700 text-sm">
-              {opp.faq
-                ? Array.isArray(opp.faq)
-                  ? opp.faq.map((item: any, i: number) => <div key={i} className="mb-1">{item.text ?? JSON.stringify(item)}</div>)
-                  : typeof opp.faq === "object"
-                    ? opp.faq.text ?? JSON.stringify(opp.faq)
-                    : opp.faq
-                : <span className="italic text-gray-400">-</span>}
-            </div>
-          </div>
-          <div className="bg-white/70 rounded-xl shadow-sm p-5 border border-primary/10 animate-fade-in">
-            <h3 className="text-primary font-bold mb-2 flex items-center gap-2"><FaStar className="text-yellow-500" /> Reviews</h3>
-            <div className="text-gray-700 text-sm">
-              {opp.reviews
-                ? Array.isArray(opp.reviews)
-                  ? opp.reviews.map((item: any, i: number) => <div key={i} className="mb-1">{item.text ?? JSON.stringify(item)}</div>)
-                  : typeof opp.reviews === "object"
-                    ? opp.reviews.text ?? JSON.stringify(opp.reviews)
-                    : opp.reviews
-                : <span className="italic text-gray-400">-</span>}
+
+          {/* FAQ */}
+          <div className="bg-white/80 rounded-2xl shadow-sm p-6 border border-primary/10 animate-fade-in w-full">
+            <h3 className="text-primary text-xl font-bold mb-4 flex items-center gap-2 border-b border-primary/10 pb-2">
+              <FaListUl /> Întrebări Frecvente (FAQ)
+            </h3>
+            <div className="flex flex-col gap-4 w-full">
+              {opp.faq ? (
+                Array.isArray(opp.faq) ? (
+                  opp.faq.map((item: any, i: number) => (
+                    <div key={i} className="w-full bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                      {item.question && (
+                        <div className="font-bold text-gray-900 text-lg mb-2 flex items-start gap-2">
+                          <span className="text-secondary">Q:</span>
+                          <span className="break-words">{item.question}</span>
+                        </div>
+                      )}
+                      <div className="text-gray-700 text-base leading-relaxed break-words whitespace-pre-wrap pl-6 border-l-2 border-secondary/20">
+                        {item.answer || item.text || JSON.stringify(item)}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-gray-700 text-base leading-relaxed break-words whitespace-pre-wrap bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                    {typeof opp.faq === "object" ? opp.faq.text ?? JSON.stringify(opp.faq) : opp.faq}
+                  </div>
+                )
+              ) : (
+                <div className="text-gray-400 italic p-4 text-center bg-gray-50 rounded-xl">Nu există întrebări frecvente.</div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Galerie */}
 
-        {opp.gallery && Array.isArray(opp.gallery) && opp.gallery.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-primary font-bold mb-3 flex items-center gap-2"><FaListUl /> Galerie</h3>
-            <div className="flex gap-2 flex-wrap">
-              {opp.gallery.map((url: string, i: number) => (
-                <img
-                  key={url + i}
-                  src={url}
-                  alt={`galerie-full-${i}`}
-                  className="w-32 h-32 object-cover rounded-lg shadow hover:scale-105 transition-all duration-200 border border-primary/20"
-                />
-              ))}
-            </div>
-          </div>
-        )}
-        {typeof opp.gallery === "string" && opp.gallery.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-primary font-bold mb-3 flex items-center gap-2"><FaListUl /> Galerie</h3>
-            <div className="flex gap-2 flex-wrap">
-              {opp.gallery.split(",").map((url: string, i: number) => (
-                <img
-                  key={url.trim() + i}
-                  src={url.trim()}
-                  alt={`galerie-full-${i}`}
-                  className="w-32 h-32 object-cover rounded-lg shadow hover:scale-105 transition-all duration-200 border border-primary/20"
-                />
-              ))}
-            </div>
-          </div>
-        )}
+
 
         {/* Video promo */}
         {opp.promo_video && (
@@ -174,6 +172,10 @@ export default function OrganizationOpportunityDetailsPage() {
             </div>
           </div>
         )}
+
+
+
+
 
         {/* Call to Action */}
         <div className="text-center mt-12">

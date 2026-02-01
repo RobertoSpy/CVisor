@@ -6,7 +6,7 @@ export type GapInfo = { start: string; end: string; length: number } | null;
 // Sursa unică pentru badges și milestone-uri
 export const BADGES = [
   {
-    code: "novice",
+    code: "lvl1",
     label: "LVL 1",
     emoji: "🌱",
     streak: 0,
@@ -14,7 +14,7 @@ export const BADGES = [
     description: "Ai acces la funcționalitățile de bază: creare profil, vizualizare oportunități și organizații."
   },
   {
-    code: "incepator",
+    code: "lvl2",
     label: "LVL 2",
     emoji: "🌿",
     streak: 7,
@@ -22,7 +22,7 @@ export const BADGES = [
     description: "Te-ai obișnuit cu platforma. Acum poți acumula puncte, care vor fi utile pentru viitoare upgrade-uri și aplicații."
   },
   {
-    code: "incepator+",
+    code: "lvl3",
     label: "LVL 3",
     emoji: "🌳",
     streak: 30,
@@ -30,7 +30,7 @@ export const BADGES = [
     description: "Ai ajuns la un nivel superior! Ai acces la o pagină nouă de aplicare și poți aplica direct la organizații din platformă."
   },
   {
-    code: "intermediar",
+    code: "lvl4",
     label: "LVL 4",
     emoji: "🍎",
     streak: 90,
@@ -38,7 +38,7 @@ export const BADGES = [
     description: "Primești acces premium: vezi oportunități exclusive, primești notificări prioritare și poți conversa cu organizațiile."
   },
   {
-    code: "advance",
+    code: "lvl5",
     label: "LVL 5",
     emoji: "👑",
     streak: 150,
@@ -74,19 +74,16 @@ export const LS_KEYS = {
 } as const;
 
 export function getPatchedSet(): Set<string> {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(LS_KEYS.patchedDays) || "[]"));
-  } catch {
-    return new Set();
-  }
+  // [FIX] Nu mai folosim LocalStorage pentru patchedDays, 
+  // deoarece backend-ul returnează deja zilele reparate în `map`,
+  // iar LS cauza probleme la schimbarea conturilor (sticky streak).
+  return new Set();
 }
 export function savePatchedSet(s: Set<string>) {
-  localStorage.setItem(LS_KEYS.patchedDays, JSON.stringify([...s]));
+  // no-op
 }
 export function patchDays(daysISO: string[]) {
-  const s = getPatchedSet();
-  daysISO.forEach((d) => s.add(d));
-  savePatchedSet(s);
+  // no-op
 }
 
 /** RAW (fără patched) */
@@ -169,6 +166,7 @@ export function computeStreakAuto(map: Record<string, number>) {
     const probe = new Date(today);
     while (visited(probe)) probe.setDate(probe.getDate() - 1);
 
+    /* DISABLING AUTO-FREEZE to allow manual purchase only
     const hole = new Date(probe);
     const holeISO = fmtDate(hole);
     const newer = new Date(hole); newer.setDate(hole.getDate() + 1);
@@ -181,6 +179,7 @@ export function computeStreakAuto(map: Record<string, number>) {
       localStorage.setItem(LS_KEYS.lastFreezeUsed, fmtDate(today));
       usedAutoFreezeNow = true;
     }
+    */
   }
 
   // --- MODIFICARE GAP ---
@@ -207,7 +206,8 @@ export function computeStreakAuto(map: Record<string, number>) {
       if (gapLen > 90) break;
     }
     gapDays.sort();
-    gapInfo = gapLen >= 2 ? { start: gapDays[0], end: gapDays[gapDays.length - 1], length: gapLen } : null;
+    // Allow gapLen >= 1 to be repairable (since auto-freeze is off)
+    gapInfo = gapLen >= 1 ? { start: gapDays[0], end: gapDays[gapDays.length - 1], length: gapLen } : null;
   }
   // --- END MODIFICARE GAP ---
 

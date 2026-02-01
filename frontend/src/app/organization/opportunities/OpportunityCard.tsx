@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Opportunity } from "./types";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   opportunity: Opportunity;
@@ -9,6 +10,53 @@ type Props = {
 };
 
 export default function OpportunityCard({ opportunity: opp, onEdit, onDelete, readOnly }: Props) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Detect mobile/touch device
+    const mq = window.matchMedia("(hover: none) and (pointer: coarse)");
+    setIsMobile(mq.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
+  }, []);
+
+  useEffect(() => {
+    // Mobile: Autoplay on scroll/intersection
+    // FIX: Don't check !opp.banner_image anymore since Video has priority
+    if (!isMobile || !videoRef.current || !opp.promo_video) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting) {
+          videoRef.current?.play().catch(() => { });
+        } else {
+          videoRef.current?.pause();
+        }
+      },
+      { threshold: 0.6 } // 60% visible
+    );
+
+    observer.observe(videoRef.current);
+    return () => observer.disconnect();
+  }, [isMobile, opp.promo_video]);
+
+  const handleMouseEnter = () => {
+    if (!isMobile && videoRef.current) {
+      videoRef.current.play().catch(() => { });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!isMobile && videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0; // Reset to start
+    }
+  };
+
   // Gradient și mesaje pentru fallback
   const fallbackBanner = () => {
     if (opp.type === "party") {
@@ -38,8 +86,24 @@ export default function OpportunityCard({ opportunity: opp, onEdit, onDelete, re
 
   return (
     <li className="bg-card rounded-2xl p-5 ring-1 ring-black/5 shadow flex flex-col justify-between relative overflow-visible">
-      {/* Banner sau fallback */}
-      {opp.banner_image ? (
+      {/* Video sau Banner sau Fallback */}
+      {opp.promo_video ? (
+        <div
+          className="w-full flex justify-center mb-4"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <video
+            ref={videoRef}
+            src={opp.promo_video}
+            className="object-cover rounded-xl max-h-48 w-full bg-black"
+            muted
+            loop
+            playsInline
+            style={{ maxWidth: "400px" }}
+          />
+        </div>
+      ) : opp.banner_image ? (
         <div className="w-full flex justify-center mb-4">
           <img
             src={opp.banner_image}

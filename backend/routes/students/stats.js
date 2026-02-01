@@ -44,6 +44,16 @@ router.post("/pageview", verifyToken, async (req, res) => {
         "INSERT INTO user_point_events (user_id, points_delta, reason) VALUES ($1, 5, 'login')",
         [uid]
       );
+
+      // Notify Student about daily points
+      const { notificationQueue } = require("../../lib/queue");
+      notificationQueue.add("user-notification", {
+        userId: uid,
+        title: "Ai primit 5 puncte! 💎",
+        body: "Bonus zilnic pentru autentificare.",
+        icon: '/albastru.svg',
+        url: '/student'
+      }, { removeOnComplete: true }).catch(console.error);
     }
 
     // ---------- 2. Bonus pentru badge nou deblocat azi ----------

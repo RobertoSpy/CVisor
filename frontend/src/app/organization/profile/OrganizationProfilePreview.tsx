@@ -2,7 +2,18 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { FaFacebook, FaInstagram, FaGlobe } from "react-icons/fa";
+import {
+  FaFacebook,
+  FaInstagram,
+  FaGlobe,
+  FaUserFriends,
+  FaUsers,
+  FaIdCard,
+  FaPhone,
+  FaEnvelope,
+  FaPhoneAlt,
+  FaCalendarAlt
+} from "react-icons/fa";
 
 type KeyPerson = { id?: string; name: string; role: string; responsibilities?: string };
 type EventItem = { id?: string; title: string; date?: string; description?: string; tags?: string[] };
@@ -18,7 +29,7 @@ export type Opportunity = {
   skills: string[];
   deadline: string;
   banner_image?: string;
-  is_pinned_on_profile?: boolean;
+  promo_video?: string;
 };
 
 type OrgProfilePayload = {
@@ -43,7 +54,6 @@ interface Props {
   profile: OrgProfilePayload | any;
   opportunities?: Opportunity[];
   isOwner?: boolean;
-  onTogglePin?: (oppId: string, currentStatus: boolean) => void;
   points?: number;
   badges?: any[];
 }
@@ -52,7 +62,6 @@ export default function OrganizationProfilePreview({
   profile,
   opportunities = [],
   isOwner = false,
-  onTogglePin,
   points = 0,
   badges = []
 }: Props) {
@@ -64,7 +73,7 @@ export default function OrganizationProfilePreview({
   const mappedProfile = {
     ...profile,
     avatarUrl: profile.avatarUrl ?? profile.avatar_url,
-    bannerUrl: profile.bannerUrl ?? profile.banner_url,
+    bannerUrl: profile.bannerUrl ?? profile.banner_url ?? profile.banner_image,
     keyPeople: profile.keyPeople ?? profile.key_people ?? [],
     contactPersons: profile.contactPersons ?? profile.contact_persons ?? [],
     media: profile.media ?? [],
@@ -157,7 +166,7 @@ export default function OrganizationProfilePreview({
               )}
               {safeProfile.volunteers !== undefined && (
                 <div className="flex items-center gap-1">
-                  <span className="material-icons text-gray-400 text-lg">group</span>
+                  <FaUserFriends className="text-gray-400 text-lg" />
                   <span>{safeProfile.volunteers} voluntari</span>
                 </div>
               )}
@@ -184,20 +193,7 @@ export default function OrganizationProfilePreview({
               </div>
             </div>
 
-            {/* Badges Showcase */}
-            {badges && badges.length > 0 && (
-              <div className="mb-8 w-full">
-                <div className="font-semibold text-gray-800 mb-4 text-center">Insigne Deblocate</div>
-                <div className="flex flex-wrap gap-4 justify-center">
-                  {badges.map((b: any, idx: number) => (
-                    <div key={idx} className="flex flex-col items-center p-3 bg-white rounded-xl shadow-sm border border-gray-100 w-24" title={b}>
-                      <div className="text-3xl mb-1">🏅</div>
-                      <div className="text-[10px] text-center font-medium leading-tight text-gray-600">{b}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Badges Showcase Removed */}
           </div>
 
           <hr className="border-gray-100 my-8" />
@@ -214,7 +210,7 @@ export default function OrganizationProfilePreview({
           {safeProfile.keyPeople.length > 0 && (
             <div className="mb-10">
               <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2 justify-center">
-                <span className="material-icons text-primary">groups</span> Echipa Noastră
+                <FaUsers className="text-primary" /> Echipa Noastră
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {safeProfile.keyPeople.map((pers: KeyPerson) => (
@@ -237,21 +233,21 @@ export default function OrganizationProfilePreview({
           {safeProfile.contactPersons.length > 0 && (
             <div className="mb-10">
               <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2 justify-center">
-                <span className="material-icons text-primary">contact_phone</span> Contact
+                <FaIdCard className="text-primary" /> Contact
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {safeProfile.contactPersons.map((person: ContactPerson) => (
                   <div key={person.id || person.email} className="flex items-start gap-4 p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition">
                     <div className="h-12 w-12 rounded-full bg-green-50 flex items-center justify-center text-green-600 font-bold flex-shrink-0 text-lg">
-                      <span className="material-icons">call</span>
+                      <FaPhone />
                     </div>
                     <div>
                       <div className="font-bold text-gray-900">{person.name}</div>
                       <div className="text-sm text-gray-600 flex items-center gap-1 mt-1">
-                        <span className="material-icons text-[14px]">email</span> {person.email}
+                        <FaEnvelope className="text-[14px]" /> {person.email}
                       </div>
                       <div className="text-sm text-gray-600 flex items-center gap-1">
-                        <span className="material-icons text-[14px]">phone</span> {person.phone}
+                        <FaPhoneAlt className="text-[14px]" /> {person.phone}
                       </div>
                     </div>
                   </div>
@@ -301,11 +297,6 @@ export default function OrganizationProfilePreview({
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4 px-2">
               <h2 className="text-xl font-bold text-gray-800">🔥 Oportunități</h2>
-              {isOwner && (
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                  Max 5 fixate
-                </span>
-              )}
             </div>
 
             {opportunities.length === 0 ? (
@@ -319,30 +310,22 @@ export default function OrganizationProfilePreview({
                     key={opp.id}
                     className="min-w-[280px] md:min-w-[320px] snap-center bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group relative flex-shrink-0"
                   >
-                    {/* Pin Button (Owner Only) */}
-                    {isOwner && onTogglePin && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          onTogglePin(opp.id, !!opp.is_pinned_on_profile);
-                        }}
-                        className={`absolute top - 2 right - 2 z - 10 px - 3 py - 1.5 rounded - full shadow - sm backdrop - blur - sm transition flex items - center gap - 1 text - xs font - bold ${opp.is_pinned_on_profile
-                          ? "bg-blue-600 text-white hover:bg-blue-700"
-                          : "bg-white/90 text-gray-500 hover:text-blue-600 hover:bg-white"
-                          } `}
-                        title={opp.is_pinned_on_profile ? "Scoate de la profil" : "Fixează la profil"}
-                      >
-                        <span className="material-icons text-sm">
-                          {opp.is_pinned_on_profile ? "push_pin" : "push_pin"}
-                        </span>
-                        {opp.is_pinned_on_profile ? "PINNED" : "PIN"}
-                      </button>
-                    )}
-
-                    <Link href={`/ student / opportunities / ${opp.id} `} className="block h-full">
+                    <Link href={`/student/opportunities/${opp.id}`} className="block h-full">
                       <div className="h-36 bg-gray-200 relative">
                         {opp.banner_image ? (
                           <img src={opp.banner_image} alt={opp.title} className="w-full h-full object-cover" />
+                        ) : opp.promo_video ? (
+                          <video
+                            src={opp.promo_video}
+                            className="w-full h-full object-cover bg-black"
+                            muted
+                            loop
+                            onMouseEnter={(e) => e.currentTarget.play()}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.pause();
+                              e.currentTarget.currentTime = 0;
+                            }}
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
                             No Image
@@ -364,7 +347,7 @@ export default function OrganizationProfilePreview({
                           ))}
                         </div>
                         <div className="text-xs text-gray-400 flex items-center gap-1">
-                          <span className="material-icons text-[14px]">calendar_today</span>
+                          <FaCalendarAlt className="text-[14px]" />
                           Deadline: {new Date(opp.deadline).toLocaleDateString("ro-RO")}
                         </div>
                       </div>
@@ -377,6 +360,6 @@ export default function OrganizationProfilePreview({
 
         </div>
       </div>
-    </div>
+    </div >
   );
 }

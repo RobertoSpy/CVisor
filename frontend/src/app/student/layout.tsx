@@ -20,7 +20,10 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
         if (data.name) setStudentName(data.name);
       })
       .catch(() => {
-        // If not logged in, maybe redirect? For now just ignore or let middleware handle it.
+        // If not logged in, clear local storage and redirect to home
+        localStorage.removeItem("role");
+        localStorage.removeItem("email");
+        router.push("/");
       });
   }, []);
 
@@ -30,7 +33,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
         localStorage.removeItem("token"); // Cleanup just in case
         localStorage.removeItem("role");
         localStorage.removeItem("email");
-        router.push("/login");
+        router.push("/");
       });
   }
 
@@ -63,7 +66,6 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
               {[
                 { href: "/student", label: "Dashboard" },
                 { href: "/student/opportunities", label: "Oportunități" },
-                { href: "/student/applications", label: "Aplicatiile mele" },
                 { href: "/student/profile", label: "Profil" },
                 { href: "/student/organizations", label: "Organizații" },
               ].map(({ href, label }) => (
@@ -77,6 +79,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                 </Link>
               ))}
             </nav>
+            <NotificationButton />
             <button
               onClick={() => {
                 setMenuOpen(false);
@@ -107,5 +110,35 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
     </div>
+  );
+}
+
+import usePushNotifications from "../../hooks/usePushNotifications";
+
+function NotificationButton() {
+  const { isSubscribed, subscribe, permission } = usePushNotifications();
+
+  if (isSubscribed) return null; // Deja abonat
+
+  if (permission === 'denied') {
+    return (
+      <button
+        onClick={() => alert("Browser-ul tău a blocat notificările pentru acest site.\n\nPentru a le activa:\n1. Apasă pe iconița lacăt/setări din stânga barei de adresă.\n2. Caută 'Notificări' și selectează 'Permite' (Allow).\n3. Reîncarcă pagina.")}
+        className="mt-4 md:mt-0 px-4 py-2 rounded-lg text-red-200 bg-red-900/30 ring-1 ring-red-500/50 hover:bg-red-900/50 transition text-xs font-bold uppercase tracking-wider mr-2"
+        title="Notificările sunt blocate"
+      >
+        ⚠️ Notificări Blocate
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={subscribe}
+      className="mt-4 md:mt-0 px-4 py-2 rounded-lg text-blue-100 ring-1 ring-blue-300/30 hover:bg-blue-800 transition text-xs font-bold uppercase tracking-wider mr-2"
+      title="Activează notificările"
+    >
+      🔔 Activează Notificări
+    </button>
   );
 }

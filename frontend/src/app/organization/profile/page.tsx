@@ -234,7 +234,7 @@ export default function OrganizationProfileWizard() {
             media: data.media ?? [],
             social: data.social ?? {},
             avatarUrl: data.avatar_url ?? data.avatarUrl ?? "",
-            bannerUrl: data.banner_url ?? data.bannerUrl ?? "",
+            bannerUrl: data.banner_url ?? data.bannerUrl ?? data.banner_image ?? "",
           }));
 
           if (!data.name) {

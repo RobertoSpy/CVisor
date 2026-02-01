@@ -4,6 +4,8 @@ const verifyToken = require("../../middleware/verifyToken");
 const verifyOrg = require("../../middleware/verifyOrg"); // middleware pentru rol organizație
 
 const router = express.Router();
+const { notificationQueue } = require("../../lib/queue");
+
 
 function toPgArray(arr) {
   if (Array.isArray(arr)) {
@@ -52,9 +54,9 @@ router.post("/", verifyToken, verifyOrg, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `INSERT INTO opportunities 
-        (title, type, skills, deadline, user_id, available_spots, price, banner_image, promo_video, gallery, participants, location, tags, agenda, faq, reviews, description, cta_url)
+        (title, type, skills, deadline, user_id, available_spots, price, banner_image, promo_video, participants, location, tags, agenda, faq, description, cta_url)
        VALUES 
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
        RETURNING *`,
       [
         title,
@@ -66,13 +68,11 @@ router.post("/", verifyToken, verifyOrg, async (req, res) => {
         price,
         banner_image,
         promo_video,
-        toPgArray(gallery),
         toJson(participants),
         location,
         toPgArray(tags),
         toJson(agenda),
         toJson(faq),
-        toJson(reviews),
         description,
         cta_url
       ]
@@ -87,6 +87,34 @@ router.post("/", verifyToken, verifyOrg, async (req, res) => {
       "INSERT INTO user_point_events (user_id, points_delta, reason) VALUES ($1, 5, 'create_opportunity')",
       [userId]
     );
+
+    // Notify user about points
+    notificationQueue.add("user-notification", {
+      userId,
+      title: "Ai primit 5 puncte! 💎",
+      body: "Felicitări! Ai publicat o nouă oportunitate.",
+      icon: '/albastru.svg',
+      url: '/organization'
+    }, { removeOnComplete: true }).catch(console.error);
+
+    // --- PUSH NOTIFICATIONS ---
+    // Trimite notificare asincron la toți abonații (nu blochează răspunsul HTTP)
+    // --- PUSH NOTIFICATIONS (ASYNC VIA QUEUE) ---
+    const orgName = req.user.full_name || "O organizație";
+    const shortDesc = description && description.length > 50 ? description.substring(0, 50) + "..." : (description || "Vezi detalii în aplicație!");
+
+    // Adaugă job în coadă
+    notificationQueue.add("opportunity-push", {
+      title: `${orgName}: ${title}`,
+      body: shortDesc,
+      icon: '/albastru.svg',
+      data: { url: `/student/opportunities/${rows[0].id}` }
+    }, {
+      removeOnComplete: true, // Șterge jobul după ce e gata
+      attempts: 3 // Încearcă de 3 ori dacă eșuează
+    }).catch(err => console.error("Queue error:", err));
+    // --------------------------
+    // --------------------------
 
     res.json({ ...rows[0], pointsAdded: 5, reason: "create_opportunity" });
   } catch (e) {
@@ -114,7 +142,6 @@ router.put("/:id", verifyToken, verifyOrg, async (req, res) => {
     tags,
     agenda,
     faq,
-    reviews,
     description
   } = req.body;
 
@@ -123,12 +150,45 @@ router.put("/:id", verifyToken, verifyOrg, async (req, res) => {
   }
 
   try {
+    // Fetch current opportunity to check for old video
+    const { rows: currentOpp } = await pool.query(
+      `SELECT promo_video FROM opportunities WHERE id = $1`,
+      [id]
+    );
+
+    if (currentOpp.length > 0) {
+      const oldVideo = currentOpp[0].promo_video;
+      // Dacă se schimbă video-ul și exista unul vechi
+      if (promo_video && oldVideo && promo_video !== oldVideo) {
+        try {
+          // Construiește calea absolută către fișierul vechi
+          // Presupunem că oldVideo începe cu "/uploads/"
+          // __dirname este .../backend/routes/organizations
+          // Trebuie să ajungem la .../backend/uploads/...
+          const fs = require('fs');
+          const path = require('path');
+
+          // Elimină slash-ul de la început dacă există pentru path.join corect
+          const relativePath = oldVideo.startsWith('/') ? oldVideo.substring(1) : oldVideo;
+          const oldFilePath = path.join(__dirname, '../../', relativePath);
+
+          if (fs.existsSync(oldFilePath)) {
+            fs.unlinkSync(oldFilePath);
+            console.log(`[Update Opportunity] Deleted old video: ${oldFilePath}`);
+          }
+        } catch (err) {
+          console.error("[Update Opportunity] Error deleting old video:", err);
+          // Nu blocăm update-ul dacă ștergerea eșuează, doar logăm
+        }
+      }
+    }
+
     const { rows } = await pool.query(
       `UPDATE opportunities SET
         title=$1, type=$2, skills=$3, deadline=$4, available_spots=$5,
-        price=$6, banner_image=$7, promo_video=$8, gallery=$9, participants=$10,
-        location=$11, tags=$12, agenda=$13, faq=$14, reviews=$15, description=$16
-       WHERE id=$17 AND user_id=$18
+        price=$6, banner_image=$7, promo_video=$8, participants=$9,
+        location=$10, tags=$11, agenda=$12, faq=$13, description=$14
+       WHERE id=$15 AND user_id=$16
        RETURNING *`,
       [
         title,
@@ -139,13 +199,11 @@ router.put("/:id", verifyToken, verifyOrg, async (req, res) => {
         price,
         banner_image,
         promo_video,
-        toPgArray(gallery),
         toJson(participants),
         location,
         toPgArray(tags),
         toJson(agenda),
         toJson(faq),
-        toJson(reviews),
         description,
         id,
         userId
@@ -228,40 +286,6 @@ router.get("/", verifyToken, verifyOrg, async (req, res) => {
   }
 });
 
-// Toggle Pin Status (PATCH /api/organization/opportunities/:id/pin)
-router.patch("/:id/pin", verifyToken, verifyOrg, async (req, res) => {
-  const userId = req.user.id;
-  const { id } = req.params;
-  const { is_pinned } = req.body; // true/false
-
-  try {
-    // Optional: Check limit of 5 pinned items
-    if (is_pinned) {
-      const { rows: countRows } = await pool.query(
-        `SELECT COUNT(*) FROM opportunities WHERE user_id = $1 AND is_pinned_on_profile = TRUE`,
-        [userId]
-      );
-      if (parseInt(countRows[0].count) >= 5) {
-        return res.status(400).json({ message: "Poți avea maxim 5 oportunități fixate." });
-      }
-    }
-
-    const { rows } = await pool.query(
-      `UPDATE opportunities 
-       SET is_pinned_on_profile = $1 
-       WHERE id = $2 AND user_id = $3 
-       RETURNING *`,
-      [is_pinned, id, userId]
-    );
-
-    if (!rows.length) return res.status(404).json({ message: "Not found" });
-    res.json(rows[0]);
-  } catch (e) {
-    console.error("DB error (pin opportunity):", e);
-    res.status(500).json({ message: "DB error", error: e.message });
-  }
-});
-
 // Public: Get opportunities for a specific organization (GET /api/organization/opportunities/public/:userId)
 router.get("/public/:userId", async (req, res) => {
   const { userId } = req.params;
@@ -269,7 +293,7 @@ router.get("/public/:userId", async (req, res) => {
     const { rows } = await pool.query(`
       SELECT * FROM opportunities 
       WHERE user_id = $1 
-      ORDER BY is_pinned_on_profile DESC, created_at DESC
+      ORDER BY created_at DESC
     `, [userId]);
     res.json(rows);
   } catch (e) {

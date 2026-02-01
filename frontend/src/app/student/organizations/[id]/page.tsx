@@ -25,6 +25,11 @@ export default function OrganizationProfilePage() {
   if (!profile) return <div className="py-10 text-center text-red-500 font-semibold text-lg">Nu s-au găsit date de profil.</div>;
 
   return (
-    <OrganizationProfilePreview profile={profile} />
+    <OrganizationProfilePreview
+      profile={profile}
+      opportunities={profile.opportunities || []}
+      points={profile.points || 0}
+      badges={profile.badges || []}
+    />
   );
 }

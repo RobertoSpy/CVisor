@@ -1,4 +1,4 @@
-"use client";
+import { BADGES } from "../lib/streak";
 import React from "react";
 import { FaGithub, FaLinkedin, FaInstagram, FaGlobe } from "react-icons/fa";
 
@@ -26,7 +26,54 @@ type ProfilePayload = {
 export default function StudentProfilePreview({ profile, points = 0, badges = [] }: { profile: ProfilePayload | null, points?: number, badges?: any[] }) {
   if (!profile) return <div className="py-10 text-center text-red-500 font-semibold text-lg">Nu s-au găsit date de profil.</div>;
 
-  const level = Math.floor(points / 100) + 1;
+  // Calculăm nivelul bazat pe cel mai mare BADGE de streak deblocat
+  let levelLabel = "LVL 1"; // Default
+
+  // Sortăm badge-urile din definiții descrescător după streak ca să-l găsim pe cel mai mare primul
+  const sortedBadgesDefs = [...BADGES].sort((a, b) => b.streak - a.streak);
+
+  for (const def of sortedBadgesDefs) {
+    // Verificăm dacă userul are acest badge (fie ca string code, fie ca object)
+    const hasBadge = badges.some((b: any) => {
+      const code = typeof b === "string" ? b : b.code;
+      return code === def.code || code === `streak_${def.streak}`;
+    });
+
+    if (hasBadge) {
+      levelLabel = def.label; // ex: "LVL 3"
+      break;
+    }
+  }
+
+  // Extragem doar numărul dacă e nevoie de el separat, sau afișăm label-ul direct
+  // const level = ...
+
+  // Map backend simple codes (strings) to full badge objects
+  const displayBadges = badges.map((b: any) => {
+    // b poate fi string ("streak_5") sau obiect ({code: "..."})
+    const code = typeof b === "string" ? b : b.code;
+
+    // Căutăm în definițiile locale
+    // Încercăm match direct (ex: "novice") sau parse la streak (ex: "streak_7")
+    const def = BADGES.find(d => d.code === code) || BADGES.find(d => `streak_${d.streak}` === code);
+
+    if (def) {
+      return {
+        id: code,
+        name: def.feature, // Folosim Feature ca nume (ex: "Început de drum") sau Label ("LVL 1")
+        icon: def.emoji,
+        label: def.label
+      };
+    }
+
+    // Fallback pentru badge-uri necunoscute
+    return {
+      id: code,
+      name: code,
+      icon: "🎖️",
+      label: "Badge"
+    };
+  });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -87,7 +134,7 @@ export default function StudentProfilePreview({ profile, points = 0, badges = []
         <div className="flex gap-6 mb-8 bg-gradient-to-r from-primary/5 to-accent/5 px-8 py-4 rounded-2xl border border-primary/10">
           <div className="text-center">
             <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Nivel</div>
-            <div className="text-2xl font-bold text-primary">Lvl {level}</div>
+            <div className="text-2xl font-bold text-primary">{levelLabel}</div>
           </div>
           <div className="w-px bg-primary/10"></div>
           <div className="text-center">
@@ -97,14 +144,15 @@ export default function StudentProfilePreview({ profile, points = 0, badges = []
         </div>
 
         {/* Badges Showcase */}
-        {badges && badges.length > 0 && (
+        {displayBadges && displayBadges.length > 0 && (
           <div className="mb-8 w-full">
             <div className="font-semibold text-gray-800 mb-4 text-center">Insigne Deblocate</div>
             <div className="flex flex-wrap gap-4 justify-center">
-              {badges.map((b: any) => (
-                <div key={b.id || b.code} className="flex flex-col items-center p-3 bg-white rounded-xl shadow-sm border border-gray-100 w-24" title={b.name}>
-                  <div className="text-3xl mb-1">{b.icon || "🏅"}</div>
-                  <div className="text-[10px] text-center font-medium leading-tight text-gray-600">{b.name}</div>
+              {displayBadges.map((b: any) => (
+                <div key={b.id} className="flex flex-col items-center p-3 bg-white rounded-xl shadow-sm border border-gray-100 w-24 transition hover:scale-105" title={b.name}>
+                  <div className="text-3xl mb-1">{b.icon}</div>
+                  <div className="text-[10px] text-center font-medium leading-tight text-gray-600">{b.label}</div>
+                  <div className="text-[9px] text-center text-gray-400 mt-0.5">{b.name}</div>
                 </div>
               ))}
             </div>

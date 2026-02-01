@@ -115,6 +115,31 @@ async function processStreakRepair(userId, repairedDate) {
 }
 
 /**
+ * Procesare upgrade nivel (costă puncte)
+ */
+async function processLevelUpgrade(userId, cost, level) {
+  if (!cost || cost <= 0) {
+    throw new Error("Invalid upgrade cost");
+  }
+
+  // Verifică dacă user-ul are suficiente puncte
+  const { rows } = await pool.query(
+    "SELECT points FROM user_points WHERE user_id=$1",
+    [userId]
+  );
+
+  const currentPoints = rows[0]?.points ?? 0;
+  if (currentPoints < cost) {
+    throw new Error('Insufficient points for upgrade');
+  }
+
+  // Scade punctele
+  const newPoints = await addPoints(userId, -cost, `upgrade_lvl${level}`);
+
+  return { newPoints };
+}
+
+/**
  * Obține punctele curente ale unui user
  */
 async function getUserPoints(userId) {
@@ -133,5 +158,6 @@ module.exports = {
   awardBadgePoints,
   awardOpportunityCreatePoints,
   processStreakRepair,
+  processLevelUpgrade,
   getUserPoints
 };

@@ -12,12 +12,22 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./backend/migrations:/docker-entrypoint-initdb.d  # Auto-run migrations la primul start
+      - ./backend/migrations:/docker-entrypoint-initdb.d # Auto-run migrations la primul start
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - cvisor-network
+
+  # Redis Cache & Queue
+  redis:
+    image: redis:alpine
+    container_name: cvisor_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
     networks:
       - cvisor-network
 
@@ -34,25 +44,30 @@ services:
       - ./backend/.env
     depends_on:
       postgres:
-        condition: service_healthy  # Așteaptă ca postgres să fie gata 100%
+        condition: service_healthy # Așteaptă ca postgres să fie gata 100%
     volumes:
       - ./backend/uploads:/app/uploads
     networks:
       - cvisor-network
     command: node app.js
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
 
   # Frontend Next.js
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_VAPID_PUBLIC_KEY=BIp1cgcXZu00LfCKcln6NnYexMK9zZloV1clJzo1jAwXwcovlKsFAaWL_hV9hNZpbjOuf8wQF55yI_6ZAHyyOac
     container_name: cvisor_frontend
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:5000  # Pentru browser
-      - API_URL=http://backend:5000  # Pentru server-side
+      - NEXT_PUBLIC_API_URL=http://192.168.0.170:5000 # Pentru browser
+      - API_URL=http://backend:5000 # Pentru server-side
     depends_on:
       - backend
     networks:
@@ -65,7 +80,7 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-      - "443:443"  # Pentru HTTPS în viitor
+      - "443:443" # Pentru HTTPS în viitor
     depends_on:
       - frontend
       - backend

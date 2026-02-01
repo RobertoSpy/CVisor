@@ -1,4 +1,5 @@
 const express = require("express");
+const { validate, userProfileSchema } = require("../../middleware/validation");
 const { pool } = require("../../db");
 const verifyToken = require("../../middleware/verifyToken");
 
@@ -8,23 +9,28 @@ const router = express.Router();
 router.get("/me", verifyToken, async (req, res) => {
   const uid = req.user.id;
   try {
+    // Modificat: Join cu Users pentru a avea mereu un nume (fallback la full_name)
     const p = await pool.query(
-      `SELECT name,
-              headline,
-              bio,
-              avatar_url AS "avatarUrl",
-              skills,
-              social,
-              location,
-              opportunity_refs
-       FROM profiles WHERE user_id=$1`,
+      `SELECT COALESCE(p.name, u.full_name) as name,
+              p.headline,
+              p.bio,
+              p.avatar_url AS "avatarUrl",
+              p.skills,
+              p.social,
+              p.location,
+              p.opportunity_refs
+       FROM users u
+       LEFT JOIN profiles p ON p.user_id = u.id
+       WHERE u.id=$1`,
       [uid]
     );
 
-    const prof = p.rows[0] || {
-      name: "", headline: "", bio: "",
-      avatarUrl: "", skills: [], social: {}, location: "", opportunity_refs: []
-    };
+    const prof = p.rows[0]; // Acum ar trebui să existe mereu pentru că user-ul există
+
+    // Fallback de siguranță (deși LEFT JOIN pe user existent returnează row)
+    if (!prof) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     const edu = await pool.query(
       `SELECT id, school, degree, start_ym AS start, end_ym AS "end", details
@@ -58,12 +64,13 @@ router.get("/me", verifyToken, async (req, res) => {
       portfolioMedia: media.rows
     });
   } catch (e) {
+    console.error("[GET /me] Error:", e);
     res.status(500).json({ message: "DB error", error: e.message });
   }
 });
 
 // PUT /api/users/me
-router.put("/me", verifyToken, async (req, res) => {
+router.put("/me", verifyToken, validate(userProfileSchema), async (req, res) => {
   const uid = req.user.id;
   const body = req.body || {};
   const {
@@ -83,20 +90,29 @@ router.put("/me", verifyToken, async (req, res) => {
     await client.query("BEGIN");
 
     await client.query(
-      `INSERT INTO profiles (user_id, name, headline, bio, avatar_url, skills, social, location, opportunity_refs,updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, now())
+      `INSERT INTO profiles (user_id, name, headline, bio, avatar_url, skills, social, location, opportunity_refs, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
        ON CONFLICT (user_id) DO UPDATE SET
-         name=EXCLUDED.name,
-         headline=EXCLUDED.headline,
-         bio=EXCLUDED.bio,
-         avatar_url=EXCLUDED.avatar_url,
-         skills=EXCLUDED.skills,
-         social=EXCLUDED.social,
-         location=EXCLUDED.location,
-        opportunity_refs=EXCLUDED.opportunity_refs,
-         updated_at=now()`,
-
-      [uid, name || null, headline || null, bio || null, avatar, skills, social, location || null, JSON.stringify(opportunityRefs)]
+         name = EXCLUDED.name,
+         headline = EXCLUDED.headline,
+         bio = EXCLUDED.bio,
+         avatar_url = EXCLUDED.avatar_url,
+         skills = EXCLUDED.skills,
+         social = EXCLUDED.social,
+         location = EXCLUDED.location,
+         opportunity_refs = EXCLUDED.opportunity_refs,
+         updated_at = NOW()`,
+      [
+        uid,
+        name || null,
+        headline || null,
+        bio || null,
+        avatar,
+        skills, // Pass array directly for TEXT[]
+        JSON.stringify(social),
+        location || null,
+        JSON.stringify(opportunityRefs)
+      ]
     );
 
     await client.query("DELETE FROM education WHERE user_id=$1", [uid]);
@@ -130,6 +146,7 @@ router.put("/me", verifyToken, async (req, res) => {
     await client.query("COMMIT");
     res.json({ ok: true });
   } catch (e) {
+    console.error("[PUT /me] Error:", e);
     await client.query("ROLLBACK");
     res.status(500).json({ message: "DB error", error: e.message });
   } finally {
@@ -214,6 +231,14 @@ router.get("/:id", verifyToken, async (req, res) => {
       [userId]
     );
 
+    // [NEW] Ia puncte
+    const pointsRes = await pool.query("SELECT points FROM user_points WHERE user_id=$1", [userId]);
+    const points = pointsRes.rows[0]?.points || 0;
+
+    // [NEW] Ia badges
+    const badgesRes = await pool.query("SELECT badge_code FROM user_badges WHERE user_id=$1", [userId]);
+    const badges = badgesRes.rows.map(r => r.badge_code);
+
     res.json({
       ...prof,
       skills: prof.skills || [],
@@ -221,7 +246,9 @@ router.get("/:id", verifyToken, async (req, res) => {
       opportunityRefs: prof.opportunity_refs || [],
       education: edu.rows,
       experience: exp.rows,
-      portfolioMedia: media.rows
+      portfolioMedia: media.rows,
+      points, // Returnăm punctele
+      badges  // Returnăm badge-urile
     });
   } catch (e) {
     res.status(500).json({ message: "DB error", error: e.message });

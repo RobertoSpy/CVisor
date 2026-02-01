@@ -8,12 +8,12 @@ const {
   setUserVerified,
   setVerificationCode,
   updatePassword,
-} = require("../db");
+} = require("../repositories/UserRepository");
 const { pool } = require("../db");
 const crypto = require("crypto");
 const { sendVerificationEmail, sendResetEmail } = require("../utils/sendVerificationEmail");
 const verifyToken = require("../middleware/verifyToken");
-const { validate, registerSchema, loginSchema } = require("../middleware/validation");
+const { validate, registerSchema, loginSchema, emailVerificationSchema, forgotPasswordSchema, resetPasswordSchema } = require("../middleware/validation");
 const { awardSignupPoints } = require("../utils/pointsManager");
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -47,16 +47,28 @@ router.post("/register", validate(registerSchema), async (req, res) => {
       console.error("Failed to send verification email:", mailErr);
     }
 
-    // Bonus de bun venit: 10 puncte (via pointsManager)
+    // Bonus de bun venit: 10 puncte + Badge
     let pointsAdded = 0;
     try {
       const newUser = await getUserByEmail(email);
       if (newUser) {
         await awardSignupPoints(newUser.id);
-        pointsAdded = 10;
+
+        // [FIX] Acordă badge-ul 'lvl1' (Start)
+        const { awardBadgePoints } = require("../utils/pointsManager");
+        await awardBadgePoints(newUser.id, 'lvl1');
+
+        // Înregistrează badge-ul și în tabela user_badges pentru vizibilitate
+        const { pool } = require("../db");
+        await pool.query(
+          "INSERT INTO user_badges (user_id, badge_code, unlocked_at) VALUES ($1, 'lvl1', NOW()) ON CONFLICT DO NOTHING",
+          [newUser.id]
+        );
+
+        pointsAdded = 15; // 10 signup + 5 badge
       }
     } catch (ptsErr) {
-      console.error("Failed to add signup bonus points:", ptsErr);
+      console.error("Failed to add signup bonus points/badge:", ptsErr);
     }
 
     res.json({ message: "Înregistrare reușită, verifică emailul.", pointsAdded, reason: "signup_bonus" });
@@ -66,7 +78,7 @@ router.post("/register", validate(registerSchema), async (req, res) => {
   }
 });
 
-router.post("/verify-email", async (req, res) => {
+router.post("/verify-email", validate(emailVerificationSchema), async (req, res) => {
   const { email, code } = req.body;
   if (!email || !code) return res.status(400).json({ message: "Email și cod necesare" });
 
@@ -90,6 +102,15 @@ router.post("/verify-email", async (req, res) => {
     }
 
     await setUserVerified(email);
+
+    // Trimite email de bun venit
+    try {
+      const { sendWelcomeEmail } = require("../utils/sendVerificationEmail");
+      await sendWelcomeEmail(email);
+    } catch (mailErr) {
+      console.error("Failed to send welcome email:", mailErr);
+    }
+
     res.json({ message: "Email validat cu succes" });
   } catch (err) {
     console.error("[verify-email] Error:", err.message);
@@ -98,7 +119,7 @@ router.post("/verify-email", async (req, res) => {
 });
 
 // Forgot Password
-router.post("/forgot-password", async (req, res) => {
+router.post("/forgot-password", validate(forgotPasswordSchema), async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: "Email necesar" });
 
@@ -127,7 +148,7 @@ router.post("/forgot-password", async (req, res) => {
 });
 
 // Reset Password
-router.post("/reset-password", async (req, res) => {
+router.post("/reset-password", validate(resetPasswordSchema), async (req, res) => {
   const { email, code, newPassword } = req.body;
   if (!email || !code || !newPassword) return res.status(400).json({ message: "Toate câmpurile sunt necesare" });
 
@@ -172,22 +193,27 @@ router.post("/login", validate(loginSchema), async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ message: "Parolă greșită" });
 
+    const { rememberMe } = req.body;
+    const expiresIn = rememberMe ? "30d" : "1d";
+    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role, full_name: user.full_name },
       JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn }
     );
 
-    // Setare cookie HTTP-only
+    // Setare cookie HTTP-only (Persistent vs Session)
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // false in dev
+      secure: false, // Ensure false for HTTP testing on mobile IP
       sameSite: "lax", // 'strict' poate cauza probleme la redirect/PWA
-      maxAge: 3600000 * 24, // 24 ore
+      maxAge: maxAge,
     });
 
     res.json({
       message: "Login reușit",
+      token, // Returnăm token-ul și în body pentru Mobile Apps
       user: { id: user.id, email: user.email, role: user.role, full_name: user.full_name },
     });
   } catch (err) {

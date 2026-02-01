@@ -5,12 +5,17 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       { source: "/api/:path*", destination: "http://backend:5000/api/:path*" },
+      { source: "/uploads/:path*", destination: "http://backend:5000/uploads/:path*" },
     ];
   },
 };
 
 export default withPWA({
   dest: "public",
-  disable: false, // Enable PWA in dev for testing
+  disable: true, // Dezactivat temporar pentru debugging pe mobil
   register: true,
+  workboxOptions: {
+    importScripts: ["/custom-sw.js"],
+    skipWaiting: true,
+  }
 })(nextConfig);

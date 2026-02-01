@@ -11,6 +11,7 @@ export default function StreakHeroCard({
   celebrate,
   onCloseCelebrate,
   onAchieveFlash = true,
+  loading,
 }: {
   currentStreak: number;
   bestStreak: number;
@@ -20,7 +21,23 @@ export default function StreakHeroCard({
   celebrate?: number | null;
   onCloseCelebrate?: () => void;
   onAchieveFlash?: boolean;
+  loading?: boolean;
 }) {
+  if (loading) {
+    return (
+      <div className="relative overflow-hidden rounded-2xl ring-1 ring-black/5 shadow bg-white p-5 h-[160px] animate-pulse">
+        <div className="flex items-center gap-5">
+          <div className="w-20 h-20 rounded-full bg-gray-200" />
+          <div className="flex-1 space-y-3">
+            <div className="h-4 bg-gray-200 rounded w-1/3" />
+            <div className="h-8 bg-gray-200 rounded w-1/2" />
+            <div className="h-4 bg-gray-200 rounded w-2/3" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const achieved = currentStreak >= goal;
   const [boom, setBoom] = useState(false);
 

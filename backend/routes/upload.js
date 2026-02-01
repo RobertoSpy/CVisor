@@ -7,19 +7,24 @@ const { validateFile, fileUploadSchema } = require("../middleware/validation");
 const router = express.Router();
 
 // SECURITATE: Tipuri de fișiere permise (doar imagini)
+// SECURITATE: Tipuri de fișiere permise (imagini + video)
 const ALLOWED_MIMETYPES = [
   'image/jpeg',
   'image/jpg',
   'image/png',
   'image/webp',
-  'image/gif'
+  'image/gif',
+  'video/mp4',
+  'video/webm',
+  'video/ogg',
+  'video/quicktime'
 ];
 
 // SECURITATE: Extensii permise (whitelist)
-const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.mp4', '.webm', '.ogg', '.mov'];
 
-// SECURITATE: Limită de 20MB (echilibru între calitate și protecție)
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+// SECURITATE: Limită de 100MB pentru video
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 // Configurare storage securizat
 const storage = multer.diskStorage({
@@ -45,7 +50,7 @@ const fileFilter = (req, file, cb) => {
   // Verifică MIME type
   if (!ALLOWED_MIMETYPES.includes(file.mimetype)) {
     return cb(
-      new Error(`Tip fișier nepermis: ${file.mimetype}. Doar imagini (JPEG, PNG, WebP, GIF) sunt permise.`),
+      new Error(`Tip fișier nepermis: ${file.mimetype}. Sunt permise imagini și video (MP4, WebM).`),
       false
     );
   }
@@ -76,7 +81,7 @@ const upload = multer({
  * POST /api/upload
  * Upload fișier securizat cu validări multiple
  */
-router.post("/", upload.single("file"), validateFile(fileUploadSchema), (req, res) => {
+router.post("/", upload.single("file"), validateFile(fileUploadSchema), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -85,10 +90,40 @@ router.post("/", upload.single("file"), validateFile(fileUploadSchema), (req, re
       });
     }
 
-    // Log pentru audit
-    console.log(`[Upload] File uploaded: ${req.file.filename}, size: ${req.file.size} bytes, mimetype: ${req.file.mimetype}`);
+    const fs = require('fs');
+    const sharp = require('sharp');
 
-    const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+    // Procesare Imagini (Compresie)
+    if (req.file.mimetype.startsWith('image/')) {
+      const optimizedFilename = `opt-${req.file.filename}`;
+      const optimizedPath = path.join(req.file.destination, optimizedFilename);
+
+      try {
+        await sharp(req.file.path)
+          .resize(1280, 1280, { fit: 'inside', withoutEnlargement: true }) // Max HD
+          .jpeg({ quality: 80, force: false }) // Auto-convert to jpeg settings if applicable, but keep format
+          .png({ quality: 80, force: false })
+          .webp({ quality: 80, force: false })
+          .toFile(optimizedPath);
+
+        // Șterge originalul necomprimat
+        fs.unlinkSync(req.file.path);
+
+        // Actualizează referințele către fișierul nou
+        req.file.filename = optimizedFilename;
+        req.file.size = fs.statSync(optimizedPath).size;
+
+        console.log(`[Upload] Image compressed: ${req.file.filename} (${req.file.size} bytes)`);
+      } catch (sharpError) {
+        console.warn("[Upload] Compression failed, using original:", sharpError);
+        // Fallback: rămâne fișierul original dacă sharp dă fail
+      }
+    } else {
+      console.log(`[Upload] File uploaded (no compression for non-image): ${req.file.filename}, size: ${req.file.size} bytes`);
+    }
+
+    // Modificat pentru a salva calea relativă
+    const fileUrl = `/uploads/${req.file.filename}`;
 
     res.json({
       success: true,

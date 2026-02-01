@@ -1,0 +1,2 @@
+ALTER TABLE opportunities
+ADD COLUMN IF NOT EXISTS is_pinned_on_profile BOOLEAN DEFAULT FALSE;

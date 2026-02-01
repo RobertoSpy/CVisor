@@ -18,7 +18,6 @@ export default function Navbar() {
   const navLinks = [
     { name: "Despre", href: "/about" },
     { name: "Studii", href: "/studies" },
-    { name: "Testimoniale", href: "/testimonials" },
     { name: "Contact", href: "/contact" },
   ];
 

@@ -6,7 +6,7 @@ const router = express.Router();
 // GET /api/opportunities?q=...
 router.get("/", async (req, res) => {
   try {
-    let query = `SELECT o.id, o.title, u.full_name AS "orgName", o.type, o.skills, o.deadline, o.banner_image, o.created_at
+    let query = `SELECT o.id, o.title, u.full_name AS "orgName", o.type, o.skills, o.deadline, o.banner_image, o.promo_video, o.created_at
        FROM opportunities o
        JOIN users u ON o.user_id = u.id`;
     const params = [];
@@ -36,8 +36,8 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const { rows, rowCount } = await pool.query(
-      `SELECT id, title, type, skills, deadline,available_spots, price, banner_image, promo_video, gallery,
-        participants, location, tags, agenda, faq, reviews, description, cta_url
+      `SELECT id, title, type, skills, deadline,available_spots, price, banner_image, promo_video,
+        participants, location, tags, agenda, faq, description, cta_url
        FROM opportunities WHERE id=$1`, [req.params.id]
     );
     if (!rowCount) return res.status(404).json({ message: "Not found" });

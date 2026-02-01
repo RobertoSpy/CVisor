@@ -1,14 +1,14 @@
 import React from "react";
 
-import {BADGES} from "../lib/streak";
+import { BADGES } from "../lib/streak";
 
 type ProgressMapProps = {
-  badges: string[];            // lista de coduri de badge deblocate, de la backend
-  routeMode?: boolean;         // dacă vrei să faci traseu orizontal
+  badges: string[];
+  currentStreak: number;
+  routeMode?: boolean;
 };
 
-export default function ProgressMap({ badges, routeMode = false }: ProgressMapProps) {
-  // Poți anima badge-urile deblocate cu Tailwind animate-bounce dacă vrei
+export default function ProgressMap({ badges, currentStreak, routeMode = false }: ProgressMapProps) {
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
       <div className="bg-white rounded-2xl p-8 shadow-xl min-w-[340px] relative">
@@ -20,13 +20,25 @@ export default function ProgressMap({ badges, routeMode = false }: ProgressMapPr
         <div className={routeMode ? "flex flex-row items-center gap-8" : "flex flex-col items-center gap-4"}>
           {BADGES.map((b, idx) => {
             const unlocked = badges.includes(b.code);
+            // Ești "aici" dacă ai streak >= b.streak dar n-ai ajuns încă la următorul
+            const nextBadge = BADGES[idx + 1];
+            const isCurrentTarget = currentStreak < b.streak && (!idx || currentStreak >= BADGES[idx - 1].streak);
+
             return (
-              <div key={b.code} className="flex flex-col items-center relative">
+              <div key={b.code} className="flex flex-col items-center relative group">
+                {isCurrentTarget && (
+                  <div className="absolute -top-8 bg-black text-white text-[10px] px-2 py-1 rounded-full animate-bounce whitespace-nowrap">
+                    Ești aici: {currentStreak} zile
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-black rotate-45"></div>
+                  </div>
+                )}
+
                 <div className={
-                  "h-14 w-14 flex items-center justify-center rounded-full text-3xl border-4 transition-all " +
-                  (unlocked ? "border-emerald-400 bg-emerald-50 animate-bounce" : "border-gray-300 bg-gray-50")
+                  "h-14 w-14 flex items-center justify-center rounded-full text-3xl border-4 transition-all relative z-10 " +
+                  (unlocked ? "border-emerald-400 bg-emerald-50" :
+                    isCurrentTarget ? "border-amber-400 bg-amber-50 ring-4 ring-amber-100" : "border-gray-300 bg-gray-50")
                 }>
-                  {unlocked ? b.emoji : <span role="img" aria-label="lock">🔒</span>}
+                  {unlocked ? b.emoji : isCurrentTarget ? "🏃" : <span className="opacity-40">🔒</span>}
                 </div>
                 <div className={unlocked ? "font-bold mt-1" : "text-gray-400 mt-1"}>
                   {b.label}
@@ -34,12 +46,12 @@ export default function ProgressMap({ badges, routeMode = false }: ProgressMapPr
                 <div className="text-xs text-gray-500">
                   {b.streak} zile streak
                   {b.feature && (
-                    <span className="ml-2 text-indigo-500 font-medium">({b.feature})</span>
+                    <div className="text-indigo-500 font-medium">({b.feature})</div>
                   )}
                 </div>
                 {/* linie animată ca traseu */}
                 {routeMode && idx < BADGES.length - 1 && (
-                  <div className="absolute top-1/2 left-full w-12 h-1 bg-emerald-300" style={{ zIndex: -1 }}></div>
+                  <div className={`absolute top-1/2 left-full w-12 h-1 -translate-y-1/2 z-0 ${(unlocked || isCurrentTarget && currentStreak > b.streak) ? "bg-emerald-300" : "bg-gray-200"}`}></div>
                 )}
               </div>
             );

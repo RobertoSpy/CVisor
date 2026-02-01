@@ -9,7 +9,7 @@ export default function StudentMapPage() {
   const [maxBadgeStreak, setMaxBadgeStreak] = useState(0);
 
   useEffect(() => {
-    // Fetch badges to determine max unlocked streak
+    // 1. Fetch badges to determine max unlocked streak
     fetch("/api/students/badges", {
       credentials: "include"
     })
@@ -24,42 +24,37 @@ export default function StudentMapPage() {
         }
       });
 
-    // Fetch current streak (optional, if we want to show progress beyond max badge)
-    // For now, we can assume effective streak is max(current, maxBadge)
-    // But we need the actual current streak from somewhere.
-    // Usually it's passed or fetched. Let's fetch points/stats or just rely on badges for "permanent" progress.
-    // The user said "daca am pierdut streakul mult, tot cu acelasi badge raman".
-    // So we primarily use maxBadgeStreak.
-    // But if currentStreak > maxBadgeStreak, we should use currentStreak.
-    // We can fetch current streak from /api/students/stats/presence or similar, but simpler is to just use maxBadgeStreak for now
-    // as the "map progress".
-    // Wait, if I have 20 days streak (no badge yet for 30), I should see progress.
-    // So I DO need current streak.
-    // Let's fetch it from the analytics endpoint or pass it?
-    // The analytics hook `useStudentAnalytics` calculates it locally.
-    // We can duplicate the logic or just fetch the raw data.
-    // For simplicity and speed, let's just use the badge data for "permanent" unlocks.
-    // And maybe we can't easily get the live streak here without duplicating the heavy logic.
-    // Let's stick to "effectiveStreak = maxBadgeStreak" for the *unlocked nodes*.
-    // And if we want to show "current progress" line, we need the real streak.
-    // Let's try to fetch the streak from the dashboard logic if possible, or just rely on badges.
-    // Actually, `OrganizationHome` calculates streak from heatmap.
-    // Let's just use maxBadgeStreak for now to satisfy the "permanent" requirement.
-    // If the user wants live updates for intermediate steps (e.g. 14 days), they need to reach them.
-    // If they lose streak, they drop to 0, but map stays at LVL X.
-    // So `effectiveStreak` should be `maxBadgeStreak`.
-    // But what if I am at 20 days (between 7 and 30)?
-    // If I lose streak, I go back to 7 (LVL 2).
-    // If I keep streak, I am at 20.
-    // So `effectiveStreak = Math.max(currentStreak, maxBadgeStreak)`.
-    // I need `currentStreak`.
-    // I will fetch the heatmap and calculate it? That's heavy.
-    // Let's just use the badge streak for now. It's safer and meets the "permanent" requirement.
-    // If the user complains about intermediate steps not showing live progress, we can add it later.
-    // Actually, I can fetch the `points` endpoint, maybe it has streak? No.
-    // I'll stick to badges.
+    // 2. Fetch live presence to get current streak
+    fetch("/api/students/stats/presence", { credentials: "include" })
+      .then(r => r.json())
+      .then(d => {
+        // Logică simplificată streak: ne uităm la zile consecutive mergând înapoi de la azi
+        if (d.map) {
+          const today = new Date().toISOString().slice(0, 10);
+          let strk = 0;
+          // verificăm 365 zile în urmă
+          for (let i = 0; i < 365; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().slice(0, 10);
+            if (d.map[dateStr] > 0) {
+              strk++;
+            } else {
+              // dacă e azi și nu am intrat încă, nu rupem streak-ul dacă ieri am intrat
+              if (i === 0) continue;
+              break;
+            }
+          }
+          setCurrentStreak(strk);
+        }
+      })
+      .catch(e => console.error("Map streak fetch err:", e));
   }, []);
 
+  // HIGHEST WATERMARK LOGIC:
+  // Progresul pe hartă e dat de Maximul dintre (Streak Curent) și (Cel mai mare Badge).
+  // Dacă pierzi streak-ul, rămâi la nivelul badge-ului.
+  // Dacă faci un nou record, avansezi.
   const effectiveStreak = Math.max(currentStreak, maxBadgeStreak);
 
   return (

@@ -36,6 +36,7 @@ router.post("/pageview", verifyToken, async (req, res) => {
     );
 
     if (alreadyGotPoints === 0) {
+      // 1a. Puncte base (5 pts)
       await pool.query(
         "INSERT INTO user_points (user_id, points, updated_at) VALUES ($1, 5, NOW()) " +
         "ON CONFLICT (user_id) DO UPDATE SET points = user_points.points + 5, updated_at = NOW()",
@@ -45,6 +46,70 @@ router.post("/pageview", verifyToken, async (req, res) => {
         "INSERT INTO user_point_events (user_id, points_delta, reason) VALUES ($1, 5, 'login')",
         [uid]
       );
+
+      // Notify Org about daily points
+      const { notificationQueue } = require("../../lib/queue");
+      notificationQueue.add("user-notification", {
+        userId: uid,
+        title: "Ai primit 5 puncte! 💎",
+        body: "Bonus zilnic pentru autentificare.",
+        icon: '/albastru.svg',
+        url: '/organization'
+      }, { removeOnComplete: true }).catch(console.error);
+
+      // 1b. Calcul STREAK & BONUSURI
+      try {
+        // Calculăm streak-ul curent (zile consecutive până azi inclusiv)
+        // Folosim o logică simplificată: numărăm zilele consecutive mergând înapoi
+        const { rows: streakRows } = await pool.query(`
+          WITH dates AS (
+            SELECT DISTINCT date(created_at) as d
+            FROM app_events
+            WHERE user_id = $1 AND event_type = 'login'
+          ),
+          groups AS (
+            SELECT d, d - (ROW_NUMBER() OVER (ORDER BY d))::integer AS grp
+            FROM dates
+          )
+          SELECT COUNT(*) as streak
+          FROM groups
+          WHERE grp = (SELECT grp FROM groups ORDER BY d DESC LIMIT 1)
+        `, [uid]);
+
+        const currentStreak = streakRows[0]?.streak ? parseInt(streakRows[0].streak) : 1;
+        console.log(`[Org Stats] User ${uid} has streak: ${currentStreak}`);
+
+        // Definim bonusurile (se repetă ciclic la fiecare 30 de zile)
+        const MILESTONES = {
+          3: 5,
+          7: 5,
+          14: 5,
+          30: 5
+        };
+
+        // Calculăm ziua din ciclul curent (1-30)
+        // Ex: ziua 33 devine 3; ziua 60 devine 30
+        let cycleDay = currentStreak % 30;
+        if (cycleDay === 0) cycleDay = 30;
+
+        const bonus = MILESTONES[cycleDay];
+        if (bonus) {
+          console.log(`[Org Stats] Awarding streak bonus! Day ${currentStreak} -> +${bonus} pts`);
+
+          await pool.query(
+            "INSERT INTO user_points (user_id, points, updated_at) VALUES ($1, $2, NOW()) " +
+            "ON CONFLICT (user_id) DO UPDATE SET points = user_points.points + $2, updated_at = NOW()",
+            [uid, bonus]
+          );
+          await pool.query(
+            "INSERT INTO user_point_events (user_id, points_delta, reason) VALUES ($1, $2, $3)",
+            [uid, bonus, `streak_bonus_${currentStreak}d`]
+          );
+        }
+
+      } catch (streakErr) {
+        console.error("[Org Stats] Streak calc error:", streakErr);
+      }
     }
 
     // ---------- 2. Bonus pentru badge nou deblocat azi ----------

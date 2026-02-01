@@ -3,6 +3,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
+
+# Environment variables for build
+ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
+ENV NEXT_PUBLIC_VAPID_PUBLIC_KEY=$NEXT_PUBLIC_VAPID_PUBLIC_KEY
+
 EXPOSE 3000
 
 # Build pentru producție

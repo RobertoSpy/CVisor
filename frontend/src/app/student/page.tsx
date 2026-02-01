@@ -1,22 +1,21 @@
 "use client";
 
-import Link from "next/link";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import confetti from "canvas-confetti";
 
-import Stat from "./components/dashboard/Stat";
 import GentleBanner from "./components/dashboard/GentleBanner";
 import GoalRing from "./components/charts/GoalRing";
 import SparklineCard from "./components/charts/SparklineCard";
 import ActivityHeatmap from "./components/charts/ActivityHeatmap";
 import OrgPostsBar from "./components/charts/OrgPostsBar";
 import StreakHeroCard from "./components/streak/StreakHeroCard";
+import StudentStatsRow from "./components/dashboard/StudentStatsRow";
+import TodaysOpportunities from "./components/dashboard/TodaysOpportunities";
 
-import useStudentData from "./hooks/useStudentData"; // [NEW] SWR Hook
+import useStudentData from "./hooks/useStudentData";
 import {
   BADGES,
-  STREAK_MILESTONES,
   computeStreakAuto,
   derivePresenceMetrics,
   deriveRawPresence,
@@ -24,6 +23,7 @@ import {
   repairGap,
   LS_KEYS,
 } from "./lib/streak";
+import { DASHBOARD_STRINGS } from "./constants";
 
 export default function StudentHome() {
 
@@ -42,7 +42,8 @@ export default function StudentHome() {
     createdAt,
     mutatePoints,
     mutateBadges,
-    mutatePresence
+    mutatePresence,
+    isLoading
   } = useStudentData();
 
   const [lastRepairUsed, setLastRepairUsed] = useState<string | null>(null);
@@ -80,7 +81,7 @@ export default function StudentHome() {
   }, [presence.usedAutoFreezeNow]);
 
   // [NEW] Daily Points & Pageview
-  const pageviewLogged = React.useRef(false);
+  const pageviewLogged = useRef(false);
   useEffect(() => {
     if (pageviewLogged.current) return;
     pageviewLogged.current = true;
@@ -101,13 +102,16 @@ export default function StudentHome() {
             spread: 70,
             origin: { y: 0.6 }
           });
-          toast.success("Ai primit 5 puncte pentru login-ul de azi! 💎", {
+          toast.success(DASHBOARD_STRINGS.LOGIN_POINTS_TOAST, {
             duration: 5000,
             icon: '💎',
           });
           // Refresh points via SWR
           mutatePoints();
+          mutateBadges(); // Potențial badge nou
         }
+        // Always refresh presence to ensure streak updates immediately after login logging
+        mutatePresence();
       })
       .catch((e) => {
         console.error(e);
@@ -156,7 +160,7 @@ export default function StudentHome() {
                 origin: { y: 0.6 },
                 colors: ['#FFD700', '#FFA500'] // Gold colors
               });
-              toast.success(`Felicitări! Ai deblocat badge-ul "${badge.label}" și ai primit 5 puncte! 🏅`, {
+              toast.success(DASHBOARD_STRINGS.BADGE_UNLOCK_TOAST(badge.label), {
                 duration: 6000,
                 icon: '🏆',
               });
@@ -172,7 +176,7 @@ export default function StudentHome() {
 
   const handleRepair = () => {
     if (points < 20) {
-      toast.error("Nu ai suficiente puncte pentru repair!");
+      toast.error(DASHBOARD_STRINGS.REPAIR_ERROR_POINTS);
       return;
     }
 
@@ -197,19 +201,23 @@ export default function StudentHome() {
         mutatePoints();
         mutatePresence();
 
-        repairGap(presence.gapInfo, 20); // marchează gap-ul ca patch-uit local (visual feedback)
+        repairGap(presence.gapInfo!, 20); // marchează gap-ul ca patch-uit local
         setLsTick(t => t + 1);
-        toast.success("Streak reparat cu succes! 🛠️");
+        toast.success(DASHBOARD_STRINGS.REPAIR_SUCCESS);
       })
-      .catch(() => toast.error("Eroare la reparare"));
+      .catch(() => toast.error(DASHBOARD_STRINGS.REPAIR_ERROR_GENERIC));
   };
 
   // Găsește badge-ul cu streak maxim pe care îl deține userul
   const bestBadge = useMemo(() => {
-    if (!Array.isArray(badges) || badges.length === 0) return null;
-    // Caută badge-ul cu streak maxim deținut (din BADGES, ca să iei emoji/label corect)
+    // Dacă nu are niciun badge unlocked, default la LVL 1 (Badge 0)
+    // Sau putem verifica dacă badges.includes('lvl1') etc.
+    // Dar logic, toată lumea începe la LVL 1.
+    if (!Array.isArray(badges)) return BADGES[0];
+
     const userBadges = BADGES.filter(b => badges.includes(b.code));
-    if (userBadges.length === 0) return null;
+    if (userBadges.length === 0) return BADGES[0]; // Fallback to LVL 1
+
     return userBadges.reduce((acc, b) => (b.streak > acc.streak ? b : acc), userBadges[0]);
   }, [badges]);
 
@@ -217,24 +225,11 @@ export default function StudentHome() {
   return (
     <div className="space-y-8 mt-10">
       {/* statistici rapide */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-        <Stat title="Puncte" value={points} />
-        <Stat title="Badge-uri" value={Array.isArray(badges) ? badges.length : 0} />
-        <Stat
-          title="Badge-ul tău actual"
-          value={
-            bestBadge
-              ? `${bestBadge.label} ${bestBadge.emoji}`
-              : "Niciun badge de streak deblocat"
-          }
-        />
-        <Link
-          href="/student/map"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-900 to-blue-500 text-white hover:opacity-90 px-4 py-2 rounded transition shadow-md"
-        >
-          🗺️ Mapa progres
-        </Link>
-      </div>
+      <StudentStatsRow
+        points={points}
+        badgesCount={Array.isArray(badges) ? badges.length : 0}
+        bestBadge={bestBadge}
+      />
 
       {/* gamification row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -252,28 +247,35 @@ export default function StudentHome() {
           {/* A) auto-freeze aplicat azi */}
           {presence.usedAutoFreezeNow && (
             <GentleBanner>
-              Bine că ai revenit! 💛 Ți-am „înghețat” streak-ul pentru o zi lipsă — se mai întâmplă.
+              {DASHBOARD_STRINGS.AUTO_FREEZE_MESSAGE}
             </GentleBanner>
           )}
 
-          {/* B) pauză 2+ zile -> repair */}
-          {presence.gapInfo && (
+          {/* B) pauză -> repair (DOAR DACĂ NU e mai mare de 1 zi / 2 zile since last login) */}
+          {presence.gapInfo && presence.gapInfo.length === 1 && (
             <GentleBanner>
-              Ai avut o pauză de <b>{presence.gapInfo.length}</b> zile ({presence.gapInfo.start} → {presence.gapInfo.end}).{" "}
-              Poți repara streakul:
+              {DASHBOARD_STRINGS.GAP_MESSAGE(presence.gapInfo.length)} ({presence.gapInfo.start}).{" "}
+              {DASHBOARD_STRINGS.REPAIR_PROMPT}
               <button
                 onClick={handleRepair}
                 className="ml-2 px-2 py-1 rounded-md bg-amber-600 text-white hover:bg-amber-700 transition"
               >
-                Repară pentru 20 puncte
+                {DASHBOARD_STRINGS.REPAIR_BUTTON}
               </button>
             </GentleBanner>
           )}
 
+          {/* Mesaj pentru gap prea mare (nereparabil) */}
+          {presence.gapInfo && presence.gapInfo.length > 1 && (
+            <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl border border-red-100 text-sm">
+              Ai ratat {presence.gapInfo.length} zile. E prea târziu pentru a repara streak-ul. 😢
+            </div>
+          )}
+
           <div className="text-[11px] text-gray-500">
-            Ultimul auto-freeze: {lastFreezeUsed ?? "—"}
+            {DASHBOARD_STRINGS.LAST_FREEZE_LABEL} {lastFreezeUsed ?? "—"}
             <span className="text-gray-400"> • </span>
-            Ultimul repair: {lastRepairUsed ?? "—"}
+            {DASHBOARD_STRINGS.LAST_REPAIR_LABEL} {lastRepairUsed ?? "—"}
           </div>
         </div>
 
@@ -291,86 +293,5 @@ export default function StudentHome() {
       {/* oportunități de azi */}
       <TodaysOpportunities />
     </div>
-  );
-}
-
-function TodaysOpportunities() {
-  const [opps, setOpps] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/opportunities?period=today", { credentials: "include" })
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setOpps(data.slice(0, 5)); // Top 5
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div className="p-4 text-center text-gray-500">Se încarcă oportunitățile de azi...</div>;
-
-  if (opps.length === 0) {
-    return (
-      <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-        <h2 className="text-lg font-bold text-gray-800 mb-2">Oportunități noi astăzi</h2>
-        <p className="text-gray-500 text-sm">Nu au fost postate oportunități noi astăzi. Revino mâine!</p>
-      </section>
-    );
-  }
-
-  return (
-    <section className="space-y-4">
-      <div className="flex items-center justify-between px-1">
-        <h2 className="text-xl font-bold text-gray-800">🔥 Oportunități postate azi</h2>
-        <Link href="/student/opportunities" className="text-sm text-primary font-semibold hover:underline">
-          Vezi toate
-        </Link>
-      </div>
-
-      <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
-        {opps.map((opp) => (
-          <Link
-            key={opp.id}
-            href={`/student/opportunities/${opp.id}`}
-            className="min-w-[280px] md:min-w-[320px] snap-center bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group"
-          >
-            <div className="h-32 bg-gray-200 relative">
-              {opp.banner_image ? (
-                <img src={opp.banner_image} alt={opp.title} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
-                  No Image
-                </div>
-              )}
-              <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-primary shadow-sm">
-                {opp.type}
-              </div>
-            </div>
-            <div className="p-4">
-              <h3 className="font-bold text-gray-900 line-clamp-1 group-hover:text-primary transition">{opp.title}</h3>
-              <p className="text-sm text-gray-500 mb-3">{opp.orgName}</p>
-
-              <div className="flex flex-wrap gap-1 mb-3">
-                {(opp.skills || []).slice(0, 2).map((skill: string) => (
-                  <span key={skill} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                    {skill}
-                  </span>
-                ))}
-                {(opp.skills || []).length > 2 && (
-                  <span className="text-[10px] bg-gray-50 text-gray-400 px-2 py-1 rounded-full">
-                    +{opp.skills.length - 2}
-                  </span>
-                )}
-              </div>
-
-              <div className="text-xs text-gray-400">
-                Deadline: {new Date(opp.deadline).toLocaleDateString("ro-RO")}
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </section>
   );
 }

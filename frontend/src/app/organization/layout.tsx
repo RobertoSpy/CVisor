@@ -12,7 +12,7 @@ export default function OrganizationLayout({ children }: { children: ReactNode }
 
   async function handleLogout() {
     try {
-      await fetch("http://localhost:5000/api/auth/logout", { method: "POST", credentials: "include" });
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     } catch (e) {
       console.error("Logout error", e);
     }
@@ -25,13 +25,15 @@ export default function OrganizationLayout({ children }: { children: ReactNode }
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/auth/me", { credentials: "include" });
+        const res = await fetch("/api/auth/me", { credentials: "include" });
         if (!res.ok) {
           throw new Error("Unauthorized");
         }
         const data = await res.json();
         setStudentname(data.full_name);
       } catch {
+        localStorage.removeItem("role");
+        localStorage.removeItem("full_name");
         router.push("/");
       }
     })();
@@ -67,9 +69,6 @@ export default function OrganizationLayout({ children }: { children: ReactNode }
                 { href: "/organization", label: "Dashboard" },
                 { href: "/organization/explore", label: "Explorează" },
                 { href: "/organization/students", label: "Studenți" },
-                { href: "/organization/timeline", label: "Timeline" },
-                { href: "/organization/testimonials", label: "Testimoniale" },
-                { href: "/organization/skills", label: "Skill Radar" },
                 { href: "/organization/opportunities", label: "Oportunități" },
                 { href: "/organization/profile", label: "Profil" },
               ].map(({ href, label }) => (

@@ -6,45 +6,48 @@ export function useOpportunityHandlers({
   setForm,
   setBannerFile,
   setPromoFile,
-  setGalleryFiles,
   setShowForm,
   setOpportunities,
   setEditForm,
   setEditId,
   setEditBannerFile,
   setEditPromoFile,
-  setEditGalleryFiles,
   form,
   bannerFile,
   promoFile,
-  galleryFiles,
   editForm,
   editId,
 }: {
   setForm: any,
   setBannerFile: any,
   setPromoFile: any,
-  setGalleryFiles: any,
   setShowForm: any,
   setOpportunities: any,
   setEditForm: any,
   setEditId: any,
   setEditBannerFile: any,
   setEditPromoFile: any,
-  setEditGalleryFiles: any,
   form: any,
   bannerFile: any,
   promoFile: any,
-  galleryFiles: any,
   editForm: any,
   editId: any,
 }) {
-
 
   // Pentru banner - adăugare
   function handleBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // VALIDARE IMAGINE
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Format nedorit! Te rugăm să încarci o imagine (JPG, PNG, WEBP).");
+      // Reset input value if needed, but since we rely on file obj, just return
+      e.target.value = "";
+      return;
+    }
+
     const data = new FormData();
     data.append("file", file);
 
@@ -53,9 +56,16 @@ export function useOpportunityHandlers({
       credentials: "include",
       body: data,
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Upload failed");
+        return res.json();
+      })
       .then((data) => {
         setForm((f: any) => ({ ...f, banner_image: data.url }));
+        toast.success("Banner încărcat!");
+      })
+      .catch(() => {
+        toast.error("Eroare la încărcare banner");
       });
   }
 
@@ -63,6 +73,15 @@ export function useOpportunityHandlers({
   function handlePromoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // VALIDARE VIDEO
+    const validTypes = ["video/mp4", "video/webm", "video/ogg"];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Format nedorit! Te rugăm să încarci un video (MP4, WEBM).");
+      e.target.value = "";
+      return;
+    }
+
     const data = new FormData();
     data.append("file", file);
 
@@ -71,31 +90,20 @@ export function useOpportunityHandlers({
       credentials: "include",
       body: data,
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Upload failed");
+        return res.json();
+      })
       .then((data) => {
         setForm((f: any) => ({ ...f, promo_video: data.url }));
+        toast.success("Video încărcat!");
+      })
+      .catch(() => {
+        toast.error("Eroare la încărcare video");
       });
   }
 
-  // Pentru galerie (multiple files) - adăugare
-  function handleGalleryChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files || []);
-    Promise.all(
-      files.map((file) => {
-        const data = new FormData();
-        data.append("file", file);
-        return fetch("/api/upload", {
-          method: "POST",
-          credentials: "include",
-          body: data,
-        })
-          .then((res) => res.json())
-          .then((data) => data.url);
-      })
-    ).then((urls) => {
-      setForm((f: any) => ({ ...f, gallery: urls }));
-    });
-  }
+
 
   // Adăugare oportunitate
   function handleSubmit(e: React.FormEvent) {
@@ -109,16 +117,8 @@ export function useOpportunityHandlers({
       tags: form.tags
         ? form.tags.split(",").map((t: string) => t.trim()).filter((t: string) => t)
         : [],
-      gallery: form.gallery
-        ? Array.isArray(form.gallery)
-          ? form.gallery
-          : typeof form.gallery === "string"
-            ? form.gallery.split(",").map((u: string) => u.trim()).filter((u: string) => u)
-            : []
-        : [],
       agenda: form.agenda && typeof form.agenda === "string" ? { text: form.agenda } : form.agenda || {},
       faq: form.faq && typeof form.faq === "string" ? [{ text: form.faq }] : form.faq || [],
-      reviews: form.reviews && typeof form.reviews === "string" ? [{ text: form.reviews }] : form.reviews || [],
       participants: [],
     };
 
@@ -156,16 +156,13 @@ export function useOpportunityHandlers({
           description: "",
           banner_image: "",
           promo_video: "",
-          gallery: "",
           tags: "",
           agenda: "",
           faq: "",
-          reviews: "",
           cta_url: form.cta_url || "",
         });
         setBannerFile(null);
         setPromoFile(null);
-        setGalleryFiles([]);
         setShowForm(false);
         // Refresh list
         setOpportunities((prev: any) => [...prev, data.opportunity || data]);
@@ -180,6 +177,15 @@ export function useOpportunityHandlers({
   function handleEditBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // VALIDARE IMAGINE
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Format nedorit! Te rugăm să încarci o imagine validă.");
+      e.target.value = "";
+      return;
+    }
+
     const data = new FormData();
     data.append("file", file);
 
@@ -188,16 +194,30 @@ export function useOpportunityHandlers({
       credentials: "include",
       body: data,
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Upload failed");
+        return res.json();
+      })
       .then((data) => {
         setEditForm((f: any) => ({ ...f, banner_image: data.url }));
-      });
+        toast.success("Banner actualizat!");
+      })
+      .catch(() => toast.error("Eroare upload banner"));
   }
 
   // Pentru promo video - editare
   function handleEditPromoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // VALIDARE VIDEO
+    const validTypes = ["video/mp4", "video/webm", "video/ogg"];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Format nedorit! Te rugăm să încarci un video valid.");
+      e.target.value = "";
+      return;
+    }
+
     const data = new FormData();
     data.append("file", file);
 
@@ -206,37 +226,15 @@ export function useOpportunityHandlers({
       credentials: "include",
       body: data,
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Upload failed");
+        return res.json();
+      })
       .then((data) => {
         setEditForm((f: any) => ({ ...f, promo_video: data.url }));
-      });
-  }
-
-  // Pentru galerie - editare
-  function handleEditGalleryChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files || []);
-    Promise.all(
-      files.map((file) => {
-        const data = new FormData();
-        data.append("file", file);
-        return fetch("/api/upload", {
-          method: "POST",
-          credentials: "include",
-          body: data,
-        })
-          .then((res) => res.json())
-          .then((data) => data.url);
+        toast.success("Video actualizat!");
       })
-    ).then((urls) => {
-      setEditForm((f: any) => ({
-        ...f,
-        gallery: Array.isArray(f.gallery)
-          ? [...f.gallery, ...urls]
-          : (typeof f.gallery === "string" && f.gallery.length > 0)
-            ? [...f.gallery.split(",").map((u: string) => u.trim()), ...urls]
-            : urls,
-      }));
-    });
+      .catch(() => toast.error("Eroare upload video"));
   }
 
   // Editare oportunitate
@@ -252,20 +250,12 @@ export function useOpportunityHandlers({
       tags: editForm.tags
         ? editForm.tags.split(",").map((t: string) => t.trim()).filter((t: string) => t)
         : [],
-      gallery: Array.isArray(editForm.gallery)
-        ? editForm.gallery
-        : (typeof editForm.gallery === "string" && editForm.gallery.length > 0)
-          ? editForm.gallery.split(",").map((u: string) => u.trim()).filter((u: string) => u)
-          : [],
       agenda: editForm.agenda && typeof editForm.agenda === "string"
         ? { text: editForm.agenda }
         : editForm.agenda || {},
       faq: editForm.faq && typeof editForm.faq === "string"
         ? editForm.faq.split("\n").map((text: string) => ({ text }))
         : editForm.faq || [],
-      reviews: editForm.reviews && typeof editForm.reviews === "string"
-        ? editForm.reviews.split("\n").map((text: string) => ({ text }))
-        : editForm.reviews || [],
       mentors: editForm.mentors && typeof editForm.mentors === "string"
         ? JSON.parse(editForm.mentors)
         : editForm.mentors || [],
@@ -297,16 +287,13 @@ export function useOpportunityHandlers({
           description: "",
           banner_image: "",
           promo_video: "",
-          gallery: "",
           tags: "",
           agenda: "",
           faq: "",
-          reviews: "",
           cta_url: form.cta_url || "",
         });
         setEditBannerFile(null);
         setEditPromoFile(null);
-        setEditGalleryFiles([]);
 
         // Update list
         setOpportunities((prev: any[]) => prev.map(o => o.id === editId ? (data.opportunity || data) : o));
@@ -353,26 +340,29 @@ export function useOpportunityHandlers({
       available_spots: opp.available_spots?.toString() ?? "",
       price: opp.price?.toString() ?? "",
       location: opp.location ?? "",
+      // [FIX] Populate missing fields
+      description: opp.description || "",
+      banner_image: opp.banner_image || "",
+      promo_video: opp.promo_video || "",
+      tags: Array.isArray(opp.tags) ? opp.tags.join(", ") : (opp.tags || ""),
+      cta_url: opp.cta_url || "",
+
+      // Complex objects
+      agenda: typeof opp.agenda === 'object' ? ((opp.agenda as any)?.text || "") : (opp.agenda || ""),
       faq: Array.isArray(opp.faq)
         ? opp.faq.map((f: any) => f.text).join("\n")
-        : (opp.faq || ""),
-      reviews: Array.isArray(opp.reviews)
-        ? opp.reviews.map((r: any) => r.text).join("\n")
-        : (opp.reviews || ""),
+        : (typeof opp.faq === 'string' ? opp.faq : ""),
     });
     setEditBannerFile(null);
     setEditPromoFile(null);
-    setEditGalleryFiles([]);
   }
 
   return {
     handleBannerChange,
     handlePromoChange,
-    handleGalleryChange,
     handleSubmit,
     handleEditBannerChange,
     handleEditPromoChange,
-    handleEditGalleryChange,
     handleEditSubmit,
     handleDelete,
     openEditModal,

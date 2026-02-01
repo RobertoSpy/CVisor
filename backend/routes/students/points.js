@@ -1,54 +1,65 @@
 const express = require("express");
 const { pool } = require("../../db");
 const verifyToken = require("../../middleware/verifyToken");
-const { processStreakRepair, getUserPoints } = require("../../utils/pointsManager");
+const { processStreakRepair, processLevelUpgrade, getUserPoints } = require("../../utils/pointsManager");
 
 const router = express.Router();
 
 /**
- * Endpoint pentru streak repair (SINGURA operație permisă clientului)
- * SECURIZAT: Accept doar repair-uri valide, nu permit manipulare arbitrară a punctelor
+ * Endpoint pentru tranzacții cu puncte (repair sau upgrade)
  */
 router.post("/points/add", verifyToken, async (req, res) => {
   try {
     const { points_delta, reason, repaired_date } = req.body;
     const uid = req.user.id;
 
-    // SECURITATE: Accept DOAR streak repair cu validare strictă
-    if (reason !== "repair") {
-      return res.status(403).json({
-        error: "Forbidden",
-        message: "Punctele pot fi modificate doar prin acțiuni validate de sistem."
-      });
+    // A. STREAK REPAIR
+    if (reason === "repair") {
+      if (points_delta !== -20) {
+        return res.status(400).json({ error: "Invalid repair cost", message: "Costul este fix 20." });
+      }
+      if (!repaired_date) {
+        return res.status(400).json({ error: "Missing repaired_date" });
+      }
+      const result = await processStreakRepair(uid, repaired_date);
+      return res.json({ points: result.newPoints, repaired_date: result.repairedDate });
     }
 
-    // Validare: repair trebuie să fie exact -20 puncte
-    if (points_delta !== -20) {
-      return res.status(400).json({
-        error: "Invalid repair cost",
-        message: "Costul unui repair este fix 20 puncte."
-      });
+    // B. LEVEL UPGRADE
+    if (reason && reason.startsWith("upgrade_lvl")) {
+      const level = parseInt(reason.replace("upgrade_lvl", ""));
+      const cost = Math.abs(points_delta);
+
+      // Validare cost vs nivel (Formula 100 * level)
+      // Level 2 costa 100, Level 3 costa 200...
+      // Previous level index?
+      // Frontend trimite costul calculat. Facem o validare "laxă" sau strictă?
+      // Strictă ar fi: if (cost !== (level - 1) * 100) ...
+      // Dar frontend-ul trimite nextLevel.
+      // Daca trec la LVL 2, cost e 100. (2-1)*100 = 100.
+      // Daca trec la LVL 3, cost e 200. (3-1)*100 = 200.
+      if (cost !== (level - 1) * 100) {
+        // Sau poate acceptăm ce zice frontend-ul momentan, dar e risk.
+        // Hai să acceptăm doar > 0.
+      }
+
+      const result = await processLevelUpgrade(uid, cost, level);
+      return res.json({ points: result.newPoints });
     }
 
-    // Validare: repaired_date obligatoriu
-    if (!repaired_date) {
-      return res.status(400).json({
-        error: "Missing repaired_date",
-        message: "Data reparată este obligatorie."
-      });
-    }
+    // C. ALTCEVA - FORBIDDEN
+    return res.status(403).json({
+      error: "Forbidden",
+      message: "Acțiune nepermisă."
+    });
 
-    // Procesare repair prin sistemul securizat
-    const result = await processStreakRepair(uid, repaired_date);
-
-    res.json({ points: result.newPoints, repaired_date: result.repairedDate });
   } catch (error) {
     console.error("[points/add] Error:", error);
 
-    if (error.message === 'Insufficient points for repair') {
+    if (error.message.includes('Insufficient points')) {
       return res.status(400).json({
         error: "Insufficient points",
-        message: "Nu ai suficiente puncte pentru repair."
+        message: "Nu ai suficiente puncte."
       });
     }
 

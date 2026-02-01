@@ -48,27 +48,23 @@ export default function OpportunitiesPage() {
     tags: "",
     agenda: "",
     faq: "",
-    reviews: "",
+
     cta_url: "",
   });
 
   // Fișiere
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [promoFile, setPromoFile] = useState<File | null>(null);
-  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [editBannerFile, setEditBannerFile] = useState<File | null>(null);
   const [editPromoFile, setEditPromoFile] = useState<File | null>(null);
-  const [editGalleryFiles, setEditGalleryFiles] = useState<File[]>([]);
 
   // Custom hook pentru funcții
   const {
     handleBannerChange,
     handlePromoChange,
-    handleGalleryChange,
     handleSubmit,
     handleEditBannerChange,
     handleEditPromoChange,
-    handleEditGalleryChange,
     handleEditSubmit,
     handleDelete,
     openEditModal,
@@ -76,18 +72,15 @@ export default function OpportunitiesPage() {
     setForm,
     setBannerFile,
     setPromoFile,
-    setGalleryFiles,
     setShowForm,
     setOpportunities,
     setEditForm,
     setEditId,
     setEditBannerFile,
     setEditPromoFile,
-    setEditGalleryFiles,
     form,
     bannerFile,
     promoFile,
-    galleryFiles,
     editForm,
     editId,
   });
@@ -204,7 +197,7 @@ export default function OpportunitiesPage() {
             {/* Banner + Video + Galerie */}
             <div className="flex flex-col gap-4 bg-blue-50/50 rounded-2xl p-6 border border-blue-100">
               <h3 className="font-semibold text-blue-900 mb-2">Media & Vizual</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-blue-800 mb-1">Banner (Imagine)</label>
                   <input type="file" accept="image/*" onChange={handleBannerChange}
@@ -214,12 +207,6 @@ export default function OpportunitiesPage() {
                 <div>
                   <label className="block text-sm font-medium text-blue-800 mb-1">Video Promo</label>
                   <input type="file" accept="video/*" onChange={handlePromoChange}
-                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-blue-800 mb-1">Galerie</label>
-                  <input type="file" accept="image/*" onChange={handleGalleryChange} multiple
                     className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition"
                   />
                 </div>
@@ -284,31 +271,21 @@ export default function OpportunitiesPage() {
                   onChange={e => setForm(f => ({ ...f, skills: e.target.value }))}
                   className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white"
                 />
-                <input
-                  type="text"
+                <textarea
                   placeholder="Agenda evenimentului"
                   value={form.agenda}
                   onChange={e => setForm(f => ({ ...f, agenda: e.target.value }))}
-                  className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white"
+                  className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white min-h-[100px]"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="FAQ (Întrebări frecvente)"
-                  value={form.faq}
-                  onChange={e => setForm(f => ({ ...f, faq: e.target.value }))}
-                  className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white"
-                />
-                <input
-                  type="text"
-                  placeholder="Reviews (Testimoniale)"
-                  value={form.reviews}
-                  onChange={e => setForm(f => ({ ...f, reviews: e.target.value }))}
-                  className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white"
-                />
-              </div>
+              <textarea
+                placeholder="FAQ (Întrebări frecvente)"
+                value={form.faq}
+                onChange={e => setForm(f => ({ ...f, faq: e.target.value }))}
+                className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white min-h-[100px]"
+              />
+
 
               <input
                 type="url"
@@ -331,182 +308,168 @@ export default function OpportunitiesPage() {
               </button>
             </div>
           </form>
-        </div>
-      )}
+        </div >
+      )
+      }
 
 
       {/* MODAL EDITARE */}
-      {editId && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={e => {
-            if (e.target === e.currentTarget) setEditId(null);
-          }}
-        >
-          <form
-            onSubmit={handleEditSubmit}
-            className="bg-white rounded-3xl p-8 shadow-2xl flex flex-col gap-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-blue-500/60 scrollbar-track-gray-100"
+      {
+        editId && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={e => {
+              if (e.target === e.currentTarget) setEditId(null);
+            }}
           >
-            {/* Top: Titlu, Locuri, Deadline */}
-            <div className="flex flex-col gap-4 border-b pb-6">
-              <div className="flex justify-between items-center">
-                <h2 className="font-bold text-2xl text-gray-800">Editează oportunitatea</h2>
-                <button type="button" onClick={() => setEditId(null)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            <form
+              onSubmit={handleEditSubmit}
+              className="bg-white rounded-3xl p-8 shadow-2xl flex flex-col gap-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-blue-500/60 scrollbar-track-gray-100"
+            >
+              {/* Top: Titlu, Locuri, Deadline */}
+              <div className="flex flex-col gap-4 border-b pb-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="font-bold text-2xl text-gray-800">Editează oportunitatea</h2>
+                  <button type="button" onClick={() => setEditId(null)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    placeholder="Titlu"
+                    value={editForm.title}
+                    onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+                    className="border border-gray-200 p-3 rounded-xl col-span-1 md:col-span-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Număr locuri"
+                    value={editForm.available_spots}
+                    onChange={e => setEditForm(f => ({ ...f, available_spots: e.target.value }))}
+                    className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    required min="1"
+                  />
+                  <input
+                    type="date"
+                    placeholder="Deadline"
+                    value={editForm.deadline}
+                    onChange={e => setEditForm(f => ({ ...f, deadline: e.target.value }))}
+                    className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    required
+                  />
+                </div>
               </div>
+
+              {/* Banner + Video + Galerie */}
+              <div className="flex flex-col gap-3 bg-blue-50/50 rounded-xl p-4 border border-blue-100">
+                <label className="font-semibold text-blue-900 text-sm">Banner imagine</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => setEditBannerFile(e.target.files?.[0] || null)}
+                  className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition"
+                />
+                <label className="font-semibold text-blue-900 text-sm mt-2">Video promo</label>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={e => setEditPromoFile(e.target.files?.[0] || null)}
+                  className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition"
+                />
+              </div>
+
+              {/* Detalii generale */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <select
+                  value={editForm.type}
+                  onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))}
+                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  required
+                >
+                  <option value="">Alege tipul oportunității</option>
+                  <option value="party">🎉 Party</option>
+                  <option value="self-development">🧠 Self-development</option>
+                </select>
+                <div className="relative">
+                  <input
+                    type="number"
+                    placeholder="Preț"
+                    value={editForm.price}
+                    onChange={e => setEditForm(f => ({ ...f, price: e.target.value }))}
+                    className="border border-gray-200 p-3 rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 pl-16"
+                    required min="0"
+                  />
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold bg-gray-100 px-2 py-1 rounded text-xs">RON</span>
+                </div>
                 <input
                   type="text"
-                  placeholder="Titlu"
-                  value={editForm.title}
-                  onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
-                  className="border border-gray-200 p-3 rounded-xl col-span-1 md:col-span-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  required
-                />
-                <input
-                  type="number"
-                  placeholder="Număr locuri"
-                  value={editForm.available_spots}
-                  onChange={e => setEditForm(f => ({ ...f, available_spots: e.target.value }))}
-                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  required min="1"
-                />
-                <input
-                  type="date"
-                  placeholder="Deadline"
-                  value={editForm.deadline}
-                  onChange={e => setEditForm(f => ({ ...f, deadline: e.target.value }))}
+                  placeholder="Locație"
+                  value={editForm.location}
+                  onChange={e => setEditForm(f => ({ ...f, location: e.target.value }))}
                   className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                   required
                 />
-              </div>
-            </div>
-
-            {/* Banner + Video + Galerie */}
-            <div className="flex flex-col gap-3 bg-blue-50/50 rounded-xl p-4 border border-blue-100">
-              <label className="font-semibold text-blue-900 text-sm">Banner imagine</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={e => setEditBannerFile(e.target.files?.[0] || null)}
-                className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition"
-              />
-              <label className="font-semibold text-blue-900 text-sm mt-2">Video promo</label>
-              <input
-                type="file"
-                accept="video/*"
-                onChange={e => setEditPromoFile(e.target.files?.[0] || null)}
-                className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition"
-              />
-              <label className="font-semibold text-blue-900 text-sm mt-2">Galerie imagini</label>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={e => setEditGalleryFiles(Array.from(e.target.files || []))}
-                className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition"
-              />
-            </div>
-
-            {/* Detalii generale */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <select
-                value={editForm.type}
-                onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))}
-                className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                required
-              >
-                <option value="">Alege tipul oportunității</option>
-                <option value="party">🎉 Party</option>
-                <option value="self-development">🧠 Self-development</option>
-              </select>
-              <div className="relative">
                 <input
-                  type="number"
-                  placeholder="Preț"
-                  value={editForm.price}
-                  onChange={e => setEditForm(f => ({ ...f, price: e.target.value }))}
-                  className="border border-gray-200 p-3 rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 pl-16"
-                  required min="0"
+                  type="text"
+                  placeholder="Tag-uri (virgulă)"
+                  value={editForm.tags}
+                  onChange={e => setEditForm(f => ({ ...f, tags: e.target.value }))}
+                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 />
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold bg-gray-100 px-2 py-1 rounded text-xs">RON</span>
+
+                <input
+                  type="url"
+                  placeholder="Link extern de înscriere (opțional)"
+                  value={editForm.cta_url || ""}
+                  onChange={e => setEditForm(f => ({ ...f, cta_url: e.target.value }))}
+                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  autoComplete="off"
+                />
               </div>
-              <input
-                type="text"
-                placeholder="Locație"
-                value={editForm.location}
-                onChange={e => setEditForm(f => ({ ...f, location: e.target.value }))}
-                className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Tag-uri (virgulă)"
-                value={editForm.tags}
-                onChange={e => setEditForm(f => ({ ...f, tags: e.target.value }))}
-                className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-              />
 
-              <input
-                type="url"
-                placeholder="Link extern de înscriere (opțional)"
-                value={editForm.cta_url || ""}
-                onChange={e => setEditForm(f => ({ ...f, cta_url: e.target.value }))}
-                className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                autoComplete="off"
-              />
-            </div>
+              {/* Descriere, skilluri, agenda, FAQ, reviews */}
+              <div className="flex flex-col gap-3">
+                <textarea
+                  placeholder="Descriere"
+                  value={editForm.description}
+                  onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[100px]"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Skilluri (virgulă)"
+                  value={editForm.skills}
+                  onChange={e => setEditForm(f => ({ ...f, skills: e.target.value }))}
+                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                />
+                <textarea
+                  placeholder="Agenda"
+                  value={editForm.agenda}
+                  onChange={e => setEditForm(f => ({ ...f, agenda: e.target.value }))}
+                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[100px]"
+                />
+                <textarea
+                  placeholder="FAQ"
+                  value={editForm.faq}
+                  onChange={e => setEditForm(f => ({ ...f, faq: e.target.value }))}
+                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[100px]"
+                />
+              </div>
 
-            {/* Descriere, skilluri, agenda, FAQ, reviews */}
-            <div className="flex flex-col gap-3">
-              <textarea
-                placeholder="Descriere"
-                value={editForm.description}
-                onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
-                className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[100px]"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Skilluri (virgulă)"
-                value={editForm.skills}
-                onChange={e => setEditForm(f => ({ ...f, skills: e.target.value }))}
-                className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-              />
-              <input
-                type="text"
-                placeholder="Agenda"
-                value={editForm.agenda}
-                onChange={e => setEditForm(f => ({ ...f, agenda: e.target.value }))}
-                className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-              />
-              <input
-                type="text"
-                placeholder="FAQ"
-                value={editForm.faq}
-                onChange={e => setEditForm(f => ({ ...f, faq: e.target.value }))}
-                className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-              />
-              <input
-                type="text"
-                placeholder="Reviews"
-                value={editForm.reviews}
-                onChange={e => setEditForm(f => ({ ...f, reviews: e.target.value }))}
-                className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-              />
-            </div>
-
-            {/* Butoane */}
-            <div className="flex gap-3 justify-end pt-4 border-t">
-              <button type="button" className="text-gray-500 hover:text-gray-800 px-4 py-2 rounded-lg transition" onClick={() => setEditId(null)}>
-                Anulează
-              </button>
-              <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition shadow">
-                Salvează Modificările
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+              {/* Butoane */}
+              <div className="flex gap-3 justify-end pt-4 border-t">
+                <button type="button" className="text-gray-500 hover:text-gray-800 px-4 py-2 rounded-lg transition" onClick={() => setEditId(null)}>
+                  Anulează
+                </button>
+                <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition shadow">
+                  Salvează Modificările
+                </button>
+              </div>
+            </form>
+          </div>
+        )
+      }
 
       <OpportunityGrid
         opportunities={filteredOpps}
@@ -514,6 +477,6 @@ export default function OpportunitiesPage() {
         onEdit={openEditModal}
         onDelete={handleDelete}
       />
-    </div>
+    </div >
   );
 }

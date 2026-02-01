@@ -29,7 +29,7 @@ export default function OrganizationHome() {
   // ========== local state ==========
   const [celebrate, setCelebrate] = useState<number | null>(null);
   const [lastFreezeUsed, setLastFreezeUsed] = useState<string | null>(null);
-  const [hasLoggedPageview, setHasLoggedPageview] = useState(false);
+  const hasLoggedPageview = React.useRef(false);
   const [lsTick, setLsTick] = useState(0);
 
   // [FIX] Use SWR Hook
@@ -66,6 +66,27 @@ export default function OrganizationHome() {
     setLastRepairUsed(localStorage.getItem(LS_KEYS.lastRepairUsed));
   }, []);
 
+  // [FIX] Log Pageview for Streak Tracking
+  useEffect(() => {
+    if (hasLoggedPageview.current) return;
+    hasLoggedPageview.current = true;
+
+    fetch("/api/organizations/stats/pageview", {
+      method: "POST",
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok) {
+          // Reload metrics after login logged
+          mutatePresence();
+          mutatePoints();
+          // Also check/unlock daily login badge if exists
+        }
+      })
+      .catch(console.error);
+  }, [mutatePresence, mutatePoints]);
+
   // ========== calcule ==========
   const presence = useMemo(() => computeStreakAuto(filteredHeatmap), [filteredHeatmap, lsTick]);
   const metrics = useMemo(() => derivePresenceMetrics(filteredHeatmap), [filteredHeatmap, lsTick]);
@@ -76,42 +97,76 @@ export default function OrganizationHome() {
   const streakGoalForUI = nextMilestone ?? 3;
   const WEEK_GOAL = 5;
 
-  // Check if current streak matches a badge milestone
+  // [MODIFIED] Badge Logic: Level is determined by badges, Points are currency.
+  // Unlock Next Level cost: 100 XP.
   useEffect(() => {
-    const badge = BADGES.find(b => b.streak === displayStreak);
-    if (badge) {
-      // Check if we already have it locally (optimization)
-      if (badges.includes(badge.code)) return;
+    if (!Array.isArray(badges)) return;
 
-      // Try to unlock on backend
-      fetch("/api/students/badges/unlock", {
+    // 1. Determine current level from badges
+    const lvlBadges = badges
+      .filter((b) => b.startsWith("lvl"))
+      .map((b) => parseInt(b.replace("lvl", ""), 10))
+      .sort((a, b) => b - a);
+
+    const currentLevel = lvlBadges.length > 0 ? lvlBadges[0] : 1;
+
+    // 2. Check if eligible for upgrade
+    // Cost formula: LVL 1->2 (100pts), LVL 2->3 (200pts), LVL 3->4 (300pts)...
+    // Cost = CurrentLevel * 100
+    const upgradeCost = currentLevel * 100;
+
+    if (points >= upgradeCost && currentLevel < 5) {
+      const nextLevel = currentLevel + 1;
+      const nextBadgeCode = `lvl${nextLevel}`;
+      const badge = BADGES.find((b) => b.code === nextBadgeCode);
+
+      if (!badge) return; // Should not happen if < 5
+
+      // Perform transaction: Deduct Cost -> Unlock Badge
+      fetch("/api/students/points/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ badge_code: badge.code })
+        body: JSON.stringify({
+          points_delta: -upgradeCost,
+          reason: `upgrade_lvl${nextLevel}`,
+        }),
       })
-        .then(r => r.json())
-        .then(d => {
+        .then((res) => {
+          if (!res.ok) throw new Error("Points deduction failed");
+          return fetch("/api/students/badges/unlock", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ badge_code: nextBadgeCode }),
+          });
+        })
+        .then((res) => res.json())
+        .then((d) => {
           if (d.ok) {
-            // Success!
             confetti({
-              particleCount: 150,
-              spread: 100,
+              particleCount: 200,
+              spread: 120,
               origin: { y: 0.6 },
-              colors: ['#FFD700', '#FFA500'] // Gold colors
+              colors: ["#FFD700", "#FFA500", "#FFFFFF"],
             });
-            toast.success(`Felicitări! Ai deblocat badge-ul "${badge.label}" și ai primit 5 puncte! 🏅`, {
-              duration: 6000,
-              icon: '🏆',
-            });
-            // Refresh via SWR
-            mutateBadges();
+            toast.success(
+              `Nivel Upgradat! Ai cheltuit ${upgradeCost} XP și ai atins Nivelul ${nextLevel}! 🚀`,
+              {
+                duration: 6000,
+                icon: "🆙",
+              }
+            );
             mutatePoints();
+            mutateBadges();
           }
         })
-        .catch(console.error);
+        .catch((err) => {
+          console.error("Level up transaction failed", err);
+          toast.error("Eroare la upgrade-ul nivelului.");
+        });
     }
-  }, [displayStreak, badges]);
+  }, [points, badges, mutatePoints, mutateBadges]);
 
   const handleRepair = () => {
     if (points < 20) {
@@ -160,12 +215,13 @@ export default function OrganizationHome() {
         <Stat title="Puncte" value={points} />
         <Stat title="Badge-uri" value={Array.isArray(badges) ? badges.length : 0} />
         <Stat
-          title="Badge-ul tău actual"
-          value={
-            bestBadge
-              ? `${bestBadge.label} ${bestBadge.emoji}`
-              : "Niciun badge de streak deblocat"
-          }
+          title="Nivel Curent"
+          value={(() => {
+            const maxLvl = Array.isArray(badges)
+              ? Math.max(1, ...badges.filter(b => b.startsWith('lvl')).map(b => parseInt(b.replace('lvl', '')) || 0))
+              : 1;
+            return `LVL ${maxLvl}`;
+          })()}
         />
         <Link
           href="/organization/map"
