@@ -4,7 +4,9 @@ const verifyToken = require("../../middleware/verifyToken");
 const verifyOrg = require("../../middleware/verifyOrg"); // middleware pentru rol organizație
 
 const router = express.Router();
-const { notificationQueue } = require("../../lib/queue");
+const { notificationQueue, videoQueue } = require("../../lib/queue");
+const path = require("path");
+const fs = require("fs");
 
 
 function toPgArray(arr) {
@@ -96,6 +98,23 @@ router.post("/", verifyToken, verifyOrg, async (req, res) => {
       icon: '/albastru.svg',
       url: '/organization'
     }, { removeOnComplete: true }).catch(console.error);
+
+    // --- VIDEO PROCESSING QUEUE ---
+    if (promo_video && promo_video.startsWith('/uploads/')) {
+      // Extract filename from URL (e.g. /uploads/123.mp4 -> 123.mp4)
+      const filename = promo_video.split('/').pop();
+      // Construct absolute path
+      const filePath = path.join(__dirname, '../../uploads', filename);
+
+      // Add to queue
+      videoQueue.add('process-video', {
+        filePath,
+        filename,
+        userId,
+        opportunityId: rows[0].id
+      }).catch(err => console.error("Video Queue Error:", err));
+    }
+    // -----------------------------
 
     // --- PUSH NOTIFICATIONS ---
     // Trimite notificare asincron la toți abonații (nu blochează răspunsul HTTP)
@@ -210,6 +229,25 @@ router.put("/:id", verifyToken, verifyOrg, async (req, res) => {
       ]
     );
     if (!rows.length) return res.status(404).json({ message: "Not found" });
+
+    // --- VIDEO PROCESSING QUEUE (Update) ---
+    // Trigger only if video changed and is local upload
+    // We already checked oldVideo logic above, but let's re-verify logic
+    if (promo_video && promo_video.startsWith('/uploads/')) {
+      // Check if it's different from potentially old one or just a safeguard
+      // Simply add to queue, if it's already processed, maybe we should have a flag?
+      // For now, simple re-process is safer.
+      const filename = promo_video.split('/').pop();
+      const filePath = path.join(__dirname, '../../uploads', filename);
+
+      videoQueue.add('process-video', {
+        filePath,
+        filename,
+        userId,
+        opportunityId: id
+      }).catch(err => console.error("Video Queue Error (Update):", err));
+    }
+
     res.json(rows[0]);
   } catch (e) {
     console.error("DB error (update opportunity):", e);
@@ -272,13 +310,17 @@ router.get("/explore", verifyToken, verifyOrg, async (req, res) => {
   }
 });
 
-// Vezi toate oportunitățile tale (GET /api/organization/opportunities)
+// Vezi toate oportunitățile tale (GET /api/organization/opportunities?status=active|archived)
 router.get("/", verifyToken, verifyOrg, async (req, res) => {
   const userId = req.user.id;
+  const status = req.query.status || 'active'; // Default to active if not provided
+
   try {
     const { rows } = await pool.query(`
-      SELECT * FROM opportunities WHERE user_id = $1 ORDER BY id DESC
-    `, [userId]);
+      SELECT * FROM opportunities 
+      WHERE user_id = $1 AND status = $2
+      ORDER BY id DESC
+    `, [userId, status]);
     res.json(rows);
   } catch (e) {
     console.error("DB error (list opportunities):", e);

@@ -11,26 +11,34 @@ export default function ExplorePage() {
   const [allOrganizations, setAllOrganizations] = useState<{ id: string, name: string }[]>([]);
 
   useEffect(() => {
-    // Fetch opportunities
-    fetch("/api/organizations/opportunities/explore", {
-      credentials: "include"
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setOpportunities(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    // 1. Fetch current user first (to filter self out)
+    fetch("/api/auth/me", { credentials: "include" })
+      .then(res => res.ok ? res.json() : null)
+      .then(user => {
+        const myId = user?.id;
 
-    // Fetch all organizations
-    fetch("/api/organizations/users/all", { credentials: "include" })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
-      .then((data) => {
-        if (data.organizations && Array.isArray(data.organizations)) {
-          setAllOrganizations(data.organizations);
-        }
+        // 2. Fetch opportunities
+        fetch("/api/organizations/opportunities/explore", { credentials: "include" })
+          .then((res) => res.json())
+          .then((data) => {
+            setOpportunities(data);
+            setLoading(false);
+          })
+          .catch(() => setLoading(false));
+
+        // 3. Fetch all organizations
+        fetch("/api/organizations/users/all", { credentials: "include" })
+          .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+          .then((data) => {
+            if (data.organizations && Array.isArray(data.organizations)) {
+              // Filter out self
+              const filteredList = data.organizations.filter((o: any) => o.id !== myId);
+              setAllOrganizations(filteredList);
+            }
+          })
+          .catch((err) => console.error("Load organizations failed:", err));
       })
-      .catch((err) => console.error("Load organizations failed:", err));
+      .catch((err) => console.error("Load user failed:", err));
   }, []);
 
   // Filtrare logic

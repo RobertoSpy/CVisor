@@ -1,7 +1,7 @@
 const express = require("express");
 const { pool } = require("../../db");
 const verifyToken = require("../../middleware/verifyToken");
-const { processStreakRepair, processLevelUpgrade, getUserPoints } = require("../../utils/pointsManager");
+const { processStreakRepair, processLevelUpgradeTransaction, getUserPoints } = require("../../utils/pointsManager");
 
 const router = express.Router();
 
@@ -25,26 +25,14 @@ router.post("/points/add", verifyToken, async (req, res) => {
       return res.json({ points: result.newPoints, repaired_date: result.repairedDate });
     }
 
-    // B. LEVEL UPGRADE
+    // B. LEVEL UPGRADE (ATOMIC)
     if (reason && reason.startsWith("upgrade_lvl")) {
       const level = parseInt(reason.replace("upgrade_lvl", ""));
       const cost = Math.abs(points_delta);
 
-      // Validare cost vs nivel (Formula 100 * level)
-      // Level 2 costa 100, Level 3 costa 200...
-      // Previous level index?
-      // Frontend trimite costul calculat. Facem o validare "laxă" sau strictă?
-      // Strictă ar fi: if (cost !== (level - 1) * 100) ...
-      // Dar frontend-ul trimite nextLevel.
-      // Daca trec la LVL 2, cost e 100. (2-1)*100 = 100.
-      // Daca trec la LVL 3, cost e 200. (3-1)*100 = 200.
-      if (cost !== (level - 1) * 100) {
-        // Sau poate acceptăm ce zice frontend-ul momentan, dar e risk.
-        // Hai să acceptăm doar > 0.
-      }
-
-      const result = await processLevelUpgrade(uid, cost, level);
-      return res.json({ points: result.newPoints });
+      // Call Atomic Transaction
+      const result = await processLevelUpgradeTransaction(uid, level, cost);
+      return res.json({ points: result.newPoints, badge: result.badgeCode });
     }
 
     // C. ALTCEVA - FORBIDDEN

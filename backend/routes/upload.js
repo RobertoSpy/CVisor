@@ -23,8 +23,8 @@ const ALLOWED_MIMETYPES = [
 // SECURITATE: Extensii permise (whitelist)
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.mp4', '.webm', '.ogg', '.mov'];
 
-// SECURITATE: Limită de 100MB pentru video
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+// SECURITATE: Limită de 60MB pentru video
+const MAX_FILE_SIZE = 60 * 1024 * 1024; // 60MB
 
 // Configurare storage securizat
 const storage = multer.diskStorage({

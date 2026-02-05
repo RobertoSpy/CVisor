@@ -158,6 +158,11 @@ app.use("/uploads", (req, res, next) => {
   console.log(`[Static] Serving file: ${req.url}`);
   next();
 }, express.static(path.join(__dirname, "uploads")));
+
+app.use("/archive", (req, res, next) => {
+  console.log(`[Static] Serving archive: ${req.url}`);
+  next();
+}, express.static(path.join(__dirname, "archive")));
 // Noua structură
 const studentAnalytics = require("./routes/students/stats");
 app.use("/api/students/stats", studentAnalytics);
@@ -210,9 +215,15 @@ app.use((err, req, res, next) => {
 
 // Jobs Scheduler
 const { startScheduler } = require('./jobs/newsletter');
+const { startArchiver } = require('./jobs/archiver');
 startScheduler();
+startArchiver();
 
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;

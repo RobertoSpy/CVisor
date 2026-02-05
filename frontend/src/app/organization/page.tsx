@@ -12,6 +12,7 @@ import SparklineCard from "../student/components/charts/SparklineCard";
 import ActivityHeatmap from "../student/components/charts/ActivityHeatmap";
 import OrgPostsBar from "../student/components/charts/OrgPostsBar";
 import StreakHeroCard from "../student/components/streak/StreakHeroCard";
+import InstallPrompt from "../student/components/InstallPrompt";
 
 import useOrganizationData from "./hooks/useOrganizationData"; // [NEW] SWR Hook
 import {
@@ -81,7 +82,15 @@ export default function OrganizationHome() {
           // Reload metrics after login logged
           mutatePresence();
           mutatePoints();
-          // Also check/unlock daily login badge if exists
+          if (data.points_awarded) {
+            toast.success("Ai primit 5 puncte! 💎");
+            confetti({
+              particleCount: 100,
+              spread: 70,
+              origin: { y: 0.6 },
+              colors: ["#3b82f6", "#60a5fa", "#ffffff"]
+            });
+          }
         }
       })
       .catch(console.error);
@@ -122,7 +131,7 @@ export default function OrganizationHome() {
 
       if (!badge) return; // Should not happen if < 5
 
-      // Perform transaction: Deduct Cost -> Unlock Badge
+      // STAGE 2 (ATOMIC): Perform transaction: Deduct Cost + Unlock Badge (Single Call)
       fetch("/api/students/points/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -132,18 +141,9 @@ export default function OrganizationHome() {
           reason: `upgrade_lvl${nextLevel}`,
         }),
       })
-        .then((res) => {
-          if (!res.ok) throw new Error("Points deduction failed");
-          return fetch("/api/students/badges/unlock", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ badge_code: nextBadgeCode }),
-          });
-        })
         .then((res) => res.json())
         .then((d) => {
-          if (d.ok) {
+          if (d.points !== undefined) { // Check for success response (points returned)
             confetti({
               particleCount: 200,
               spread: 120,
@@ -168,37 +168,59 @@ export default function OrganizationHome() {
     }
   }, [points, badges, mutatePoints, mutateBadges]);
 
-  const handleRepair = () => {
-    if (points < 20) {
-      toast.error("Nu ai suficiente puncte pentru repair!");
+  const handleRepair = async () => {
+    if (!presence.gapInfo) return;
+
+    const daysToRepair = presence.gapInfo.length;
+    const totalCost = daysToRepair * 20;
+
+    if (points < totalCost) {
+      toast.error(`Nu ai suficiente puncte! Îți trebuie ${totalCost} XP pentru a repara ${daysToRepair} zile.`);
       return;
     }
 
-    if (!presence.gapInfo) return;
+    const toastId = toast.loading("Se repară streak-ul...");
 
-    const dateToRepair = presence.gapInfo.start;
+    // Generate array of dates to repair
+    const dates: string[] = [];
+    const start = new Date(presence.gapInfo.start);
+    const end = new Date(presence.gapInfo.end);
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      dates.push(d.toISOString().split('T')[0]);
+    }
 
-    fetch("/api/students/points/add", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        points_delta: -20,
-        reason: "repair",
-        repaired_date: dateToRepair
-      })
-    })
-      .then(r => r.json())
-      .then(d => {
-        // Refresh via SWR
-        mutatePoints();
-        mutatePresence();
+    try {
+      // Repair each day
+      for (const dateStr of dates) {
+        await fetch("/api/students/points/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            points_delta: -20,
+            reason: "repair",
+            repaired_date: dateStr
+          })
+        }).then(r => {
+          if (!r.ok) throw new Error("Failed to repair date: " + dateStr);
+          return r.json();
+        });
+      }
 
-        repairGap(presence.gapInfo, 20);
-        setLsTick(t => t + 1);
-        toast.success("Streak reparat cu succes! 🛠️");
-      })
-      .catch(() => toast.error("Eroare la reparare"));
+      // Refresh via SWR
+      mutatePoints();
+      mutatePresence();
+
+      repairGap(presence.gapInfo, 20); // Local update helper
+      setLsTick(t => t + 1);
+      toast.dismiss(toastId);
+      toast.success("Streak reparat cu succes! 🛠️");
+
+    } catch (err) {
+      console.error(err);
+      toast.dismiss(toastId);
+      toast.error("Eroare la reparare. Verifică punctele.");
+    }
   };
 
   const bestBadge = useMemo(() => {
@@ -210,6 +232,9 @@ export default function OrganizationHome() {
 
   return (
     <div className="space-y-8 mt-10">
+      {/* PWA Install FAB */}
+      <InstallPrompt />
+
       {/* statistici rapide */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
         <Stat title="Puncte" value={points} />

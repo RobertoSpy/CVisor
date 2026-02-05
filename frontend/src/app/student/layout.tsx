@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -41,6 +42,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-neutral relative">
       {/* Sticky Navbar */}
       <header className="sticky top-0 z-50 w-full backdrop-blur-md bg-gradient-to-r from-blue-900/90 via-blue-700/90 to-blue-500/90 border-b border-white/10 shadow-lg transition-all duration-300">
+        <PermissionBanner />
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 md:px-6 py-3">
 
           {/* Logo */}
@@ -120,25 +122,48 @@ function NotificationButton() {
 
   if (isSubscribed) return null; // Deja abonat
 
-  if (permission === 'denied') {
-    return (
-      <button
-        onClick={() => alert("Browser-ul tău a blocat notificările pentru acest site.\n\nPentru a le activa:\n1. Apasă pe iconița lacăt/setări din stânga barei de adresă.\n2. Caută 'Notificări' și selectează 'Permite' (Allow).\n3. Reîncarcă pagina.")}
-        className="mt-4 md:mt-0 px-4 py-2 rounded-lg text-red-200 bg-red-900/30 ring-1 ring-red-500/50 hover:bg-red-900/50 transition text-xs font-bold uppercase tracking-wider mr-2"
-        title="Notificările sunt blocate"
-      >
-        ⚠️ Notificări Blocate
-      </button>
-    );
-  }
+  // If blocked, we don't show a button here. A banner will be shown in the layout instead.
+  if (permission === 'denied') return null;
 
   return (
     <button
-      onClick={subscribe}
+      onClick={() => {
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+        if (!isStandalone) {
+          toast.error("Trebuie să instalezi aplicația mai întâi pentru a activa notificările! 📲", {
+            duration: 4000
+          });
+          return;
+        }
+        subscribe();
+      }}
       className="mt-4 md:mt-0 px-4 py-2 rounded-lg text-blue-100 ring-1 ring-blue-300/30 hover:bg-blue-800 transition text-xs font-bold uppercase tracking-wider mr-2"
       title="Activează notificările"
     >
       🔔 Activează Notificări
     </button>
+  );
+}
+
+function PermissionBanner() {
+  const [permission, setPermission] = useState<NotificationPermission>('default');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setPermission(Notification.permission);
+    }
+  }, []);
+
+  if (permission !== 'denied') return null;
+
+  return (
+    <div className="bg-orange-500/10 border-b border-orange-500/20 backdrop-blur-md">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 flex items-start md:items-center gap-3 text-sm text-orange-200">
+        <span className="text-xl">⚠️</span>
+        <p>
+          Pentru a primi notificari de la asociații, <span className="font-bold underline cursor-help" title="Deschide aplicația -> Setări Aplicație -> Notificări -> Permite">adaugă CVisor pe ecranul tău</span> și activează clopoțelul din setările aplicației.
+        </p>
+      </div>
+    </div>
   );
 }

@@ -87,8 +87,11 @@ export default function OpportunitiesPage() {
 
 
 
+  const [statusFilter, setStatusFilter] = useState<"active" | "archived">("active");
+
   useEffect(() => {
-    fetch("/api/organizations/opportunities", {
+    setLoading(true);
+    fetch(`/api/organizations/opportunities?status=${statusFilter}`, {
       credentials: "include",
     })
       .then((res) => res.json())
@@ -97,7 +100,7 @@ export default function OpportunitiesPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [statusFilter]);
 
   // Filtrare după tip
   const filteredOpps = selectedType
@@ -112,7 +115,23 @@ export default function OpportunitiesPage() {
           Oportunitățile Tale
         </h1>
 
-        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-center">
+          {/* Status Toggles */}
+          <div className="flex bg-gray-200 p-1 rounded-xl">
+            <button
+              onClick={() => setStatusFilter("active")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${statusFilter === "active" ? "bg-white shadow text-primary" : "text-gray-500 hover:text-gray-700"}`}
+            >
+              Active
+            </button>
+            <button
+              onClick={() => setStatusFilter("archived")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${statusFilter === "archived" ? "bg-white shadow text-primary" : "text-gray-500 hover:text-gray-700"}`}
+            >
+              🗄️ Arhivă
+            </button>
+          </div>
+
           {/* Category Filter */}
           <div className="flex bg-gray-100 p-1 rounded-xl">
             <button
@@ -366,14 +385,14 @@ export default function OpportunitiesPage() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={e => setEditBannerFile(e.target.files?.[0] || null)}
+                  onChange={handleEditBannerChange}
                   className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition"
                 />
                 <label className="font-semibold text-blue-900 text-sm mt-2">Video promo</label>
                 <input
                   type="file"
                   accept="video/*"
-                  onChange={e => setEditPromoFile(e.target.files?.[0] || null)}
+                  onChange={handleEditPromoChange}
                   className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition"
                 />
               </div>

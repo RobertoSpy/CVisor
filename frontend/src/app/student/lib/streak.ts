@@ -206,8 +206,9 @@ export function computeStreakAuto(map: Record<string, number>) {
       if (gapLen > 90) break;
     }
     gapDays.sort();
-    // Allow gapLen >= 1 to be repairable (since auto-freeze is off)
-    gapInfo = gapLen >= 1 ? { start: gapDays[0], end: gapDays[gapDays.length - 1], length: gapLen } : null;
+    // Allow gapLen >= 1 to be repairable, BUT ONLY if gap is small (<= 2 days)
+    // Business Rule: If gap > 2 days, streak is lost forever.
+    gapInfo = (gapLen >= 1 && gapLen <= 2) ? { start: gapDays[0], end: gapDays[gapDays.length - 1], length: gapLen } : null;
   }
   // --- END MODIFICARE GAP ---
 

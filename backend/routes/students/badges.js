@@ -1,6 +1,7 @@
 const express = require("express");
 const { pool } = require("../../db");
 const verifyToken = require("../../middleware/verifyToken");
+const { performTransaction, awardBadgePoints } = require("../../utils/pointsManager");
 
 const router = express.Router();
 
@@ -13,28 +14,34 @@ router.get("/badges", verifyToken, async (req, res) => {
 router.post("/badges/unlock", verifyToken, async (req, res) => {
   const uid = req.user.id;
   const { badge_code } = req.body;
-  // Verifică dacă există deja
-  const { rowCount } = await pool.query(
-    "SELECT 1 FROM user_badges WHERE user_id=$1 AND badge_code=$2",
-    [uid, badge_code]
-  );
-  if (rowCount > 0) return res.status(400).json({ error: "Badge already unlocked" });
-  await pool.query(
-    "INSERT INTO user_badges (user_id, badge_code, unlocked_at) VALUES ($1, $2, NOW())",
-    [uid, badge_code]
-  );
 
-  // [NEW] Award 5 bonus points
-  await pool.query(
-    "INSERT INTO user_points (user_id, points, updated_at) VALUES ($1, 5, NOW()) " +
-    "ON CONFLICT (user_id) DO UPDATE SET points = user_points.points + 5, updated_at = NOW()",
-    [uid]
-  );
-  await pool.query(
-    "INSERT INTO user_point_events (user_id, points_delta, reason) VALUES ($1, $2, $3)",
-    [uid, 5, `badge:${badge_code} `]
-  );
-  res.json({ ok: true });
+  try {
+    await performTransaction(async (client) => {
+      // 1. Check if exists
+      const { rowCount } = await client.query(
+        "SELECT 1 FROM user_badges WHERE user_id=$1 AND badge_code=$2",
+        [uid, badge_code]
+      );
+      if (rowCount > 0) throw new Error("Badge already unlocked");
+
+      // 2. Insert Badge
+      await client.query(
+        "INSERT INTO user_badges (user_id, badge_code, unlocked_at) VALUES ($1, $2, NOW())",
+        [uid, badge_code]
+      );
+
+      // 3. Award Bonus Points (Atomic via same client)
+      await awardBadgePoints(uid, badge_code, client);
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.message === "Badge already unlocked") {
+      return res.status(400).json({ error: "Badge already unlocked" });
+    }
+    console.error("[badges/unlock] Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 module.exports = router;

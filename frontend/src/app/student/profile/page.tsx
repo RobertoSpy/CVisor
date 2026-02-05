@@ -354,33 +354,53 @@ export default function StudentProfileWizard() {
   useEffect(() => { debouncedStore(payload); }, [payload]);
 
   useEffect(() => {
-    // Fetch basic user info (name)
-    fetch("/api/users/basic", { credentials: "include" })
-      .then(res => res.json())
-      .then(data => {
-        if (data.full_name) setName(data.full_name);
-      })
-      .catch(err => console.error("Failed to fetch basic info", err));
-
-    try {
-      const email = localStorage.getItem("email") || "default";
-      const key = `profileWizardDraft_${email}`;
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        const d = JSON.parse(raw) as ProfilePayload;
-        // setName(d.name || ""); // Don't overwrite name from draft if we want it from DB
-        setHeadline(d.headline || "");
-        setBio(d.bio || "");
-        setLocation(d.location || "");
-        setAvatarDataUrl(d.avatarDataUrl);
-        setSkills(d.skills || []);
-        setSocial(d.social || {});
-        setEducation(d.education || []);
-        setExperience(d.experience || []);
-        setPortfolioMedia(d.portfolioMedia || []);
-        setOpportunityRefs(d.opportunityRefs || []);
+    async function loadData() {
+      try {
+        // 1. Try fetching from DB (Source of Truth)
+        const res = await fetch("/api/users/me", { credentials: "include" });
+        if (res.ok) {
+          const d = await res.json();
+          // Populate state from DB
+          setName(d.name || ""); // d.name is COALESCE(profile.name, users.full_name)
+          setHeadline(d.headline || "");
+          setBio(d.bio || "");
+          setLocation(d.location || "");
+          setAvatarDataUrl(d.avatarUrl || d.avatarDataUrl); // Handle both DB field and Payload field naming
+          setSkills(d.skills || []);
+          setSocial(d.social || {});
+          setEducation(d.education || []);
+          setExperience(d.experience || []);
+          setPortfolioMedia(d.portfolioMedia || []);
+          setOpportunityRefs(d.opportunityRefs || []);
+          return; // Stop here if DB load was successful
+        }
+      } catch (err) {
+        console.error("Failed to fetch profile from DB", err);
       }
-    } catch { }
+
+      // 2. Fallback to LocalStorage (Draft) if DB failed or empty
+      try {
+        const email = localStorage.getItem("email") || "default";
+        const key = `profileWizardDraft_${email}`;
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const d = JSON.parse(raw) as ProfilePayload;
+          // setName(d.name || ""); // Keep name from basic info if possible
+          setHeadline(d.headline || "");
+          setBio(d.bio || "");
+          setLocation(d.location || "");
+          setAvatarDataUrl(d.avatarDataUrl);
+          setSkills(d.skills || []);
+          setSocial(d.social || {});
+          setEducation(d.education || []);
+          setExperience(d.experience || []);
+          setPortfolioMedia(d.portfolioMedia || []);
+          setOpportunityRefs(d.opportunityRefs || []);
+        }
+      } catch { }
+    }
+
+    loadData();
   }, []);
 
   // Completion map for stepper
@@ -424,37 +444,62 @@ export default function StudentProfileWizard() {
   useEffect(() => { const h = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); } }; window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h); }, [payload]);
 
   return (
-    <div className="grid lg:grid-cols-[260px,1fr] gap-6 mt-10">
+    <div className="flex flex-col lg:grid lg:grid-cols-[260px,1fr] gap-6 mt-6 lg:mt-10">
       {/* Left: Stepper + checklist */}
       <div className="space-y-4">
-        <Card>
-          <div className="flex items-center justify-between mb-2"><div className="text-sm text-gray-600">Completitudine</div><div className="text-sm font-medium">{pct}%</div></div>
-          <div className="h-2 bg-black/10 rounded-full overflow-hidden mb-2">
-            <div
-              className={
-                "h-full transition-all duration-300 " +
-                (pct === 100 ? "bg-emerald-500" : pct >= 50 ? "bg-primary" : "bg-accent")
-              }
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <div className="text-xs text-gray-600">XP: <span className="font-medium">{xp}</span></div>
-        </Card>
-        <Stepper current={step} completeMap={completeMap} go={setStep} />
-        <Card>
-          <div className="text-sm font-medium mb-3">Checklist global (ca să nu ratezi nimic)</div>
-          <div className="space-y-2">
-            <CheckRow ok={!!name} label="Nume" />
-            <CheckRow ok={!!headline} label="Headline" />
-            <CheckRow ok={!!bio} label="Bio" />
-            <CheckRow ok={!!location} label="Locație" />
-            <CheckRow ok={skills.length > 0} label="Minim 1 skill" />
-            <CheckRow ok={education.length > 0} label="Cel puțin 1 educație" />
-            <CheckRow ok={experience.length > 0} label="Cel puțin 1 experiență" />
-            <CheckRow ok={opportunityRefs.length > 0} label="Cel puțin 1 oportunitate" />
-            <CheckRow ok={portfolioMedia.length > 0} label="Cel puțin 1 media" />
-          </div>
-        </Card>
+        {/* Stats - Hide on mobile (shown in footer) */}
+        <div className="hidden lg:block">
+          <Card>
+            <div className="flex items-center justify-between mb-2"><div className="text-sm text-gray-600">Completitudine</div><div className="text-sm font-medium">{pct}%</div></div>
+            <div className="h-2 bg-black/10 rounded-full overflow-hidden mb-2">
+              <div
+                className={
+                  "h-full transition-all duration-300 " +
+                  (pct === 100 ? "bg-emerald-500" : pct >= 50 ? "bg-primary" : "bg-accent")
+                }
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <div className="text-xs text-gray-600">XP: <span className="font-medium">{xp}</span></div>
+          </Card>
+        </div>
+
+        {/* Stepper - Mobile: Horizontal Scroll, Desktop: Vertical */}
+        <nav className="sticky top-2 z-20 bg-gray-50/95 backdrop-blur py-2 lg:py-0 lg:static lg:bg-transparent -mx-4 px-4 lg:mx-0 lg:px-0 border-b lg:border-none border-black/5 lg:space-y-2 flex lg:block overflow-x-auto gap-3 no-scrollbar">
+          {STEPS.map((s, idx) => {
+            const done = completeMap[s.key];
+            const isNow = step === s.key;
+            return (
+              <button key={s.key} onClick={() => setStep(s.key)} className={cls(
+                "flex-shrink-0 text-left px-3 py-2 lg:py-3 rounded-xl ring-1 transition-all lg:w-full",
+                isNow ? "bg-primary text-white ring-primary/60 shadow scale-[0.98]" : "bg-white ring-black/10 hover:bg-black/5"
+              )}>
+                <div className="flex items-center gap-2 lg:gap-3">
+                  <div className={cls("h-5 w-5 lg:h-6 lg:w-6 rounded-full grid place-items-center text-[10px] lg:text-xs", done ? "bg-emerald-500 text-white" : "bg-black/10 text-gray-600")}>{done ? "✓" : idx + 1}</div>
+                  <div className="text-xs lg:text-sm font-medium whitespace-nowrap">{s.label}</div>
+                </div>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Checklist - Hide on mobile to save space */}
+        <div className="hidden lg:block">
+          <Card>
+            <div className="text-sm font-medium mb-3">Checklist global (ca să nu ratezi nimic)</div>
+            <div className="space-y-2">
+              <CheckRow ok={!!name} label="Nume" />
+              <CheckRow ok={!!headline} label="Headline" />
+              <CheckRow ok={!!bio} label="Bio" />
+              <CheckRow ok={!!location} label="Locație" />
+              <CheckRow ok={skills.length > 0} label="Minim 1 skill" />
+              <CheckRow ok={education.length > 0} label="Cel puțin 1 educație" />
+              <CheckRow ok={experience.length > 0} label="Cel puțin 1 experiență" />
+              <CheckRow ok={opportunityRefs.length > 0} label="Cel puțin 1 oportunitate" />
+              <CheckRow ok={portfolioMedia.length > 0} label="Cel puțin 1 media" />
+            </div>
+          </Card>
+        </div>
       </div>
 
       {/* Right: Step content */}
@@ -466,9 +511,8 @@ export default function StudentProfileWizard() {
                 <Field label="Nume" required>
                   <TextInput
                     value={name}
-                    readOnly
-                    className="bg-gray-100 text-gray-500 cursor-not-allowed"
-                    placeholder="Se încarcă..."
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Numele tău complet"
                   />
                 </Field>
                 <Field label="Headline" required hint="Domeniu + focus"><TextInput value={headline} onChange={e => setHeadline(e.target.value)} placeholder="Student FII • Frontend" /></Field>
@@ -566,27 +610,32 @@ export default function StudentProfileWizard() {
         )}
 
         {/* Footer actions */}
-        <div className="sticky bottom-4">
+        <div className="sticky bottom-4 z-10">
           <div className="bg-white/95 backdrop-blur ring-1 ring-black/10 rounded-2xl p-3 flex flex-wrap items-center gap-3 shadow">
             <GhostButton onClick={prev}>Înapoi</GhostButton>
+
+            <Button onClick={save} disabled={saving}>
+              {saving ? "Se salvează…" : "Salvează"}
+            </Button>
+
             {step !== "review" && (
               <Button onClick={next} disabled={!validateStep(step, payload)}>Continuă</Button>
             )}
+
             {step === "review" && (
-              <>
-                <Button onClick={save} disabled={miss.length > 0 || saving}>
-                  {saving ? "Se salvează…" : "Salvează profilul"}
-                </Button>
-                <Button
-                  className="ml-2"
-                  onClick={() => router.push("/student/profile/preview")}
-                  type="button"
-                >
-                  Previzualizează profilul
-                </Button>
-              </>
+              <Button
+                className="ml-2"
+                onClick={() => router.push("/student/profile/preview")}
+                type="button"
+              >
+                Previzualizează profilul
+              </Button>
             )}
-            <div className="ml-auto text-sm text-gray-600 flex items-center gap-2"><span className="px-2 py-1 rounded bg-black/5">XP: {xp}</span><span className="px-2 py-1 rounded bg-black/5">{pct}%</span><span className="hidden md:inline">ⓘ Ctrl/⌘+S salvează</span></div>
+
+            <div className="ml-auto text-sm text-gray-600 flex items-center gap-2">
+              <span className="px-2 py-1 rounded bg-black/5">XP: {xp}</span>
+              <span className="px-2 py-1 rounded bg-black/5">{pct}%</span>
+            </div>
             {msg && <span className={cls("text-sm", msg === "Salvat!" ? "text-success" : "text-primary")}>{msg}</span>}
           </div>
         </div>

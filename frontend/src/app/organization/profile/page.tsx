@@ -301,36 +301,58 @@ export default function OrganizationProfileWizard() {
 
   // Step content
   return (
-    <div className="grid lg:grid-cols-[260px,1fr] gap-6 mt-10">
+    <div className="flex flex-col lg:grid lg:grid-cols-[260px,1fr] gap-6 mt-6 lg:mt-10">
       {/* Left: Stepper + checklist */}
       <div className="space-y-4">
-        <Card>
-          <div className="flex items-center justify-between mb-2"><div className="text-sm text-gray-600">Completitudine</div><div className="text-sm font-medium">{pct}%</div></div>
-          <div className="h-2 bg-black/10 rounded-full overflow-hidden mb-2">
-            <div
-              className={"h-full transition-all duration-300 " + (pct === 100 ? "bg-emerald-500" : pct >= 50 ? "bg-primary" : "bg-accent")}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <div className="text-xs text-gray-600">XP: <span className="font-medium">{xp}</span></div>
-        </Card>
-        <Stepper current={step} completeMap={completeMap} go={setStep} />
-        <Card>
-          <div className="text-sm font-medium mb-3">Checklist global</div>
-          <div className="space-y-2">
-            <CheckRow ok={!!profile.name} label="Nume" />
-            <CheckRow ok={!!profile.headline} label="Headline" />
-            <CheckRow ok={!!profile.bio} label="Bio" />
-            <CheckRow ok={!!profile.avatarUrl} label="Avatar" />
-            <CheckRow ok={!!profile.location} label="Locație" />
-            <CheckRow ok={!!profile.volunteers} label="Voluntari" />
-            <CheckRow ok={profile.social && Object.keys(profile.social).length > 0} label="Social" />
-            <CheckRow ok={profile.events.length > 0} label="Oportunități/Evenimente" />
-            <CheckRow ok={profile.keyPeople.length > 0} label="Persoane cheie" />
-            <CheckRow ok={profile.contactPersons.length > 0} label="Contact" />
-            <CheckRow ok={profile.media.length > 0} label="Media" />
-          </div>
-        </Card>
+        {/* Stats - Hide on mobile */}
+        <div className="hidden lg:block">
+          <Card>
+            <div className="flex items-center justify-between mb-2"><div className="text-sm text-gray-600">Completitudine</div><div className="text-sm font-medium">{pct}%</div></div>
+            <div className="h-2 bg-black/10 rounded-full overflow-hidden mb-2">
+              <div
+                className={"h-full transition-all duration-300 " + (pct === 100 ? "bg-emerald-500" : pct >= 50 ? "bg-primary" : "bg-accent")}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <div className="text-xs text-gray-600">XP: <span className="font-medium">{xp}</span></div>
+          </Card>
+        </div>
+
+        {/* Stepper - Mobile: Horizontal Scroll, Desktop: Vertical */}
+        <nav className="sticky top-2 z-20 bg-gray-50/95 backdrop-blur py-2 lg:py-0 lg:static lg:bg-transparent -mx-4 px-4 lg:mx-0 lg:px-0 border-b lg:border-none border-black/5 lg:space-y-2 flex lg:block overflow-x-auto gap-3 no-scrollbar">
+          {STEPS.map((s, idx) => {
+            const done = completeMap[s.key];
+            const isNow = step === s.key;
+            return (
+              <button key={s.key} onClick={() => setStep(s.key)} className={cls("flex-shrink-0 w-auto lg:w-full text-left px-3 py-2 lg:py-3 rounded-xl ring-1 transition-all", isNow ? "bg-primary text-white ring-primary/60 shadow scale-[0.98]" : "bg-white ring-black/10 hover:bg-black/5")}>
+                <div className="flex items-center gap-2 lg:gap-3">
+                  <div className={cls("h-5 w-5 lg:h-6 lg:w-6 rounded-full grid place-items-center text-[10px] lg:text-xs", done ? "bg-emerald-500 text-white" : "bg-black/10 text-gray-600")}>{done ? "✓" : idx + 1}</div>
+                  <div className="text-xs lg:text-sm font-medium whitespace-nowrap">{s.label}</div>
+                </div>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Checklist - Hide on mobile */}
+        <div className="hidden lg:block">
+          <Card>
+            <div className="text-sm font-medium mb-3">Checklist global</div>
+            <div className="space-y-2">
+              <CheckRow ok={!!profile.name} label="Nume" />
+              <CheckRow ok={!!profile.headline} label="Headline" />
+              <CheckRow ok={!!profile.bio} label="Bio" />
+              <CheckRow ok={!!profile.avatarUrl} label="Avatar" />
+              <CheckRow ok={!!profile.location} label="Locație" />
+              <CheckRow ok={!!profile.volunteers} label="Voluntari" />
+              <CheckRow ok={profile.social && Object.keys(profile.social).length > 0} label="Social" />
+              <CheckRow ok={profile.events.length > 0} label="Oportunități/Evenimente" />
+              <CheckRow ok={profile.keyPeople.length > 0} label="Persoane cheie" />
+              <CheckRow ok={profile.contactPersons.length > 0} label="Contact" />
+              <CheckRow ok={profile.media.length > 0} label="Media" />
+            </div>
+          </Card>
+        </div>
       </div>
 
       {/* Right: Step content */}
@@ -377,7 +399,6 @@ export default function OrganizationProfileWizard() {
                 </Card>
               </div>
             </div>
-            <Button className="mt-6" onClick={next}>Continuă</Button>
           </Card>
         )}
 
@@ -406,125 +427,152 @@ export default function OrganizationProfileWizard() {
               ))}
               <Button onClick={() => handleChange("events", [...profile.events, { id: uid(), title: "", date: "", description: "" }])}>+ Adaugă oportunitate/eveniment</Button>
             </div>
-            <Button className="mt-6" onClick={next}>Continuă</Button>
           </Card>
-        )}
+        )
+        }
 
-        {step === "people" && (
-          <Card>
-            <div className="space-y-3">
-              {profile.keyPeople.map((pers, idx) => (
-                <div key={pers.id} className="grid grid-cols-3 gap-3 items-center">
-                  <TextInput value={pers.name} onChange={e => handleChange("keyPeople", profile.keyPeople.map(x => x.id === pers.id ? { ...x, name: e.target.value } : x))} placeholder="Nume" />
-                  <TextInput value={pers.role} onChange={e => handleChange("keyPeople", profile.keyPeople.map(x => x.id === pers.id ? { ...x, role: e.target.value } : x))} placeholder="Rol" />
-                  <TextInput value={pers.responsibilities || ""} onChange={e => handleChange("keyPeople", profile.keyPeople.map(x => x.id === pers.id ? { ...x, responsibilities: e.target.value } : x))} placeholder="Responsabilități" />
-                  {profile.keyPeople.length > 1 && (
-                    <Button type="button" onClick={() => handleChange("keyPeople", profile.keyPeople.filter(x => x.id !== pers.id))}>Șterge</Button>
-                  )}
-                </div>
-              ))}
-              <Button onClick={() => handleChange("keyPeople", [...profile.keyPeople, { id: uid(), name: "", role: "", responsibilities: "" }])}>+ Adaugă persoană</Button>
-            </div>
-            <Button className="mt-6" onClick={next}>Continuă</Button>
-          </Card>
-        )}
-
-        {step === "contact" && (
-          <Card>
-            <div className="space-y-3">
-              {profile.contactPersons.map((person, idx) => (
-                <div key={person.id} className="grid grid-cols-3 gap-3 items-center">
-                  <TextInput value={person.name} onChange={e => handleChange("contactPersons", profile.contactPersons.map(x => x.id === person.id ? { ...x, name: e.target.value } : x))} placeholder="Nume" />
-                  <TextInput value={person.email} onChange={e => handleChange("contactPersons", profile.contactPersons.map(x => x.id === person.id ? { ...x, email: e.target.value } : x))} placeholder="Email" />
-                  <TextInput value={person.phone} onChange={e => handleChange("contactPersons", profile.contactPersons.map(x => x.id === person.id ? { ...x, phone: e.target.value } : x))} placeholder="Telefon" />
-                  {profile.contactPersons.length > 1 && (
-                    <Button type="button" onClick={() => handleChange("contactPersons", profile.contactPersons.filter(x => x.id !== person.id))}>Șterge</Button>
-                  )}
-                </div>
-              ))}
-              <Button onClick={() => handleChange("contactPersons", [...profile.contactPersons, { id: uid(), name: "", email: "", phone: "" }])}>+ Adaugă persoană contact</Button>
-            </div>
-            <Button className="mt-6" onClick={next}>Continuă</Button>
-          </Card>
-        )}
-
-        {step === "media" && (
-          <Card>
-            <Field label="Media organizație" required hint="Poze sau videoclipuri relevante pentru profilul organizației.">
-              <MediaEditor media={profile.media} setMedia={v => handleChange("media", v)} />
-            </Field>
-            <Button className="mt-6" onClick={next}>Continuă</Button>
-          </Card>
-        )}
-
-        {step === "review" && (
-          <Card>
-            <div className="space-y-4">
-              <div className="flex flex-col md:flex-row items-center mb-4">
-                {profile.avatarUrl && (
-                  <div className="h-32 w-32 rounded-full ring-4 ring-primary overflow-hidden bg-black/5 shadow-lg mb-2 flex items-center justify-center">
-                    <img src={profile.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+        {
+          step === "people" && (
+            <Card>
+              <div className="space-y-3">
+                {profile.keyPeople.map((pers, idx) => (
+                  <div key={pers.id} className="grid grid-cols-3 gap-3 items-center">
+                    <TextInput value={pers.name} onChange={e => handleChange("keyPeople", profile.keyPeople.map(x => x.id === pers.id ? { ...x, name: e.target.value } : x))} placeholder="Nume" />
+                    <TextInput value={pers.role} onChange={e => handleChange("keyPeople", profile.keyPeople.map(x => x.id === pers.id ? { ...x, role: e.target.value } : x))} placeholder="Rol" />
+                    <TextInput value={pers.responsibilities || ""} onChange={e => handleChange("keyPeople", profile.keyPeople.map(x => x.id === pers.id ? { ...x, responsibilities: e.target.value } : x))} placeholder="Responsabilități" />
+                    {profile.keyPeople.length > 1 && (
+                      <Button type="button" onClick={() => handleChange("keyPeople", profile.keyPeople.filter(x => x.id !== pers.id))}>Șterge</Button>
+                    )}
                   </div>
-                )}
-                <div className="flex-1 md:ml-6">
-                  <div className="text-2xl font-bold">{profile.name}</div>
-                  <div className="text-primary font-semibold text-lg mt-1">{profile.headline}</div>
-                  <div className="mt-2 text-gray-700">{profile.bio}</div>
-                  <div className="flex gap-3 mt-2">
-                    {profile.social.facebook && <a href={profile.social.facebook} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:text-primary">Facebook</a>}
-                    {profile.social.instagram && <a href={profile.social.instagram} target="_blank" rel="noopener noreferrer" className="text-pink-600 hover:text-primary">Instagram</a>}
-                    {profile.social.website && <a href={profile.social.website} target="_blank" rel="noopener noreferrer" className="text-gray-700 hover:text-primary">Website</a>}
+                ))}
+                <Button onClick={() => handleChange("keyPeople", [...profile.keyPeople, { id: uid(), name: "", role: "", responsibilities: "" }])}>+ Adaugă persoană</Button>
+              </div>
+            </Card>
+          )
+        }
+
+        {
+          step === "contact" && (
+            <Card>
+              <div className="space-y-3">
+                {profile.contactPersons.map((person, idx) => (
+                  <div key={person.id} className="grid grid-cols-3 gap-3 items-center">
+                    <TextInput value={person.name} onChange={e => handleChange("contactPersons", profile.contactPersons.map(x => x.id === person.id ? { ...x, name: e.target.value } : x))} placeholder="Nume" />
+                    <TextInput value={person.email} onChange={e => handleChange("contactPersons", profile.contactPersons.map(x => x.id === person.id ? { ...x, email: e.target.value } : x))} placeholder="Email" />
+                    <TextInput value={person.phone} onChange={e => handleChange("contactPersons", profile.contactPersons.map(x => x.id === person.id ? { ...x, phone: e.target.value } : x))} placeholder="Telefon" />
+                    {profile.contactPersons.length > 1 && (
+                      <Button type="button" onClick={() => handleChange("contactPersons", profile.contactPersons.filter(x => x.id !== person.id))}>Șterge</Button>
+                    )}
                   </div>
-                  <div className="text-gray-500 mt-2">{profile.location}</div>
-                  <div className="mt-2">Voluntari: <span className="font-bold">{profile.volunteers}</span></div>
-                </div>
+                ))}
+                <Button onClick={() => handleChange("contactPersons", [...profile.contactPersons, { id: uid(), name: "", email: "", phone: "" }])}>+ Adaugă persoană contact</Button>
               </div>
-              <div>
-                <b>Oportunități & Evenimente:</b>
-                <ul className="list-disc pl-6">
-                  {profile.events.map(ev => <li key={ev.id}>{ev.title} ({ev.date})</li>)}
-                </ul>
-              </div>
-              <div>
-                <b>Persoane cheie:</b>
-                <ul className="list-disc pl-6">
-                  {profile.keyPeople.map(pers => <li key={pers.id}>{pers.name} - {pers.role} {pers.responsibilities ? `(${pers.responsibilities})` : ""}</li>)}
-                </ul>
-              </div>
-              <div>
-                <b>Persoane contact:</b>
-                <ul className="list-disc pl-6">
-                  {profile.contactPersons.map(person => <li key={person.id}>{person.name} ({person.email}, {person.phone})</li>)}
-                </ul>
-              </div>
-              <div>
-                <b>Media:</b>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                  {profile.media.map(m =>
-                    <div key={m.id} className="rounded-xl overflow-hidden ring-1 ring-black/10 bg-black/5">
-                      {m.kind === 'image'
-                        ? <img src={m.url} className="h-40 w-full object-cover" />
-                        : <video src={m.url} className="h-40 w-full object-cover" controls />}
-                      {m.caption && <div className="text-xs text-gray-600 text-center">{m.caption}</div>}
+            </Card>
+          )
+        }
+
+        {
+          step === "media" && (
+            <Card>
+              <Field label="Media organizație" required hint="Poze sau videoclipuri relevante pentru profilul organizației.">
+                <MediaEditor media={profile.media} setMedia={v => handleChange("media", v)} />
+              </Field>
+            </Card>
+          )
+        }
+
+        {
+          step === "review" && (
+            <Card>
+              <div className="space-y-4">
+                <div className="flex flex-col md:flex-row items-center mb-4">
+                  {profile.avatarUrl && (
+                    <div className="h-32 w-32 rounded-full ring-4 ring-primary overflow-hidden bg-black/5 shadow-lg mb-2 flex items-center justify-center">
+                      <img src={profile.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
                     </div>
                   )}
+                  <div className="flex-1 md:ml-6">
+                    <div className="text-2xl font-bold">{profile.name}</div>
+                    <div className="text-primary font-semibold text-lg mt-1">{profile.headline}</div>
+                    <div className="mt-2 text-gray-700">{profile.bio}</div>
+                    <div className="flex gap-3 mt-2">
+                      {profile.social.facebook && <a href={profile.social.facebook} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:text-primary">Facebook</a>}
+                      {profile.social.instagram && <a href={profile.social.instagram} target="_blank" rel="noopener noreferrer" className="text-pink-600 hover:text-primary">Instagram</a>}
+                      {profile.social.website && <a href={profile.social.website} target="_blank" rel="noopener noreferrer" className="text-gray-700 hover:text-primary">Website</a>}
+                    </div>
+                    <div className="text-gray-500 mt-2">{profile.location}</div>
+                    <div className="mt-2">Voluntari: <span className="font-bold">{profile.volunteers}</span></div>
+                  </div>
+                </div>
+                <div>
+                  <b>Oportunități & Evenimente:</b>
+                  <ul className="list-disc pl-6">
+                    {profile.events.map(ev => <li key={ev.id}>{ev.title} ({ev.date})</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <b>Persoane cheie:</b>
+                  <ul className="list-disc pl-6">
+                    {profile.keyPeople.map(pers => <li key={pers.id}>{pers.name} - {pers.role} {pers.responsibilities ? `(${pers.responsibilities})` : ""}</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <b>Persoane contact:</b>
+                  <ul className="list-disc pl-6">
+                    {profile.contactPersons.map(person => <li key={person.id}>{person.name} ({person.email}, {person.phone})</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <b>Media:</b>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                    {profile.media.map(m =>
+                      <div key={m.id} className="rounded-xl overflow-hidden ring-1 ring-black/10 bg-black/5">
+                        {m.kind === 'image'
+                          ? <img src={m.url} className="h-40 w-full object-cover" />
+                          : <video src={m.url} className="h-40 w-full object-cover" controls />}
+                        {m.caption && <div className="text-xs text-gray-600 text-center">{m.caption}</div>}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="mt-8 flex flex-wrap gap-2 items-center">
-                <Button onClick={save} disabled={saving}>{saving ? "Se salvează…" : "Salvează profilul"}</Button>
-                <Button className="ml-2" onClick={() => router.push("/organization/profile/preview")} type="button">
-                  Previzualizează profilul
-                </Button>
-                <span className="px-2 py-1 rounded bg-black/5">XP: {xp}</span>
-                <span className="px-2 py-1 rounded bg-black/5">{pct}%</span>
-                <span className="hidden md:inline">ⓘ Ctrl/⌘+S salvează</span>
-                {msg && <span className={cls("text-sm", msg === "Salvat!" ? "text-success" : "text-primary")}>{msg}</span>}
-              </div>
+
+            </Card >
+          )
+        }
+
+        {/* Footer actions */}
+        <div className="sticky bottom-4 z-10">
+          <div className="bg-white/95 backdrop-blur ring-1 ring-black/10 rounded-2xl p-3 flex flex-wrap items-center gap-3 shadow">
+            <GhostButton onClick={prev}>Înapoi</GhostButton>
+
+            <Button onClick={save} disabled={saving}>
+              {saving ? "Se salvează…" : "Salvează"}
+            </Button>
+
+            {step !== "review" && (
+              <Button onClick={next} disabled={!validateStep(step, profile)}>Continuă</Button>
+            )}
+
+            {step === "review" && (
+              <Button
+                className="ml-2"
+                onClick={() => router.push("/organization/profile/preview")}
+                type="button"
+              >
+                Previzualizează profilul
+              </Button>
+            )}
+
+            <div className="ml-auto text-sm text-gray-600 flex items-center gap-2">
+              <span className="px-2 py-1 rounded bg-black/5">XP: {xp}</span>
+              <span className="px-2 py-1 rounded bg-black/5">{pct}%</span>
             </div>
-          </Card>
-        )}
-      </div>
-    </div>
+            {msg && <span className={cls("text-sm", msg === "Salvat!" ? "text-success" : "text-primary")}>{msg}</span>}
+          </div>
+        </div>
+      </div >
+    </div >
   );
 }
 

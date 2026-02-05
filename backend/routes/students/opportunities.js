@@ -10,23 +10,41 @@ router.get("/", async (req, res) => {
        FROM opportunities o
        JOIN users u ON o.user_id = u.id`;
     const params = [];
+    let whereClauses = [];
 
+    // Filter by period (today)
     if (req.query.period === 'today') {
-      query += ` WHERE o.created_at >= CURRENT_DATE`;
+      whereClauses.push(`o.created_at >= CURRENT_DATE`);
+    }
+
+    // Filter by search query (title, orgName, skills)
+    const q = (req.query.q || "").toString().trim().toLowerCase();
+    if (q) {
+      // Add wildcard for ILIKE
+      const searchParam = `%${q}%`;
+      params.push(searchParam);
+
+      // SQL Logic:
+      // (title ILIKE $1 OR orgName ILIKE $1 OR skills::text ILIKE $1)
+      // Note: We cast skills array to text for simple inclusion check
+      whereClauses.push(`(
+        o.title ILIKE $${params.length} OR 
+        u.full_name ILIKE $${params.length} OR 
+        array_to_string(o.skills, ',') ILIKE $${params.length}
+      )`);
+    }
+
+    // Construct final Query
+    if (whereClauses.length > 0) {
+      query += ` WHERE ` + whereClauses.join(' AND ');
     }
 
     query += ` ORDER BY o.id DESC`;
 
     const { rows } = await pool.query(query, params);
-    const q = (req.query.q || "").toString().toLowerCase();
-    if (!q) return res.json(rows);
 
-    const filtered = rows.filter(o =>
-      (o.title + " " + o.orgName + " " + (o.skills || []).join(" "))
-        .toLowerCase()
-        .includes(q)
-    );
-    res.json(filtered);
+    // No more JS filtering needed!
+    res.json(rows);
   } catch (e) {
     res.status(500).json({ message: "DB error", error: e.message });
   }

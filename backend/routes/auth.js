@@ -13,7 +13,7 @@ const { pool } = require("../db");
 const crypto = require("crypto");
 const { sendVerificationEmail, sendResetEmail } = require("../utils/sendVerificationEmail");
 const verifyToken = require("../middleware/verifyToken");
-const { validate, registerSchema, loginSchema, emailVerificationSchema, forgotPasswordSchema, resetPasswordSchema } = require("../middleware/validation");
+const { validate, registerSchema, loginSchema, emailVerificationSchema, forgotPasswordSchema, passwordResetSchema } = require("../middleware/validation");
 const { awardSignupPoints } = require("../utils/pointsManager");
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -148,7 +148,7 @@ router.post("/forgot-password", validate(forgotPasswordSchema), async (req, res)
 });
 
 // Reset Password
-router.post("/reset-password", validate(resetPasswordSchema), async (req, res) => {
+router.post("/reset-password", validate(passwordResetSchema), async (req, res) => {
   const { email, code, newPassword } = req.body;
   if (!email || !code || !newPassword) return res.status(400).json({ message: "Toate câmpurile sunt necesare" });
 
@@ -194,26 +194,46 @@ router.post("/login", validate(loginSchema), async (req, res) => {
     if (!valid) return res.status(401).json({ message: "Parolă greșită" });
 
     const { rememberMe } = req.body;
-    const expiresIn = rememberMe ? "30d" : "1d";
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+    const { generateAccessToken, generateRefreshToken } = require("../utils/tokens");
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, full_name: user.full_name },
-      JWT_SECRET,
-      { expiresIn }
+    // 1. Generate Access Token (15 min)
+    const token = generateAccessToken(user);
+
+    // 2. Generate Refresh Token
+    const refreshToken = generateRefreshToken();
+
+    // 3. Hash Refresh Token & Calc Expiry
+    const hash = crypto.createHash("sha256").update(refreshToken).digest("hex");
+    const refreshDuration = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+    const expiresAt = new Date(Date.now() + refreshDuration);
+
+    // 4. Store Refresh Token Hash in DB
+    await pool.query(
+      "INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address) VALUES ($1, $2, $3, $4, $5)",
+      [user.id, hash, expiresAt, req.headers["user-agent"], req.ip]
     );
 
-    // Setare cookie HTTP-only (Persistent vs Session)
+    // 5. Set Cookies
+    // Access Token Cookie (15 min)
     res.cookie("token", token, {
       httpOnly: true,
-      secure: false, // Ensure false for HTTP testing on mobile IP
-      sameSite: "lax", // 'strict' poate cauza probleme la redirect/PWA
-      maxAge: maxAge,
+      secure: false, // Ensure false for HTTP testing
+      sameSite: "lax",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    // Refresh Token Cookie (Long Lived)
+    res.cookie("refresh_token", refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: refreshDuration,
+      path: "/", // Valid for all paths (needed for refresh) -- default is / but be explicit if needed
     });
 
     res.json({
       message: "Login reușit",
-      token, // Returnăm token-ul și în body pentru Mobile Apps
+      token, // Returnăm access token pentru clients (e.g. Mobile)
       user: { id: user.id, email: user.email, role: user.role, full_name: user.full_name },
     });
   } catch (err) {
@@ -223,8 +243,19 @@ router.post("/login", validate(loginSchema), async (req, res) => {
 });
 
 // Logout
-router.post("/logout", (req, res) => {
+router.post("/logout", async (req, res) => {
+  const refreshToken = req.cookies.refresh_token;
+  if (refreshToken) {
+    try {
+      const hash = crypto.createHash("sha256").update(refreshToken).digest("hex");
+      await pool.query("UPDATE refresh_tokens SET is_revoked = TRUE WHERE token_hash = $1", [hash]);
+    } catch (e) {
+      console.error("Logout revoke error:", e);
+    }
+  }
+
   res.clearCookie("token");
+  res.clearCookie("refresh_token");
   res.json({ message: "Logout reușit" });
 });
 

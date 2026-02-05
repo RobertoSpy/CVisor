@@ -1,5 +1,8 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- ====================
+-- 1. USERS & PROFILES
+-- ====================
 -- USERS
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
@@ -44,7 +47,9 @@ CREATE TABLE IF NOT EXISTS organization_profiles (
   video_url TEXT,
   updated_at TIMESTAMP DEFAULT NOW()
 );
--- OPPORTUNITIES
+-- ====================
+-- 2. OPPORTUNITIES
+-- ====================
 CREATE TABLE IF NOT EXISTS opportunities (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -66,8 +71,19 @@ CREATE TABLE IF NOT EXISTS opportunities (
   reviews JSONB,
   description TEXT,
   cta_url TEXT,
+  status VARCHAR(50) DEFAULT 'active',
+  -- Added from 004
+  video_variants JSONB DEFAULT '{}',
+  -- Added from 004
+  is_pinned_on_profile BOOLEAN DEFAULT FALSE,
+  -- Added from 003
   created_at TIMESTAMP DEFAULT NOW()
 );
+-- Index for faster status filtering (from 004)
+CREATE INDEX IF NOT EXISTS idx_opportunities_status ON opportunities(status);
+-- ====================
+-- 3. STUDENT DETAILS
+-- ====================
 -- EDUCATION (Student)
 CREATE TABLE IF NOT EXISTS education (
   id SERIAL PRIMARY KEY,
@@ -97,6 +113,9 @@ CREATE TABLE IF NOT EXISTS portfolio_media (
   url TEXT,
   caption TEXT
 );
+-- ====================
+-- 4. GAMIFICATION & EVENTS
+-- ====================
 -- GAMIFICATION / POINTS
 CREATE TABLE IF NOT EXISTS user_points (
   user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -134,6 +153,9 @@ CREATE TABLE IF NOT EXISTS app_events (
     payload JSONB,
     created_at TIMESTAMP DEFAULT NOW()
 );
+-- ====================
+-- 5. ORGANIZATION EXTRAS
+-- ====================
 -- VOLUNTEERS (Referenced in org stats)
 CREATE TABLE IF NOT EXISTS volunteers (
   id SERIAL PRIMARY KEY,
@@ -150,7 +172,23 @@ CREATE TABLE IF NOT EXISTS projects (
   description TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
--- FUNCTIONS & TRIGGERS
+-- ====================
+-- 6. PUSH NOTIFICATIONS
+-- ====================
+-- From 002_push_subscriptions.sql
+CREATE TABLE IF NOT EXISTS push_subscriptions(
+  id SERIAL PRIMARY KEY,
+  user_id INT,
+  -- Poate fi NULL pentru useri anonimi dacă decidem, dar aici legăm de user
+  endpoint TEXT NOT NULL UNIQUE,
+  keys_p256dh TEXT NOT NULL,
+  keys_auth TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+-- ====================
+-- 7. FUNCTIONS & TRIGGERS
+-- ====================
 -- Function to add initial points on user creation
 CREATE OR REPLACE FUNCTION add_initial_points() RETURNS TRIGGER AS $$ BEGIN
 INSERT INTO user_points (user_id, points)

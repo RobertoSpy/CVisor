@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 
 const publicVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
@@ -41,7 +42,7 @@ export default function usePushNotifications() {
     }
 
     if (Notification.permission === 'denied') {
-      alert("Notificările sunt blocate din browser. Te rugăm să le deblochezi din setările de lângă bara de adresă (iconița lacăt/setări) și să încerci din nou.");
+      // Handled by UI banner
       return;
     }
 
@@ -73,13 +74,17 @@ export default function usePushNotifications() {
 
       setIsSubscribed(true);
       setPermission(Notification.permission);
-      alert("Te-ai abonat cu succes la notificări! 🎉");
+      setIsSubscribed(true);
+      setPermission(Notification.permission);
+      toast.success("Te-ai abonat cu succes la notificări! 🎉");
     } catch (error: any) {
       console.error("Failed to subscribe:", error);
       if (error.name === 'NotAllowedError' || error.message.includes('Permission denied')) {
-        alert("Accesul la notificări a fost respins. Trebuie să dai 'Permite' (Allow) când ești întrebat.");
+        // Handled by UI banner
+      } else if (error.name === 'AbortError' || error.message.includes('push service error')) {
+        toast.error("Eroare de conexiune la serviciul de notificări. Verifică setările.");
       } else {
-        alert(`Eroare tehnică la abonare: ${error.message}\n\nTe rugăm să reîncarci pagina sau să încerci alt browser.`);
+        toast.error(`Eroare tehnică la abonare: ${error.message}`);
       }
     }
   };

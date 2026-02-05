@@ -60,13 +60,13 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_VAPID_PUBLIC_KEY=BIp1cgcXZu00LfCKcln6NnYexMK9zZloV1clJzo1jAwXwcovlKsFAaWL_hV9hNZpbjOuf8wQF55yI_6ZAHyyOac
+        - NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
     container_name: cvisor_frontend
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://192.168.0.170:5000 # Pentru browser
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} # Pentru browser
       - API_URL=http://backend:5000 # Pentru server-side
     depends_on:
       - backend

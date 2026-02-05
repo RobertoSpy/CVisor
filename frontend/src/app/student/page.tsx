@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import confetti from "canvas-confetti";
+import Link from "next/link";
 
 import GentleBanner from "./components/dashboard/GentleBanner";
 import GoalRing from "./components/charts/GoalRing";
@@ -11,9 +12,11 @@ import ActivityHeatmap from "./components/charts/ActivityHeatmap";
 import OrgPostsBar from "./components/charts/OrgPostsBar";
 import StreakHeroCard from "./components/streak/StreakHeroCard";
 import StudentStatsRow from "./components/dashboard/StudentStatsRow";
+import InstallPrompt from "./components/InstallPrompt";
 import TodaysOpportunities from "./components/dashboard/TodaysOpportunities";
 
 import useStudentData from "./hooks/useStudentData";
+import { DASHBOARD_STRINGS } from "./constants";
 import {
   BADGES,
   computeStreakAuto,
@@ -23,17 +26,8 @@ import {
   repairGap,
   LS_KEYS,
 } from "./lib/streak";
-import { DASHBOARD_STRINGS } from "./constants";
 
 export default function StudentHome() {
-
-  // ===== local state ====
-  const [celebrate, setCelebrate] = useState<number | null>(null);
-  const [lastFreezeUsed, setLastFreezeUsed] = useState<string | null>(null);
-  const [hasLoggedPageview, setHasLoggedPageview] = useState(false);
-  const [lsTick, setLsTick] = useState(0); // forțează re-calc după patch/repair
-
-  // [FIX] Use SWR Hook instead of manual fetch
   const {
     points,
     badges,
@@ -42,28 +36,78 @@ export default function StudentHome() {
     createdAt,
     mutatePoints,
     mutateBadges,
-    mutatePresence,
-    isLoading
+    mutatePresence
   } = useStudentData();
 
+  const [celebrate, setCelebrate] = useState<number | null>(null);
+  const [lastFreezeUsed, setLastFreezeUsed] = useState<string | null>(null);
   const [lastRepairUsed, setLastRepairUsed] = useState<string | null>(null);
+  const [lsTick, setLsTick] = useState(0);
+  const hasLoggedPageview = useRef(false);
 
+  // --- Filter Logic ---
   const filteredHeatmap = useMemo(() => {
     if (!createdAt) return heatmapData;
     const cDate = new Date(createdAt);
+    cDate.setHours(0, 0, 0, 0);
     return Object.fromEntries(
-      Object.entries(heatmapData).filter(
-        ([day, _]) => new Date(day) >= cDate
-      )
+      Object.entries(heatmapData).filter(([day, _]) => {
+        const d = new Date(day);
+        d.setHours(0, 0, 0, 0);
+        return d >= cDate;
+      })
     );
   }, [heatmapData, createdAt]);
 
+  // --- Init ---
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    setLastRepairUsed(localStorage.getItem(LS_KEYS.lastRepairUsed));
+    if (typeof window !== "undefined") {
+      setLastRepairUsed(localStorage.getItem(LS_KEYS.lastRepairUsed));
+      setLastFreezeUsed(localStorage.getItem(LS_KEYS.lastFreezeUsed));
+    }
   }, []);
 
-  // ===== calcule =====
+  // --- Pageview / Daily Login ---
+  useEffect(() => {
+    if (hasLoggedPageview.current) return;
+    hasLoggedPageview.current = true;
+
+    fetch("/api/students/stats/pageview", {
+      method: "POST",
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok) {
+          if (data.points_awarded) {
+            toast.success(DASHBOARD_STRINGS.LOGIN_POINTS_TOAST, {
+              icon: "💎",
+              duration: 4000
+            });
+            confetti({
+              particleCount: 100,
+              spread: 70,
+              origin: { y: 0.6 },
+              colors: ["#3b82f6", "#60a5fa", "#ffffff"]
+            });
+          }
+          if (data.unlockedBadges && data.unlockedBadges.length > 0) {
+            data.unlockedBadges.forEach((b: any) => {
+              toast.success(DASHBOARD_STRINGS.BADGE_UNLOCK_TOAST(b.label || b.code), {
+                icon: "🏅",
+                duration: 6000
+              });
+            });
+          }
+          mutatePresence();
+          mutatePoints();
+          mutateBadges();
+        }
+      })
+      .catch(console.error);
+  }, [mutatePoints, mutateBadges, mutatePresence]);
+
+  // --- Computations ---
   const presence = useMemo(() => computeStreakAuto(filteredHeatmap), [filteredHeatmap, lsTick]);
   const metrics = useMemo(() => derivePresenceMetrics(filteredHeatmap), [filteredHeatmap, lsTick]);
   const raw = useMemo(() => deriveRawPresence(filteredHeatmap), [filteredHeatmap]);
@@ -73,157 +117,76 @@ export default function StudentHome() {
   const streakGoalForUI = nextMilestone ?? 3;
   const WEEK_GOAL = 5;
 
-  useEffect(() => {
-    if (presence.usedAutoFreezeNow && typeof window !== "undefined") {
-      setLastFreezeUsed(localStorage.getItem(LS_KEYS.lastFreezeUsed));
-      setLsTick((t) => t + 1);
-    }
-  }, [presence.usedAutoFreezeNow]);
+  // --- Best Badge ---
+  const bestBadge = useMemo(() => {
+    if (!Array.isArray(badges) || badges.length === 0) return null;
+    const userBadges = BADGES.filter(b => badges.includes(b.code));
+    if (userBadges.length === 0) return null;
+    return userBadges.reduce((acc, b) => (b.streak > acc.streak ? b : acc), userBadges[0]);
+  }, [badges]);
 
-  // [NEW] Daily Points & Pageview
-  const pageviewLogged = useRef(false);
-  useEffect(() => {
-    if (pageviewLogged.current) return;
-    pageviewLogged.current = true;
+  // --- Repair Handler ---
+  const handleRepair = async () => {
+    if (!presence.gapInfo) return;
 
-    fetch("/api/students/stats/pageview", {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then(r => r.json())
-      .then(d => {
-        setHasLoggedPageview(true);
-        if (d.points_awarded) {
-          confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 }
-          });
-          toast.success(DASHBOARD_STRINGS.LOGIN_POINTS_TOAST, {
-            duration: 5000,
-            icon: '💎',
-          });
-          // Refresh points via SWR
-          mutatePoints();
-          mutateBadges(); // Potențial badge nou
-        }
-        // Always refresh presence to ensure streak updates immediately after login logging
-        mutatePresence();
-      })
-      .catch((e) => {
-        console.error(e);
-        setHasLoggedPageview(true);
-      });
-  }, []);
+    const daysToRepair = presence.gapInfo.length;
+    const totalCost = daysToRepair * 20;
 
-  // === REQUEST pentru puncte bonus la milestone ===
-  useEffect(() => {
-    if (celebrate !== null) {
-      // Puncte de login se acordă oricum la primul pageview al zilei.
-      // Aici trimitem badge_code DOAR când sărbătorim un milestone!
-      fetch("/api/students/stats/pageview", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ badge_code: `streak_${celebrate}` })
-      });
-    }
-  }, [celebrate]);
-
-  // ====== BADGE AUTO-UNLOCK LOGIC ======
-  useEffect(() => {
-    if (displayStreak === 0) return;
-
-    BADGES.forEach(badge => {
-      if (
-        displayStreak >= badge.streak &&
-        !badges.includes(badge.code)
-      ) {
-        fetch("/api/students/badges/unlock", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ badge_code: badge.code })
-        })
-          .then(r => r.json())
-          .then(d => {
-            if (d.ok) {
-              // Success!
-              confetti({
-                particleCount: 150,
-                spread: 100,
-                origin: { y: 0.6 },
-                colors: ['#FFD700', '#FFA500'] // Gold colors
-              });
-              toast.success(DASHBOARD_STRINGS.BADGE_UNLOCK_TOAST(badge.label), {
-                duration: 6000,
-                icon: '🏆',
-              });
-              // Refresh via SWR
-              mutateBadges();
-              mutatePoints();
-            }
-          })
-          .catch(console.error);
-      }
-    });
-  }, [displayStreak, badges]);
-
-  const handleRepair = () => {
-    if (points < 20) {
-      toast.error(DASHBOARD_STRINGS.REPAIR_ERROR_POINTS);
+    if (points < totalCost) {
+      toast.error(`Nu ai suficiente puncte! Îți trebuie ${totalCost} XP pentru a repara ${daysToRepair} zile.`);
       return;
     }
 
-    if (!presence.gapInfo) return;
-    const dateToRepair = presence.gapInfo.start;
+    const toastId = toast.loading("Se repară streak-ul...");
 
-    fetch("/api/students/points/add", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({
-        points_delta: -20,
-        reason: "repair",
-        repaired_date: dateToRepair
-      })
-    })
-      .then(r => r.json())
-      .then(d => {
-        // Refresh via SWR
-        mutatePoints();
-        mutatePresence();
+    // Generate array of dates to repair
+    const dates: string[] = [];
+    const start = new Date(presence.gapInfo.start);
+    const end = new Date(presence.gapInfo.end);
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      dates.push(d.toISOString().split('T')[0]);
+    }
 
-        repairGap(presence.gapInfo!, 20); // marchează gap-ul ca patch-uit local
-        setLsTick(t => t + 1);
-        toast.success(DASHBOARD_STRINGS.REPAIR_SUCCESS);
-      })
-      .catch(() => toast.error(DASHBOARD_STRINGS.REPAIR_ERROR_GENERIC));
+    try {
+      // Repair each day
+      for (const dateStr of dates) {
+        await fetch("/api/students/points/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            points_delta: -20,
+            reason: "repair",
+            repaired_date: dateStr
+          })
+        }).then(r => {
+          if (!r.ok) throw new Error("Failed to repair date: " + dateStr);
+          return r.json();
+        });
+      }
+
+      // Refresh via SWR
+      mutatePoints();
+      mutatePresence();
+
+      repairGap(presence.gapInfo, 20); // Local update helper
+      setLsTick(t => t + 1);
+      toast.dismiss(toastId);
+      toast.success("Streak reparat cu succes! 🛠️");
+
+    } catch (err) {
+      console.error(err);
+      toast.dismiss(toastId);
+      toast.error("Eroare la reparare. Verifică punctele.");
+    }
   };
-
-  // Găsește badge-ul cu streak maxim pe care îl deține userul
-  const bestBadge = useMemo(() => {
-    // Dacă nu are niciun badge unlocked, default la LVL 1 (Badge 0)
-    // Sau putem verifica dacă badges.includes('lvl1') etc.
-    // Dar logic, toată lumea începe la LVL 1.
-    if (!Array.isArray(badges)) return BADGES[0];
-
-    const userBadges = BADGES.filter(b => badges.includes(b.code));
-    if (userBadges.length === 0) return BADGES[0]; // Fallback to LVL 1
-
-    return userBadges.reduce((acc, b) => (b.streak > acc.streak ? b : acc), userBadges[0]);
-  }, [badges]);
 
 
   return (
     <div className="space-y-8 mt-10">
+      {/* PWA Install Prompt */}
+      <InstallPrompt />
+
       {/* statistici rapide */}
       <StudentStatsRow
         points={points}
