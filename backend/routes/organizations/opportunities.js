@@ -53,6 +53,17 @@ router.post("/", verifyToken, verifyOrg, async (req, res) => {
     return res.status(400).json({ message: "Lipsesc câmpuri obligatorii" });
   }
 
+  // VALIDARE: Deadline nu poate fi în trecut
+  const deadlineDate = new Date(deadline);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset la miezul nopții pentru comparație corectă
+
+  if (deadlineDate < today) {
+    return res.status(400).json({
+      message: "Deadline-ul nu poate fi în trecut! Te rugăm să alegi o dată din viitor."
+    });
+  }
+
   try {
     const { rows } = await pool.query(
       `INSERT INTO opportunities 
@@ -166,6 +177,17 @@ router.put("/:id", verifyToken, verifyOrg, async (req, res) => {
 
   if (!title || !type || !deadline || !description) {
     return res.status(400).json({ message: "Lipsesc câmpuri obligatorii" });
+  }
+
+  // VALIDARE: Deadline nu poate fi în trecut
+  const deadlineDate = new Date(deadline);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset la miezul nopții pentru comparație corectă
+
+  if (deadlineDate < today) {
+    return res.status(400).json({
+      message: "Deadline-ul nu poate fi în trecut! Te rugăm să alegi o dată din viitor."
+    });
   }
 
   try {

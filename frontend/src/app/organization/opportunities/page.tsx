@@ -207,8 +207,10 @@ export default function OpportunitiesPage() {
                   placeholder="Deadline"
                   value={form.deadline}
                   onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))}
+                  min={new Date().toISOString().split('T')[0]}
                   className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white"
                   required
+                  title="Deadline-ul trebuie să fie în viitor"
                 />
               </div>
             </div>
@@ -373,8 +375,10 @@ export default function OpportunitiesPage() {
                     placeholder="Deadline"
                     value={editForm.deadline}
                     onChange={e => setEditForm(f => ({ ...f, deadline: e.target.value }))}
+                    min={new Date().toISOString().split('T')[0]}
                     className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                     required
+                    title="Deadline-ul trebuie să fie în viitor"
                   />
                 </div>
               </div>

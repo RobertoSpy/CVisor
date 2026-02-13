@@ -99,10 +99,10 @@ async function archiveExpiredOpportunities() {
 }
 
 function startArchiver() {
-  // Rulează zilnic la ora 00:00 (Miezul nopții)
-  cron.schedule("0 0 * * *", archiveExpiredOpportunities);
+  // Rulează zilnic la ora 22:00 UTC = 00:00 România (Miezul Nopții)
+  cron.schedule("0 22 * * *", archiveExpiredOpportunities);
 
-  console.log("[Scheduler] Archiver job scheduled (Daily 00:00 AM).");
+  console.log("[Scheduler] Archiver job scheduled (Daily 22:00 UTC = 00:00 Romania Time - Midnight).");
 }
 
 module.exports = { startArchiver, archiveExpiredOpportunities };

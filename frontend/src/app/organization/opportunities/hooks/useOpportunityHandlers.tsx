@@ -109,6 +109,16 @@ export function useOpportunityHandlers({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
+    // VALIDARE: Deadline nu poate fi în trecut
+    const deadlineDate = new Date(form.deadline);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (deadlineDate < today) {
+      toast.error("Deadline-ul nu poate fi în trecut! Te rugăm să alegi o dată din viitor.");
+      return;
+    }
+
     const payload = {
       ...form,
       skills: form.skills
@@ -241,6 +251,16 @@ export function useOpportunityHandlers({
   function handleEditSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!editId) return;
+
+    // VALIDARE: Deadline nu poate fi în trecut
+    const deadlineDate = new Date(editForm.deadline);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (deadlineDate < today) {
+      toast.error("Deadline-ul nu poate fi în trecut! Te rugăm să alegi o dată din viitor.");
+      return;
+    }
 
     const payload = {
       ...editForm,
