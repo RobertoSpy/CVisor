@@ -42,12 +42,12 @@ jobs:
       # ── Code Smells / Bugs (ESLint) ────────────────────────
       - name: "🐛 Lint — Bugs & Code Smells"
         working-directory: backend
-        run: npx eslint . --ext .js --format compact --no-error-on-unmatched-pattern || true
+        run: npx eslint . --max-warnings 50 || true
 
       # ── Security Vulnerabilities (npm audit) ───────────────
-      - name: "🔒 Security — npm audit"
+      - name: "🔒 Security — npm audit fix"
         working-directory: backend
-        run: npm audit --audit-level=critical || true
+        run: npm audit fix --force || true
 
       # ── Upload Coverage Report ─────────────────────────────
       - name: Upload coverage
