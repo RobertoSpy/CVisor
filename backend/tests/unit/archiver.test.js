@@ -32,18 +32,21 @@ jest.mock('path', () => {
 // Must require archiver AFTER mocks are set up
 const { archiveExpiredOpportunities } = require('../../jobs/archiver');
 
-describe('Archiver Logic', () => {
+describe('Archiver Logic — 3-Step Flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  test('should archive expired opportunities and move files async', async () => {
+  test('should mark expired, archive after 2 days, and move files', async () => {
     const fsPromises = require('fs/promises');
 
-    // 1. Mock expired update (UPDATE opportunities SET status='archived')
-    pool.query.mockResolvedValueOnce({ rowCount: 5 });
+    // Step 1: active → expired (UPDATE SET status='expired')
+    pool.query.mockResolvedValueOnce({ rowCount: 3 });
 
-    // 2. Mock cold items fetch (30+ days expired, with files to move)
+    // Step 2: expired → archived (UPDATE SET status='archived' RETURNING id)
+    pool.query.mockResolvedValueOnce({ rowCount: 1, rows: [{ id: 1 }] });
+
+    // Step 3: Cold items fetch (SELECT by archived IDs)
     const mockItems = [
       {
         id: 1,
@@ -54,15 +57,15 @@ describe('Archiver Logic', () => {
     ];
     pool.query.mockResolvedValueOnce({ rows: mockItems });
 
-    // 3. Mock banner update query
+    // Step 3a: banner update query
     pool.query.mockResolvedValueOnce({ rowCount: 1 });
-    // 4. Mock video update query
+    // Step 3b: video update query
     pool.query.mockResolvedValueOnce({ rowCount: 1 });
 
     await archiveExpiredOpportunities();
 
-    // Verify async rename was called (not renameSync)
-    expect(fsPromises.rename).toHaveBeenCalledTimes(2); // banner + video
+    // Verify async rename was called (banner + video)
+    expect(fsPromises.rename).toHaveBeenCalledTimes(2);
     expect(pool.query).toHaveBeenCalledWith(
       expect.stringContaining("UPDATE opportunities SET banner_image"),
       expect.arrayContaining(['/archive/banner.jpg', 1])
@@ -73,10 +76,26 @@ describe('Archiver Logic', () => {
     );
   });
 
-  test('should handle already-archived items gracefully', async () => {
-    pool.query.mockResolvedValueOnce({ rowCount: 0 }); // No expired updates
-    pool.query.mockResolvedValueOnce({ rows: [] }); // No cold items
+  test('should handle no expired and no archived gracefully', async () => {
+    // Step 1: No active → expired
+    pool.query.mockResolvedValueOnce({ rowCount: 0 });
+    // Step 2: No expired → archived
+    pool.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
 
     await expect(archiveExpiredOpportunities()).resolves.not.toThrow();
+  });
+
+  test('should skip cold storage when no items are archived', async () => {
+    const fsPromises = require('fs/promises');
+
+    // Step 1: 2 items expired
+    pool.query.mockResolvedValueOnce({ rowCount: 2 });
+    // Step 2: 0 items archived (all still in grace period)
+    pool.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+
+    await archiveExpiredOpportunities();
+
+    // No file moves should happen
+    expect(fsPromises.rename).not.toHaveBeenCalled();
   });
 });
