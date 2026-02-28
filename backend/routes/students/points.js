@@ -2,13 +2,14 @@ const express = require("express");
 const { pool } = require("../../db");
 const verifyToken = require("../../middleware/verifyToken");
 const { processStreakRepair, processLevelUpgradeTransaction, getUserPoints } = require("../../utils/pointsManager");
+const { validate, studentPointsAddSchema } = require("../../middleware/validation");
 
 const router = express.Router();
 
 /**
  * Endpoint pentru tranzacții cu puncte (repair sau upgrade)
  */
-router.post("/points/add", verifyToken, async (req, res) => {
+router.post("/points/add", verifyToken, validate(studentPointsAddSchema), async (req, res) => {
   try {
     const { points_delta, reason, repaired_date } = req.body;
     const uid = req.user.id;

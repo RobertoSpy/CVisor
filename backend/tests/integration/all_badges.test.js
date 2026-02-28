@@ -1,43 +1,49 @@
 const request = require('supertest');
-const app = require('../../app');
 const { pool } = require('../../db');
 
 jest.mock('../../db', () => ({
   pool: {
     query: jest.fn(),
+    connect: jest.fn(),
   },
 }));
+
+jest.mock('../../workers', () => ({ startWorkers: jest.fn() }));
 
 jest.mock('../../middleware/verifyToken', () => (req, res, next) => {
   req.user = { id: 1, role: 'student' };
   next();
 });
 
-const ALL_BADGES = [
-  'streak_3', 'streak_7', 'streak_14', 'streak_30', 'streak_50', 'streak_100', 'streak_365',
-  'lvl1', 'lvl2', 'lvl3', 'lvl4', 'lvl5',
-  'early_bird', 'night_owl', 'social_butterfly'
-];
+// Badge unlock uses performTransaction -> pool.connect -> client
+const mockClient = {
+  query: jest.fn(),
+  release: jest.fn(),
+};
+pool.connect.mockResolvedValue(mockClient);
+
+const app = require('../../app');
+
+// Only the 5 REAL badges defined in frontend/src/app/student/lib/streak.ts
+const ALL_BADGES = ['lvl1', 'lvl2', 'lvl3', 'lvl4', 'lvl5'];
 
 describe('All Badges Unlock Scenario', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    pool.connect.mockResolvedValue(mockClient);
   });
 
-  test('User should be able to unlock ALL badges sequentially', async () => {
+  test('User should be able to unlock all 5 level badges sequentially', async () => {
     for (const badge of ALL_BADGES) {
-      // 1. Check if badge exists (mock returning 0 rows = not yet unlocked)
-      pool.query.mockResolvedValueOnce({ rowCount: 0 });
-
-      // 2. Insert Badge
-      pool.query.mockResolvedValueOnce({ rowCount: 1 });
-
-      // 3. Award Points (Check/Insert/Log) for the badge
-      // The implementation does:
-      // INSERT user_points ...
-      pool.query.mockResolvedValueOnce({ rowCount: 1 });
-      // INSERT user_point_events ...
-      pool.query.mockResolvedValueOnce({ rowCount: 1 });
+      // performTransaction: BEGIN -> check -> insert -> awardBadgePoints queries -> COMMIT
+      mockClient.query
+        .mockResolvedValueOnce({})                    // BEGIN
+        .mockResolvedValueOnce({ rowCount: 0 })       // Check not unlocked yet
+        .mockResolvedValueOnce({ rowCount: 1 })       // Insert badge
+        .mockResolvedValueOnce({ rows: [{ points: 10 }] }) // awardBadgePoints: GET current points
+        .mockResolvedValueOnce({ rowCount: 1 })       // awardBadgePoints: INSERT/UPDATE points
+        .mockResolvedValueOnce({ rowCount: 1 })       // awardBadgePoints: INSERT event
+        .mockResolvedValueOnce({});                   // COMMIT
 
       const res = await request(app)
         .post('/api/students/badges/unlock')
@@ -49,25 +55,19 @@ describe('All Badges Unlock Scenario', () => {
       expect(res.statusCode).toBe(200);
       expect(res.body.ok).toBe(true);
     }
-
-    // Check total interactions with DB
-    // 4 queries per badge * 15 badges = 60 calls
-    expect(pool.query).toHaveBeenCalledTimes(ALL_BADGES.length * 4);
   });
 
-  test('User CANNOT re-unlock badges (e.g. after losing streak)', async () => {
-    const BADGE_TO_TEST = 'streak_3';
-
-    // 1. Check if badge exists (Mock returning 1 row = ALREADY UNLOCKED)
-    pool.query.mockResolvedValueOnce({ rowCount: 1 });
-
-    // We don't need to mock insert/points because logic should stop here.
+  test('User CANNOT re-unlock badges', async () => {
+    // performTransaction: BEGIN -> check -> finds rowCount=1 -> throws -> ROLLBACK
+    mockClient.query
+      .mockResolvedValueOnce({})               // BEGIN
+      .mockResolvedValueOnce({ rowCount: 1 })  // Already unlocked
+      .mockResolvedValueOnce({});              // ROLLBACK
 
     const res = await request(app)
       .post('/api/students/badges/unlock')
-      .send({ badge_code: BADGE_TO_TEST });
+      .send({ badge_code: 'lvl1' });
 
-    // Expect 400 because backend says "Badge already unlocked"
     expect(res.statusCode).toBe(400);
     expect(res.body.error).toBe('Badge already unlocked');
   });

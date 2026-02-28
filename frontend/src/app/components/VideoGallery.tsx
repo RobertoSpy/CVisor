@@ -1,4 +1,4 @@
-"use client";
+// Server Component — no "use client" for SEO
 export default function VideoGallery() {
   const videos = [
     { id: "abc123", title: "Viața studențească la CVISOR" },

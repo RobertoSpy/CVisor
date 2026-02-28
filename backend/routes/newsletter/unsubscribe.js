@@ -1,19 +1,16 @@
 const express = require("express");
 const { pool } = require("../../db");
 const crypto = require("crypto");
+const { validate, newsletterUnsubscribeSchema } = require("../../middleware/validation");
 const router = express.Router();
 
 /**
  * Handle Unsubscribe Request
  * Verifies email and token (security hash)
  */
-router.post("/unsubscribe", async (req, res) => {
+router.post("/unsubscribe", validate(newsletterUnsubscribeSchema), async (req, res) => {
   try {
     const { email, token } = req.body;
-
-    if (!email || !token) {
-      return res.status(400).json({ error: "Missing parameters" });
-    }
 
     // 1. Verify Token (HMAC SHA256 of email + SECRET)
     // We use JWT_SECRET or a specific NEWSLETTER_SECRET

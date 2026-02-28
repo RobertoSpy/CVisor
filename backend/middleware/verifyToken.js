@@ -47,7 +47,6 @@ async function tryRefresh(req, res, next) {
     );
 
     if (result.rows.length === 0) {
-      // Invalid/Revoked/Expired refresh token
       res.clearCookie("token");
       res.clearCookie("refresh_token");
       return res.status(401).json({ message: "Session invalid" });
@@ -63,12 +62,11 @@ async function tryRefresh(req, res, next) {
     // Generate new Access Token
     const newToken = generateAccessToken(user);
 
-    // Set new cookie
     res.cookie("token", newToken, {
       httpOnly: true,
-      secure: false, // Ensure false for HTTP testing
+      secure: process.env.COOKIE_SECURE === 'true',
       sameSite: "lax",
-      maxAge: 15 * 60 * 1000, // 15 min match
+      maxAge: 15 * 60 * 1000, // 15 min
     });
 
     req.user = user;

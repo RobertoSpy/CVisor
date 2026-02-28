@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { FaCheckCircle, FaExclamationCircle } from "react-icons/fa";
+import ApiClient from "../../lib/api/client";
 
 function UnsubscribeContent() {
   const params = useSearchParams();
@@ -21,12 +22,7 @@ function UnsubscribeContent() {
     }
 
     // Auto-execute unsubscribe
-    fetch("/api/newsletter/unsubscribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, token }),
-    })
-      .then((res) => res.json())
+    ApiClient.post<{ ok?: boolean; error?: string }>("/api/newsletter/unsubscribe", { email, token })
       .then((data) => {
         if (data.ok) {
           setStatus("success");

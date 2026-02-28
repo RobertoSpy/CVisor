@@ -5,7 +5,7 @@ const verifyToken = require("../../middleware/verifyToken");
 
 // GET /api/organizations/analytics/posts?weeks=8
 router.get("/posts", verifyToken, async (req, res) => {
-  const weeks = Math.max(1, parseInt(req.query.weeks ?? "8", 10));
+  const weeks = Math.min(52, Math.max(1, parseInt(req.query.weeks ?? "8", 10)));
   try {
     const sql = `
       WITH buckets AS (

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import StudentOpportunityCard from "./StudentOpportunityCard";
-import type { Opportunity } from "../../organization/opportunities/types";
+import type { Opportunity } from "@/lib/types";
 
 type Props = {
   opportunities: Opportunity[];

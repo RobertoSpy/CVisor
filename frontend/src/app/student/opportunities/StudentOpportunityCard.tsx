@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Opportunity } from "../../organization/opportunities/types";
+import { Opportunity } from "@/lib/types";
 import { useEffect, useRef, useState } from "react";
 
 type Props = {
@@ -56,7 +56,13 @@ export default function StudentOpportunityCard({ opportunity: opp }: Props) {
   };
 
   return (
-    <li className="bg-card rounded-2xl p-5 ring-1 ring-black/5 shadow-[0_6px_24px_rgba(0,0,0,0.06)] flex flex-col justify-between">
+    <li className={`bg-card rounded-2xl p-5 ring-1 ring-black/5 shadow-[0_6px_24px_rgba(0,0,0,0.06)] flex flex-col justify-between relative ${opp.status === 'expired' ? 'opacity-75' : ''}`}>
+      {/* Badge Expirat */}
+      {opp.status === 'expired' && (
+        <div className="absolute top-3 right-3 z-10 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-lg">
+          Expirat
+        </div>
+      )}
       {/* Imagine banner sau Video */}
       {/* Video sau Banner */}
       {opp.promo_video ? (

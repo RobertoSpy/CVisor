@@ -3,13 +3,20 @@ import { fmtDate } from "./utils";
 
 export type GapInfo = { start: string; end: string; length: number } | null;
 
-// Sursa unică pentru badges și milestone-uri
+// ============================================================
+// GAMIFICATION: Points-Based System
+// ============================================================
+// Badges and Map are based on TOTAL POINTS, not streak.
+// Streak milestones give BONUS POINTS.
+// ============================================================
+
+// Badge levels — unlocked by POINTS
 export const BADGES = [
   {
     code: "lvl1",
     label: "LVL 1",
     emoji: "🌱",
-    streak: 0,
+    points: 0,        // Start — automatic
     feature: "Început de drum",
     description: "Ai acces la funcționalitățile de bază: creare profil, vizualizare oportunități și organizații."
   },
@@ -17,7 +24,7 @@ export const BADGES = [
     code: "lvl2",
     label: "LVL 2",
     emoji: "🌿",
-    streak: 7,
+    points: 50,        // 50 points needed
     feature: "Puncte și experiență",
     description: "Te-ai obișnuit cu platforma. Acum poți acumula puncte, care vor fi utile pentru viitoare upgrade-uri și aplicații."
   },
@@ -25,7 +32,7 @@ export const BADGES = [
     code: "lvl3",
     label: "LVL 3",
     emoji: "🌳",
-    streak: 30,
+    points: 150,       // 150 points needed
     feature: "Aplicații Directe",
     description: "Ai ajuns la un nivel superior! Ai acces la o pagină nouă de aplicare și poți aplica direct la organizații din platformă."
   },
@@ -33,7 +40,7 @@ export const BADGES = [
     code: "lvl4",
     label: "LVL 4",
     emoji: "🍎",
-    streak: 90,
+    points: 400,       // 400 points needed
     feature: "Acces Premium",
     description: "Primești acces premium: vezi oportunități exclusive, primești notificări prioritare și poți conversa cu organizațiile."
   },
@@ -41,31 +48,61 @@ export const BADGES = [
     code: "lvl5",
     label: "LVL 5",
     emoji: "👑",
-    streak: 150,
+    points: 1000,      // 1000 points needed
     feature: "Acces All",
     description: "Ești veteran! Ai deblocat toate funcționalitățile platformei, inclusiv statistici avansate și mentorat personalizat."
   }
 ];
 
+// Map nodes — based on POINTS
 export const MAP_NODES = [
-  { streak: 0, type: "badge", label: "LVL 1" },
-  { streak: 3, type: "step", label: "3 Zile" },
-  { streak: 7, type: "badge", label: "LVL 2" },
-  { streak: 14, type: "step", label: "14 Zile" },
-  { streak: 30, type: "badge", label: "LVL 3" },
-  { streak: 60, type: "step", label: "60 Zile" },
-  { streak: 90, type: "badge", label: "LVL 4" },
-  { streak: 120, type: "step", label: "120 Zile" },
-  { streak: 150, type: "badge", label: "LVL 5" },
-  { streak: 999, type: "soon", label: "SOON" },
+  { points: 0, type: "badge", label: "LVL 1" },
+  { points: 25, type: "step", label: "25 XP" },
+  { points: 50, type: "badge", label: "LVL 2" },
+  { points: 100, type: "step", label: "100 XP" },
+  { points: 150, type: "badge", label: "LVL 3" },
+  { points: 250, type: "step", label: "250 XP" },
+  { points: 400, type: "badge", label: "LVL 4" },
+  { points: 700, type: "step", label: "700 XP" },
+  { points: 1000, type: "badge", label: "LVL 5" },
+  { points: 9999, type: "soon", label: "SOON" },
 ];
 
-export const STREAK_MILESTONES = BADGES.map(b => b.streak) as number[];
+// Streak milestones — give BONUS points
+export const STREAK_BONUSES: Record<number, number> = {
+  3: 10,      // 3 days streak → +10 points
+  7: 15,      // 7 days → +15 points
+  14: 20,     // 14 days → +20 points
+  30: 30,     // 30 days → +30 points
+  60: 40,     // 60 days → +40 points
+  90: 50,     // 90 days → +50 points
+};
+
+// Point sources reference (awarded by backend)
+export const POINT_SOURCES = {
+  SIGNUP: 10,           // La înregistrare
+  DAILY_LOGIN: 5,       // La login zilnic
+  PROFILE_100: 10,      // Profil 100% complet
+  STREAK_MILESTONE: "varies",  // La milestone-uri streak
+  OPPORTUNITY_CLICK: 2, // Click pe link oportunitate
+  BADGE_UNLOCK: 5,      // La deblocarea unui badge
+  OPPORTUNITY_CREATE: 5, // (Orgs) La crearea unei oportunități
+};
+
+// Legacy exports for backward-compat
+export const STREAK_MILESTONES = BADGES.map(b => b.points) as number[];
 export const MILESTONE_LABELS: Record<number, string> = Object.fromEntries(
-  BADGES.map(b => [b.streak, b.label])
+  BADGES.map(b => [b.points, b.label])
 );
 
-export const nextMilestoneFor = (n: number) => STREAK_MILESTONES.find((m) => m > n) ?? null;
+export const nextMilestoneFor = (currentPoints: number) => {
+  const nextBadge = BADGES.find(b => b.points > currentPoints);
+  return nextBadge?.points ?? null;
+};
+
+// ============================================================
+// Presence / Streak Calculation (unchanged logic)
+// ============================================================
 
 export const LS_KEYS = {
   patchedDays: "streak:patchedDays",
@@ -74,9 +111,6 @@ export const LS_KEYS = {
 } as const;
 
 export function getPatchedSet(): Set<string> {
-  // [FIX] Nu mai folosim LocalStorage pentru patchedDays, 
-  // deoarece backend-ul returnează deja zilele reparate în `map`,
-  // iar LS cauza probleme la schimbarea conturilor (sticky streak).
   return new Set();
 }
 export function savePatchedSet(s: Set<string>) {
@@ -165,25 +199,9 @@ export function computeStreakAuto(map: Record<string, number>) {
   if (visitedRaw(today)) {
     const probe = new Date(today);
     while (visited(probe)) probe.setDate(probe.getDate() - 1);
-
-    /* DISABLING AUTO-FREEZE to allow manual purchase only
-    const hole = new Date(probe);
-    const holeISO = fmtDate(hole);
-    const newer = new Date(hole); newer.setDate(hole.getDate() + 1);
-    const older = new Date(hole); older.setDate(hole.getDate() - 1);
-
-    const isHole = !visited(hole) && visited(newer) && visited(older);
-    if (isHole && !patched.has(holeISO)) {
-      patched.add(holeISO);
-      savePatchedSet(patched);
-      localStorage.setItem(LS_KEYS.lastFreezeUsed, fmtDate(today));
-      usedAutoFreezeNow = true;
-    }
-    */
   }
 
-  // --- MODIFICARE GAP ---
-  // Găsește prima zi cu activitate
+  // --- GAP Detection ---
   const allDays = Object.keys(map || {}).sort();
   let firstActiveDay = null;
   for (const day of allDays) {
@@ -206,11 +224,8 @@ export function computeStreakAuto(map: Record<string, number>) {
       if (gapLen > 90) break;
     }
     gapDays.sort();
-    // Allow gapLen >= 1 to be repairable, BUT ONLY if gap is small (<= 2 days)
-    // Business Rule: If gap > 2 days, streak is lost forever.
     gapInfo = (gapLen >= 1 && gapLen <= 2) ? { start: gapDays[0], end: gapDays[gapDays.length - 1], length: gapLen } : null;
   }
-  // --- END MODIFICARE GAP ---
 
   // recompute streak with patched
   let currentStreak = 0;
@@ -234,5 +249,4 @@ export function repairGap(gap: GapInfo, _costGems = 100) {
   const start = new Date(gap.start + "T00:00:00"), end = new Date(gap.end + "T00:00:00");
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) span.push(fmtDate(d));
   patchDays(span);
-  localStorage.setItem(LS_KEYS.lastRepairUsed, fmtDate(new Date()));
 }

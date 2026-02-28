@@ -57,3 +57,13 @@ uploads/
 
 # Păstrează doar placeholder-ul
 !backend/uploads/.gitkeep
+
+# SSL Certificates (NICIODATĂ în Git!)
+nginx/certs/
+*.pem
+*.key
+*.crt
+
+# Archive (fișiere vechi mutate de archiver)
+archive/
+**/archive/

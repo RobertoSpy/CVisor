@@ -23,8 +23,11 @@ const ALLOWED_MIMETYPES = [
 // SECURITATE: Extensii permise (whitelist)
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.mp4', '.webm', '.ogg', '.mov'];
 
-// SECURITATE: Limită de 60MB pentru video
-const MAX_FILE_SIZE = 60 * 1024 * 1024; // 60MB
+// SECURITATE: Limită de 30MB (optimizat pentru 10k+ useri)
+const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
+
+// VIDEO: Durată maximă 20 secunde
+const MAX_VIDEO_DURATION = 20; // secunde
 
 // Configurare storage securizat
 const storage = multer.diskStorage({
@@ -93,21 +96,55 @@ router.post("/", upload.single("file"), validateFile(fileUploadSchema), async (r
     const fs = require('fs');
     const sharp = require('sharp');
 
+    // ── VIDEO DURATION CHECK (max 20 seconds) ────────────────────
+    if (req.file.mimetype.startsWith('video/')) {
+      try {
+        const ffmpeg = require('fluent-ffmpeg');
+        const duration = await new Promise((resolve, reject) => {
+          ffmpeg.ffprobe(req.file.path, (err, metadata) => {
+            if (err) return reject(err);
+            resolve(metadata.format.duration || 0);
+          });
+        });
+
+        if (duration > MAX_VIDEO_DURATION) {
+          // Delete the uploaded file
+          try { fs.unlinkSync(req.file.path); } catch (_) { }
+          return res.status(400).json({
+            error: "Video too long",
+            message: `Videoul este prea lung (${Math.round(duration)}s). Maxim ${MAX_VIDEO_DURATION} secunde permise.`
+          });
+        }
+      } catch (probeErr) {
+        console.warn("[Upload] ffprobe check failed, allowing upload:", probeErr.message);
+        // If ffprobe fails (e.g. not installed), allow upload but log warning
+      }
+    }
+
     // Procesare Imagini (Compresie)
     if (req.file.mimetype.startsWith('image/')) {
       const optimizedFilename = `opt-${req.file.filename}`;
       const optimizedPath = path.join(req.file.destination, optimizedFilename);
 
       try {
+        // Use sharp with limit concurrency to avoid memory spikes
+        sharp.concurrency(1);
         await sharp(req.file.path)
+          .rotate() // Auto-rotate based on EXIF
           .resize(1280, 1280, { fit: 'inside', withoutEnlargement: true }) // Max HD
-          .jpeg({ quality: 80, force: false }) // Auto-convert to jpeg settings if applicable, but keep format
+          .jpeg({ quality: 80, force: false })
           .png({ quality: 80, force: false })
           .webp({ quality: 80, force: false })
           .toFile(optimizedPath);
 
-        // Șterge originalul necomprimat
-        fs.unlinkSync(req.file.path);
+        // Şterge originalul necomprimat
+        try {
+          if (fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+          }
+        } catch (unlinkErr) {
+          console.error("[Upload] Failed to unlink original:", unlinkErr);
+        }
 
         // Actualizează referințele către fișierul nou
         req.file.filename = optimizedFilename;
@@ -116,7 +153,7 @@ router.post("/", upload.single("file"), validateFile(fileUploadSchema), async (r
         console.log(`[Upload] Image compressed: ${req.file.filename} (${req.file.size} bytes)`);
       } catch (sharpError) {
         console.warn("[Upload] Compression failed, using original:", sharpError);
-        // Fallback: rămâne fișierul original dacă sharp dă fail
+        // Fallback: rămâne fișierul original
       }
     } else {
       console.log(`[Upload] File uploaded (no compression for non-image): ${req.file.filename}, size: ${req.file.size} bytes`);
@@ -133,11 +170,15 @@ router.post("/", upload.single("file"), validateFile(fileUploadSchema), async (r
       mimetype: req.file.mimetype
     });
   } catch (error) {
-    console.error("[Upload] Error:", error);
-    res.status(500).json({
-      error: "Upload failed",
-      message: error.message
-    });
+    console.error("[Upload] Critical Error:", error);
+    // Ensure we don't crash the server, though Express usually catches this. 
+    // Socket hang up implies the event loop blocked or process died.
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: "Upload failed",
+        message: error.message
+      });
+    }
   }
 });
 

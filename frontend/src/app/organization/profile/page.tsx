@@ -1,7 +1,8 @@
 "use client";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import BannerUploader from "./BannerUploader"
+import BannerUploader from "./BannerUploader";
+import ApiClient from "../../../lib/api/client";
 
 // Types
 type SocialLinks = { facebook?: string; instagram?: string; website?: string };
@@ -27,7 +28,7 @@ type OrgProfilePayload = {
 
 // Utils
 const uid = () => Math.random().toString(36).slice(2, 9);
-const cls = (...x: Array<string | false | undefined>) => x.filter(Boolean).join(" ");
+const cls = (...x: Array<string | false | undefined | null>) => x.filter(Boolean).join(" ");
 
 // Progress helpers
 function pctProfile(p: OrgProfilePayload) {
@@ -38,82 +39,99 @@ function pctProfile(p: OrgProfilePayload) {
   ];
   return Math.round(checks.reduce((a, b) => a + (b ? 1 : 0), 0) / checks.length * 100);
 }
-function xpOf(p: OrgProfilePayload) {
-  return (p.volunteers || 0) * 5 + (p.keyPeople.length * 10) + (p.events.length * 15) + (p.media.length * 5);
-}
-
-// Debounce helper
-function useDebouncedCallback<T extends any[]>(fn: (...args: T) => void, delay = 600) {
-  const t = useRef<NodeJS.Timeout | null>(null);
-  return (...args: T) => { if (t.current) clearTimeout(t.current); t.current = setTimeout(() => fn(...args), delay); };
-}
 
 // UI Atoms
-function Button({ children, className, onClick, disabled, type = "button" }: { children: React.ReactNode; className?: string; onClick?: () => void; disabled?: boolean; type?: "button" | "submit" }) {
+function Button({ children, className, onClick, disabled, type = "button", variant = "primary" }: { children: React.ReactNode; className?: string; onClick?: () => void; disabled?: boolean; type?: "button" | "submit"; variant?: "primary" | "secondary" | "ghost" }) {
+  const base = "px-6 py-3 rounded-xl font-bold transition-all transform active:scale-95 shadow-sm flex items-center justify-center gap-2";
+  const vars = {
+    primary: "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/20 hover:shadow-lg hover:-translate-y-0.5",
+    secondary: "bg-gray-100 text-gray-700 hover:bg-gray-200",
+    ghost: "bg-transparent text-gray-500 hover:text-gray-900 hover:bg-gray-50",
+  };
   return (
-    <button type={type} onClick={onClick} disabled={disabled} className={cls("px-4 py-2.5 rounded-xl text-sm shadow-sm transition inline-flex items-center justify-center", disabled ? "bg-black/10 text-gray-500 cursor-not-allowed" : "bg-primary text-white hover:bg-accent", className)}>{children}</button>
+    <button type={type} onClick={onClick} disabled={disabled} className={cls(base, vars[variant], disabled && "opacity-50 cursor-not-allowed pointer-events-none", className)}>
+      {children}
+    </button>
   );
 }
-function GhostButton({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
-  return <button type="button" onClick={onClick} className="px-3 py-2 rounded-xl text-sm bg-black/5 hover:bg-black/10">{children}</button>;
-}
-function Field({ label, children, required = false, hint, error }: { label: string; children: React.ReactNode; required?: boolean; hint?: string; error?: string }) {
+
+function Field({ label, children, required, hint, error }: { label: string; children: React.ReactNode; required?: boolean; hint?: string; error?: string }) {
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-1">
-        <label className="text-sm text-gray-800 font-medium">{label}</label>
-        {required && <span className="text-[11px] px-1 py-0.5 rounded bg-amber-100 text-amber-700">obligatoriu</span>}
+    <div className="group">
+      <div className="flex items-center justify-between mb-1.5 pl-1">
+        <label className="text-sm font-semibold text-gray-700 group-focus-within:text-blue-600 transition-colors flex items-center gap-1.5">
+          {label}
+          {required && <span className="h-1.5 w-1.5 rounded-full bg-red-400" title="Obligatoriu" />}
+        </label>
+        {hint && <span className="text-[11px] text-gray-400 font-medium tracking-wide uppercase">{hint}</span>}
       </div>
       {children}
-      {hint && <p className="text-[12px] text-gray-500 mt-1">{hint}</p>}
-      {error && <p className="text-[12px] text-accent mt-1">{error}</p>}
+      {error && <p className="text-xs text-red-500 mt-1.5 pl-1 font-medium animate-in slide-in-from-top-1">{error}</p>}
     </div>
   );
 }
+
 function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={cls("w-full rounded-xl border border-black/10 bg-white/90 px-3.5 py-3 outline-none focus:ring-2 focus:ring-primary/30 transition placeholder:text-gray-400", props.className)} />;
+  return <input {...props} className={cls("w-full rounded-2xl bg-gray-50 border-transparent px-5 py-4 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-gray-800 placeholder:text-gray-400 hover:bg-gray-100/80 shadow-inner shadow-gray-200/50", props.className)} />;
 }
+
 function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={cls("w-full rounded-xl border border-black/10 bg-white/90 px-3.5 py-3 min-h-[120px] outline-none focus:ring-2 focus:ring-primary/30 transition placeholder:text-gray-400", props.className)} />;
+  return <textarea {...props} className={cls("w-full rounded-2xl bg-gray-50 border-transparent px-5 py-4 min-h-[140px] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-gray-800 placeholder:text-gray-400 hover:bg-gray-100/80 shadow-inner shadow-gray-200/50 resize-y", props.className)} />;
 }
-function Card({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cls("bg-white/90 backdrop-blur rounded-2xl p-5 ring-1 ring-black/10 shadow-[0_6px_24px_rgba(0,0,0,0.06)]", className)}>{children}</div>;
-}
-function Pill({ children }: { children: React.ReactNode }) { return <span className="text-[11px] px-2 py-1 rounded-md bg-primary/10 text-primary">{children}</span>; }
-function CheckRow({ ok, label, sub }: { ok: boolean; label: string; sub?: string }) {
+
+function Card({ children, className, title, subtitle }: { children: React.ReactNode; className?: string; title?: string; subtitle?: string }) {
   return (
-    <div className="flex items-start gap-3">
-      <div className={cls("mt-0.5 h-4 w-4 rounded-full grid place-items-center text-[10px]", ok ? "bg-emerald-500 text-white" : "bg-black/10 text-gray-500")}>{ok ? "✓" : "!"}</div>
-      <div className="text-sm">
-        <div className="font-medium">{label}</div>
-        {sub && <div className="text-gray-500 text-xs">{sub}</div>}
-      </div>
+    <div className={cls("bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white shadow-xl shadow-gray-200/40 relative overflow-hidden", className)}>
+      {(title || subtitle) && (
+        <div className="mb-8 relative z-10">
+          {title && <h3 className="text-2xl font-bold text-gray-800 tracking-tight">{title}</h3>}
+          {subtitle && <p className="text-gray-500 mt-1 font-medium">{subtitle}</p>}
+        </div>
+      )}
+      <div className="relative z-10">{children}</div>
+      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50/50 to-purple-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 -z-0" />
     </div>
   );
 }
 
 // Stepper
 const STEPS = [
-  { key: "basics", label: "Date de bază" },
-  { key: "events", label: "Oportunități & Evenimente" },
-  { key: "people", label: "Persoane cheie" },
-  { key: "contact", label: "Contact" },
-  { key: "media", label: "Media" },
-  { key: "review", label: "Verificare & Salvare" },
+  { key: "basics", label: "Date de bază", icon: "🏢" },
+  { key: "events", label: "Oportunități", icon: "🚀" },
+  { key: "people", label: "Echipa", icon: "👥" },
+  { key: "contact", label: "Contact", icon: "📞" },
+  { key: "media", label: "Media & Vizual", icon: "📸" },
+  { key: "review", label: "Verificare", icon: "✅" },
 ] as const;
 type StepKey = typeof STEPS[number]["key"];
 
 function Stepper({ current, completeMap, go }: { current: StepKey; completeMap: Record<StepKey, boolean>; go: (k: StepKey) => void }) {
   return (
-    <nav className="sticky top-4 space-y-2">
+    <nav className="sticky top-24 space-y-2 max-h-[calc(100vh-8rem)] overflow-y-auto pr-2 no-scrollbar">
       {STEPS.map((s, idx) => {
         const done = completeMap[s.key];
-        const isNow = current === s.key;
+        const active = current === s.key;
         return (
-          <button key={s.key} onClick={() => go(s.key)} className={cls("w-full text-left px-3 py-3 rounded-xl ring-1", isNow ? "bg-primary text-white ring-primary/60 shadow" : "bg-white ring-black/10 hover:bg-black/5")}>
-            <div className="flex items-center gap-3">
-              <div className={cls("h-6 w-6 rounded-full grid place-items-center text-xs", done ? "bg-emerald-500 text-white" : "bg-black/10 text-gray-600")}>{done ? "✓" : idx + 1}</div>
-              <div className="text-sm font-medium">{s.label}</div>
+          <button
+            key={s.key}
+            onClick={() => go(s.key)}
+            className={cls(
+              "group w-full text-left px-4 py-3.5 rounded-2xl transition-all duration-300 relative overflow-hidden",
+              active ? "bg-white shadow-lg shadow-blue-500/10 scale-[1.02]" : "hover:bg-gray-50 text-gray-500 hover:text-gray-800"
+            )}
+          >
+            {active && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500 rounded-r-full" />}
+            <div className="flex items-center gap-4 relative z-10">
+              <div className={cls(
+                "h-10 w-10 rounded-xl grid place-items-center text-lg font-bold transition-all bg-gradient-to-br shadow-inner",
+                active ? "from-blue-500 to-indigo-600 text-white shadow-blue-500/20" : done ? "from-emerald-500 to-teal-600 text-white" : "from-gray-100 to-gray-200 text-gray-400"
+              )}>
+                {done && !active ? "✓" : s.icon}
+              </div>
+              <div className="flex flex-col">
+                <span className={cls("text-sm font-bold tracking-tight", active ? "text-gray-800" : "text-gray-500 group-hover:text-gray-700")}>{s.label}</span>
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 transform scale-0 group-hover:scale-100 transition origin-left h-0 group-hover:h-auto">Pasul {idx + 1}</span>
+              </div>
             </div>
           </button>
         );
@@ -122,61 +140,76 @@ function Stepper({ current, completeMap, go }: { current: StepKey; completeMap: 
   );
 }
 
-// Avatar uploader ca la student
+// Avatar uploader
 function AvatarUploader({ value, onChange }: { value?: string; onChange: (dataUrl?: string) => void }) {
   async function handleFile(file: File) {
     const formData = new FormData();
     formData.append("file", file);
-    const resp = await fetch("/api/upload", { method: "POST", credentials: "include", body: formData });
-    const data = await resp.json();
-    onChange(data.url);
+    try {
+      const data = await ApiClient.post<{ url: string }>("/api/upload", formData);
+      onChange(data.url);
+    } catch (e) { console.error(e); }
   }
   return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="h-28 w-28 rounded-full ring-4 ring-primary overflow-hidden bg-black/5 shadow-lg mb-2 flex items-center justify-center">
-        {value ? <img src={value} alt="avatar" className="h-full w-full object-cover" /> : <div className="h-full w-full grid place-items-center text-xs text-gray-500">Avatar</div>}
-      </div>
-      <div className="flex gap-2">
-        <label className="inline-flex items-center gap-2 bg-secondary text-white px-3.5 py-2.5 rounded-xl hover:bg-accent transition cursor-pointer shadow">Încarcă
+    <div className="flex flex-col items-center gap-4 group">
+      <div className="relative">
+        <div className={cls("h-32 w-32 rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-300 group-hover:rotate-3 group-hover:scale-105 border-4 border-white", !value && "bg-gray-100 flex items-center justify-center")}>
+          {value ? <img src={value} alt="avatar" className="h-full w-full object-cover" /> : <span className="text-3xl text-gray-300">🏢</span>}
+        </div>
+        <label className="absolute -bottom-3 -right-3 h-10 w-10 bg-blue-600 text-white rounded-full grid place-items-center cursor-pointer shadow-lg shadow-blue-600/30 hover:bg-blue-700 transition-transform hover:scale-110 active:scale-90">
+          📷
           <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
         </label>
-        {value && <button type="button" onClick={() => onChange(undefined)} className="text-sm underline underline-offset-4 decoration-primary hover:text-primary">Elimină</button>}
       </div>
+      {value && <button onClick={() => onChange(undefined)} className="text-xs font-semibold text-red-500 hover:bg-red-50 px-3 py-1 rounded-full transition-colors">Șterge Avatar</button>}
     </div>
   );
 }
 
-// Media uploader
-function MediaEditor({ media, setMedia }: { media: Media[]; setMedia: (v: Media[]) => void }) {
-  async function add(files: FileList | null) {
-    if (!files) return;
-    const next: Media[] = [];
-    for (const f of Array.from(files)) {
-      const formData = new FormData();
-      formData.append("file", f);
-      const resp = await fetch("/api/upload", { method: "POST", credentials: "include", body: formData });
-      const data = await resp.json();
-      const url = data.url;
-      const isVideo = /video/.test(f.type) || /\.(mp4|webm|ogg)$/i.test(f.name);
-      next.push({ id: uid(), kind: isVideo ? "video" : "image", url, caption: f.name });
-    }
-    setMedia([...media, ...next]);
+// Single Video Uploader
+function SingleVideoUploader({ media, setMedia }: { media: Media[]; setMedia: (v: Media[]) => void }) {
+  // We only care about the first video if it exists
+  const video = media.find(m => m.kind === 'video');
+
+  async function handleFile(file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const data = await ApiClient.post<{ url: string }>("/api/upload", formData);
+      // Replace entire media array with just this new video
+      setMedia([{ id: uid(), kind: "video", url: data.url, caption: "Video de Prezentare" }]);
+    } catch (e) { console.error(e); }
   }
-  function remove(id: string) { setMedia(media.filter(m => m.id !== id)); }
+
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {media.map(m => (
-          <div key={m.id} className="relative rounded-xl overflow-hidden ring-1 ring-black/10 bg-black/5">
-            {m.kind === 'image' ? <img src={m.url} className="h-40 w-full object-cover" /> : <video src={m.url} className="h-40 w-full object-cover" controls />}
-            <button onClick={() => remove(m.id)} className="absolute top-2 right-2 text-xs bg-white/90 rounded px-2 py-1">Șterge</button>
-            {m.caption && <div className="text-xs text-gray-600 text-center">{m.caption}</div>}
+    <div className="space-y-4">
+      {video ? (
+        <div className="relative rounded-2xl overflow-hidden bg-black shadow-lg ring-1 ring-black/10 aspect-video group">
+          <video src={video.url} className="w-full h-full object-contain" controls />
+          <button
+            onClick={() => setMedia([])}
+            className="absolute top-2 right-2 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 transform scale-90 hover:scale-100"
+            title="Șterge Video"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      ) : (
+        <label className="block w-full aspect-video rounded-3xl border-3 border-dashed border-gray-200 hover:border-blue-500 hover:bg-blue-50/30 transition-all cursor-pointer group relative overflow-hidden">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+            <div className="h-16 w-16 rounded-full bg-blue-100 text-blue-600 grid place-items-center text-3xl shadow-inner group-hover:scale-110 transition-transform">
+              🎥
+            </div>
+            <div className="text-center">
+              <p className="text-gray-900 font-bold text-lg">Încarcă Video de Prezentare</p>
+              <p className="text-gray-500 text-sm mt-1">MP4, WebM (Max 50MB)</p>
+            </div>
           </div>
-        ))}
-      </div>
-      <label className="inline-flex items-center gap-2 bg-secondary text-white px-4 py-2.5 rounded-xl hover:bg-accent transition cursor-pointer shadow">Adaugă media
-        <input type="file" multiple accept="image/*,video/*" className="hidden" onChange={e => add(e.target.files)} />
-      </label>
+          <input type="file" accept="video/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+        </label>
+      )}
     </div>
   );
 }
@@ -188,25 +221,51 @@ export default function OrganizationProfileWizard() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  // State with 1 default element for keyPeople/contactPersons
   const [profile, setProfile] = useState<OrgProfilePayload>({
-    name: "",
-    headline: "",
-    bio: "",
-    avatarUrl: "",
-    bannerUrl: "",
-    location: "",
-    volunteers: 0,
-    social: {},
-    events: [],
-    keyPeople: [{ id: uid(), name: "", role: "", responsibilities: "" }],
-    contactPersons: [{ id: uid(), name: "", email: "", phone: "" }],
-    media: [],
+    name: "", headline: "", bio: "", avatarUrl: "", bannerUrl: "", location: "", volunteers: 0,
+    social: {}, events: [], keyPeople: [{ id: uid(), name: "", role: "", responsibilities: "" }],
+    contactPersons: [{ id: uid(), name: "", email: "", phone: "" }], media: [],
   });
 
-  const handleChange = (field: keyof OrgProfilePayload, value: any) => {
-    setProfile(prev => ({ ...prev, [field]: value }));
-  };
+  const handleChange = (field: keyof OrgProfilePayload, value: any) => setProfile(prev => ({ ...prev, [field]: value }));
+
+  // Autosave & Fetch logic
+  useEffect(() => {
+    async function init() {
+      try {
+        const data = await ApiClient.get<any>("/api/organizations/users/profile");
+        if (data) {
+          setProfile(p => ({
+            ...p, ...data,
+            keyPeople: data.keyPeople ?? data.key_people ?? [], contactPersons: data.contactPersons ?? data.contact_persons ?? [],
+            avatarUrl: data.avatar_url ?? data.avatarUrl ?? "", bannerUrl: data.banner_url ?? data.bannerUrl ?? "",
+          }));
+        }
+      } catch { }
+    }
+    init();
+  }, []);
+
+  async function save() {
+    setSaving(true);
+    try {
+      await ApiClient.post("/api/organizations/users/profile", profile);
+      setMsg("Salvat cu succes!");
+    } catch { setMsg("Eroare la salvare."); }
+    finally { setSaving(false); setTimeout(() => setMsg(null), 3000); }
+  }
+
+  // Completeness logic
+  function validateStep(s: StepKey, p: OrgProfilePayload) {
+    switch (s) {
+      case "basics": return !!p.name && !!p.headline && !!p.bio && !!p.avatarUrl && !!p.location;
+      case "events": return true;
+      case "people": return p.keyPeople.length > 0 && p.keyPeople.every(x => x.name && x.role);
+      case "contact": return p.contactPersons.length > 0 && p.contactPersons.every(x => x.email);
+      case "media": return true;
+      case "review": return true;
+    }
+  }
 
   const completeMap = useMemo(() => {
     const m: Record<StepKey, boolean> = { basics: false, events: false, people: false, contact: false, media: false, review: false };
@@ -214,376 +273,199 @@ export default function OrganizationProfileWizard() {
     return m;
   }, [profile]);
 
-  // Autosave local
-  useEffect(() => { try { localStorage.setItem("orgProfileDraft", JSON.stringify(profile)); } catch { } }, [profile]);
+  const next = () => { const idx = STEPS.findIndex(s => s.key === step); if (idx < STEPS.length - 1) setStep(STEPS[idx + 1].key); };
+  const prev = () => { const idx = STEPS.findIndex(s => s.key === step); if (idx > 0) setStep(STEPS[idx - 1].key); };
 
-  useEffect(() => {
-    async function fetchProfile() {
-      try {
-        const resp = await fetch("/api/organizations/users/profile", {
-          credentials: "include"
-        });
-        if (resp.ok) {
-          const data = await resp.json();
-          setProfile(prev => ({
-            ...prev,
-            ...data,
-            keyPeople: data.keyPeople ?? data.key_people ?? [],
-            contactPersons: data.contactPersons ?? data.contact_persons ?? [],
-            events: data.events ?? [],
-            media: data.media ?? [],
-            social: data.social ?? {},
-            avatarUrl: data.avatar_url ?? data.avatarUrl ?? "",
-            bannerUrl: data.banner_url ?? data.bannerUrl ?? data.banner_image ?? "",
-          }));
-
-          if (!data.name) {
-            fetchAuthName();
-          }
-        } else {
-          fetchAuthName();
-          const raw = localStorage.getItem("orgProfileDraft");
-          if (raw) setProfile(JSON.parse(raw));
-        }
-      } catch {
-        fetchAuthName();
-        const raw = localStorage.getItem("orgProfileDraft");
-        if (raw) setProfile(JSON.parse(raw));
-      }
-    }
-
-    async function fetchAuthName() {
-      try {
-        const res = await fetch("/api/auth/me", { credentials: "include" });
-        if (res.ok) {
-          const user = await res.json();
-          if (user.full_name) {
-            setProfile(prev => ({ ...prev, name: user.full_name }));
-          }
-        }
-      } catch (e) {
-        console.error("Failed to fetch auth name", e);
-      }
-    }
-
-    fetchProfile();
-  }, []);
-
-  async function save() {
-    setSaving(true);
-    setMsg(null);
-    try {
-      await fetch("/api/organizations/users/profile", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(profile)
-      });
-      setMsg("Salvat!");
-    } catch {
-      setMsg("Eroare la salvare");
-    } finally {
-      setSaving(false);
-      setTimeout(() => setMsg(null), 2000);
-    }
-  }
-
-  const pct = pctProfile(profile);
-  const xp = xpOf(profile);
-
-  function next() { const idx = STEPS.findIndex(s => s.key === step); const after = STEPS[idx + 1]?.key; if (after) setStep(after); }
-  function prev() { const idx = STEPS.findIndex(s => s.key === step); const before = STEPS[idx - 1]?.key; if (before) setStep(before); }
-
-  // Keyboard Ctrl/⌘+S
-  useEffect(() => { const h = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); } }; window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h); }, [profile]);
-
-  // Step content
   return (
-    <div className="flex flex-col lg:grid lg:grid-cols-[260px,1fr] gap-6 mt-6 lg:mt-10">
-      {/* Left: Stepper + checklist */}
-      <div className="space-y-4">
-        {/* Stats - Hide on mobile */}
-        <div className="hidden lg:block">
-          <Card>
-            <div className="flex items-center justify-between mb-2"><div className="text-sm text-gray-600">Completitudine</div><div className="text-sm font-medium">{pct}%</div></div>
-            <div className="h-2 bg-black/10 rounded-full overflow-hidden mb-2">
-              <div
-                className={"h-full transition-all duration-300 " + (pct === 100 ? "bg-emerald-500" : pct >= 50 ? "bg-primary" : "bg-accent")}
-                style={{ width: `${pct}%` }}
-              />
+    <div className="min-h-screen bg-transparent pb-20 overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 pt-8">
+        {/* Header */}
+        <div className="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight mb-2">Editează Profilul</h1>
+            <p className="text-lg text-gray-500 font-medium max-w-2xl">Construiește o prezență puternică pentru organizația ta. Completează toate detaliile pentru a atrage cei mai buni voluntari.</p>
+          </div>
+          <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-100">
+            <div className="text-right">
+              <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">Scor Profil</div>
+              <div className="text-lg font-black text-blue-600">{pctProfile(profile)}%</div>
             </div>
-            <div className="text-xs text-gray-600">XP: <span className="font-medium">{xp}</span></div>
-          </Card>
+            <div className="h-10 w-10 relative">
+              <svg className="h-full w-full rotate-[-90deg]" viewBox="0 0 36 36">
+                <path className="text-gray-100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+                <path className="text-blue-500" strokeDasharray={`${pctProfile(profile)}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+              </svg>
+            </div>
+          </div>
         </div>
 
-        {/* Stepper - Mobile: Horizontal Scroll, Desktop: Vertical */}
-        <nav className="sticky top-2 z-20 bg-gray-50/95 backdrop-blur py-2 lg:py-0 lg:static lg:bg-transparent -mx-4 px-4 lg:mx-0 lg:px-0 border-b lg:border-none border-black/5 lg:space-y-2 flex lg:block overflow-x-auto gap-3 no-scrollbar">
-          {STEPS.map((s, idx) => {
-            const done = completeMap[s.key];
-            const isNow = step === s.key;
-            return (
-              <button key={s.key} onClick={() => setStep(s.key)} className={cls("flex-shrink-0 w-auto lg:w-full text-left px-3 py-2 lg:py-3 rounded-xl ring-1 transition-all", isNow ? "bg-primary text-white ring-primary/60 shadow scale-[0.98]" : "bg-white ring-black/10 hover:bg-black/5")}>
-                <div className="flex items-center gap-2 lg:gap-3">
-                  <div className={cls("h-5 w-5 lg:h-6 lg:w-6 rounded-full grid place-items-center text-[10px] lg:text-xs", done ? "bg-emerald-500 text-white" : "bg-black/10 text-gray-600")}>{done ? "✓" : idx + 1}</div>
-                  <div className="text-xs lg:text-sm font-medium whitespace-nowrap">{s.label}</div>
-                </div>
-              </button>
-            );
-          })}
-        </nav>
+        <div className="flex flex-col lg:grid lg:grid-cols-[280px,1fr] gap-8 lg:gap-12 items-start justify-center">
+          {/* Left Sidebar */}
+          <div className="hidden lg:block">
+            <Stepper current={step} completeMap={completeMap} go={setStep} />
+          </div>
 
-        {/* Checklist - Hide on mobile */}
-        <div className="hidden lg:block">
-          <Card>
-            <div className="text-sm font-medium mb-3">Checklist global</div>
-            <div className="space-y-2">
-              <CheckRow ok={!!profile.name} label="Nume" />
-              <CheckRow ok={!!profile.headline} label="Headline" />
-              <CheckRow ok={!!profile.bio} label="Bio" />
-              <CheckRow ok={!!profile.avatarUrl} label="Avatar" />
-              <CheckRow ok={!!profile.location} label="Locație" />
-              <CheckRow ok={!!profile.volunteers} label="Voluntari" />
-              <CheckRow ok={profile.social && Object.keys(profile.social).length > 0} label="Social" />
-              <CheckRow ok={profile.events.length > 0} label="Oportunități/Evenimente" />
-              <CheckRow ok={profile.keyPeople.length > 0} label="Persoane cheie" />
-              <CheckRow ok={profile.contactPersons.length > 0} label="Contact" />
-              <CheckRow ok={profile.media.length > 0} label="Media" />
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      {/* Right: Step content */}
-      <div className="space-y-6">
-        {step === "basics" && (
-          <Card>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <Field label="Nume organizație" required><TextInput value={profile.name} onChange={e => handleChange("name", e.target.value)} placeholder="Ex: Asociația Exemplu" /></Field>
-                <Field label="Headline" required hint="Scurt slogan"><TextInput value={profile.headline} onChange={e => handleChange("headline", e.target.value)} placeholder="Facem educație altfel!" /></Field>
-                <Field label="Bio" required hint="2‑3 propoziții scurte"><Textarea value={profile.bio} onChange={e => handleChange("bio", e.target.value)} placeholder="Suntem o echipă de tineri entuziaști..." /></Field>
-                <Field label="Locație" required><TextInput value={profile.location} onChange={e => handleChange("location", e.target.value)} placeholder="Iași, RO" /></Field>
-                <Field label="Număr voluntari">
-                  <TextInput
-                    type="number"
-                    min={0}
-                    value={profile.volunteers ? profile.volunteers.toString() : ""}
-                    onChange={e => {
-                      const val = e.target.value.replace(/^0+/, "");
-                      handleChange("volunteers", val === "" ? 0 : Number(val));
-                    }}
-                    placeholder="ex: 23"
-                  />
-                </Field>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <Field label="Facebook"><TextInput value={profile.social.facebook || ""} onChange={e => handleChange("social", { ...profile.social, facebook: e.target.value })} placeholder="https://facebook.com/org" /></Field>
-                  <Field label="Instagram"><TextInput value={profile.social.instagram || ""} onChange={e => handleChange("social", { ...profile.social, instagram: e.target.value })} placeholder="https://instagram.com/org" /></Field>
-                  <Field label="Website"><TextInput value={profile.social.website || ""} onChange={e => handleChange("social", { ...profile.social, website: e.target.value })} placeholder="https://org.ro" /></Field>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <Field label="Avatar organizație" required>
-                  <AvatarUploader value={profile.avatarUrl} onChange={v => handleChange("avatarUrl", v)} />
-                </Field>
-                <Field label="Banner organizație">
-                  <BannerUploader value={profile.bannerUrl} onChange={v => handleChange("bannerUrl", v)} />
-                </Field>
-                <Card>
-                  <div className="text-sm font-medium mb-2">Ce trebuie să bifezi aici</div>
-                  <ul className="text-sm text-gray-600 list-disc ml-4 space-y-1">
-                    <li>Completează nume, headline, bio, locație și voluntari</li>
-                    <li>Adaugă linkuri sociale și avatar</li>
-                  </ul>
-                </Card>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {step === "events" && (
-          <Card>
-            <div className="space-y-3">
-              {profile.events.map(ev => (
-                <div key={ev.id} className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <TextInput
-                    value={ev.title}
-                    onChange={e => handleChange("events", profile.events.map(x => x.id === ev.id ? { ...x, title: e.target.value } : x))}
-                    placeholder="Titlu oportunitate/Eveniment"
-                  />
-                  <TextInput
-                    type="month"
-                    value={ev.date}
-                    onChange={e => handleChange("events", profile.events.map(x => x.id === ev.id ? { ...x, date: e.target.value } : x))}
-                    placeholder="Lună/An"
-                  />
-                  <TextInput
-                    value={ev.description || ""}
-                    onChange={e => handleChange("events", profile.events.map(x => x.id === ev.id ? { ...x, description: e.target.value } : x))}
-                    placeholder="Descriere"
-                  />
-                </div>
+          {/* Stepper Mobile - Horizontal scroll but centered container */}
+          <div className="lg:hidden w-full overflow-x-auto pb-4 px-1 no-scrollbar scroll-smooth flex justify-start md:justify-center">
+            <div className="flex gap-2">
+              {STEPS.map((s, idx) => (
+                <button key={s.key} onClick={() => setStep(s.key)} className={cls("flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all", step === s.key ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30" : "bg-white text-gray-500 border border-gray-100")}>
+                  {idx + 1}. {s.label}
+                </button>
               ))}
-              <Button onClick={() => handleChange("events", [...profile.events, { id: uid(), title: "", date: "", description: "" }])}>+ Adaugă oportunitate/eveniment</Button>
             </div>
-          </Card>
-        )
-        }
+          </div>
 
-        {
-          step === "people" && (
-            <Card>
-              <div className="space-y-3">
-                {profile.keyPeople.map((pers, idx) => (
-                  <div key={pers.id} className="grid grid-cols-3 gap-3 items-center">
-                    <TextInput value={pers.name} onChange={e => handleChange("keyPeople", profile.keyPeople.map(x => x.id === pers.id ? { ...x, name: e.target.value } : x))} placeholder="Nume" />
-                    <TextInput value={pers.role} onChange={e => handleChange("keyPeople", profile.keyPeople.map(x => x.id === pers.id ? { ...x, role: e.target.value } : x))} placeholder="Rol" />
-                    <TextInput value={pers.responsibilities || ""} onChange={e => handleChange("keyPeople", profile.keyPeople.map(x => x.id === pers.id ? { ...x, responsibilities: e.target.value } : x))} placeholder="Responsabilități" />
-                    {profile.keyPeople.length > 1 && (
-                      <Button type="button" onClick={() => handleChange("keyPeople", profile.keyPeople.filter(x => x.id !== pers.id))}>Șterge</Button>
-                    )}
-                  </div>
-                ))}
-                <Button onClick={() => handleChange("keyPeople", [...profile.keyPeople, { id: uid(), name: "", role: "", responsibilities: "" }])}>+ Adaugă persoană</Button>
-              </div>
-            </Card>
-          )
-        }
-
-        {
-          step === "contact" && (
-            <Card>
-              <div className="space-y-3">
-                {profile.contactPersons.map((person, idx) => (
-                  <div key={person.id} className="grid grid-cols-3 gap-3 items-center">
-                    <TextInput value={person.name} onChange={e => handleChange("contactPersons", profile.contactPersons.map(x => x.id === person.id ? { ...x, name: e.target.value } : x))} placeholder="Nume" />
-                    <TextInput value={person.email} onChange={e => handleChange("contactPersons", profile.contactPersons.map(x => x.id === person.id ? { ...x, email: e.target.value } : x))} placeholder="Email" />
-                    <TextInput value={person.phone} onChange={e => handleChange("contactPersons", profile.contactPersons.map(x => x.id === person.id ? { ...x, phone: e.target.value } : x))} placeholder="Telefon" />
-                    {profile.contactPersons.length > 1 && (
-                      <Button type="button" onClick={() => handleChange("contactPersons", profile.contactPersons.filter(x => x.id !== person.id))}>Șterge</Button>
-                    )}
-                  </div>
-                ))}
-                <Button onClick={() => handleChange("contactPersons", [...profile.contactPersons, { id: uid(), name: "", email: "", phone: "" }])}>+ Adaugă persoană contact</Button>
-              </div>
-            </Card>
-          )
-        }
-
-        {
-          step === "media" && (
-            <Card>
-              <Field label="Media organizație" required hint="Poze sau videoclipuri relevante pentru profilul organizației.">
-                <MediaEditor media={profile.media} setMedia={v => handleChange("media", v)} />
-              </Field>
-            </Card>
-          )
-        }
-
-        {
-          step === "review" && (
-            <Card>
-              <div className="space-y-4">
-                <div className="flex flex-col md:flex-row items-center mb-4">
-                  {profile.avatarUrl && (
-                    <div className="h-32 w-32 rounded-full ring-4 ring-primary overflow-hidden bg-black/5 shadow-lg mb-2 flex items-center justify-center">
-                      <img src={profile.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+          {/* Main Content Area */}
+          <div className="relative animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-full">
+            {step === "basics" && (
+              <Card title="Date de Identitate" subtitle="Informațiile esențiale despre organizația ta.">
+                <div className="grid md:grid-cols-[1fr,auto] gap-8">
+                  <div className="space-y-6">
+                    <Field label="Numele Organizației" required><TextInput value={profile.name} onChange={e => handleChange("name", e.target.value)} placeholder="Ex: Asociația Tinerilor..." /></Field>
+                    <Field label="Headline (Slogan)" required><TextInput value={profile.headline || ""} onChange={e => handleChange("headline", e.target.value)} placeholder="Motto-ul vostru scurt" /></Field>
+                    <Field label="Descriere (Bio)" required><Textarea value={profile.bio || ""} onChange={e => handleChange("bio", e.target.value)} placeholder="Povestea voastră pe scurt..." /></Field>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field label="Locație" required><TextInput value={profile.location || ""} onChange={e => handleChange("location", e.target.value)} placeholder="Oraș, Țară" /></Field>
+                      <Field label="Nr. Voluntari"><TextInput type="number" min="0" value={profile.volunteers || ""} onChange={e => handleChange("volunteers", parseInt(e.target.value) || 0)} placeholder="Estimativ" /></Field>
                     </div>
-                  )}
-                  <div className="flex-1 md:ml-6">
-                    <div className="text-2xl font-bold">{profile.name}</div>
-                    <div className="text-primary font-semibold text-lg mt-1">{profile.headline}</div>
-                    <div className="mt-2 text-gray-700">{profile.bio}</div>
-                    <div className="flex gap-3 mt-2">
-                      {profile.social.facebook && <a href={profile.social.facebook} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:text-primary">Facebook</a>}
-                      {profile.social.instagram && <a href={profile.social.instagram} target="_blank" rel="noopener noreferrer" className="text-pink-600 hover:text-primary">Instagram</a>}
-                      {profile.social.website && <a href={profile.social.website} target="_blank" rel="noopener noreferrer" className="text-gray-700 hover:text-primary">Website</a>}
-                    </div>
-                    <div className="text-gray-500 mt-2">{profile.location}</div>
-                    <div className="mt-2">Voluntari: <span className="font-bold">{profile.volunteers}</span></div>
+                  </div>
+                  <div className="flex flex-col items-center gap-6 min-w-[200px]">
+                    <Field label="Avatar Oficial"><AvatarUploader value={profile.avatarUrl} onChange={v => handleChange("avatarUrl", v)} /></Field>
                   </div>
                 </div>
-                <div>
-                  <b>Oportunități & Evenimente:</b>
-                  <ul className="list-disc pl-6">
-                    {profile.events.map(ev => <li key={ev.id}>{ev.title} ({ev.date})</li>)}
-                  </ul>
+                <div className="mt-8 pt-8 border-t border-gray-100">
+                  <h4 className="text-lg font-bold text-gray-800 mb-4">Link-uri Sociale</h4>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <TextInput value={profile.social.website || ""} onChange={e => handleChange("social", { ...profile.social, website: e.target.value })} placeholder="Website (https://...)" />
+                    <TextInput value={profile.social.facebook || ""} onChange={e => handleChange("social", { ...profile.social, facebook: e.target.value })} placeholder="Facebook" />
+                    <TextInput value={profile.social.instagram || ""} onChange={e => handleChange("social", { ...profile.social, instagram: e.target.value })} placeholder="Instagram" />
+                  </div>
                 </div>
-                <div>
-                  <b>Persoane cheie:</b>
-                  <ul className="list-disc pl-6">
-                    {profile.keyPeople.map(pers => <li key={pers.id}>{pers.name} - {pers.role} {pers.responsibilities ? `(${pers.responsibilities})` : ""}</li>)}
-                  </ul>
-                </div>
-                <div>
-                  <b>Persoane contact:</b>
-                  <ul className="list-disc pl-6">
-                    {profile.contactPersons.map(person => <li key={person.id}>{person.name} ({person.email}, {person.phone})</li>)}
-                  </ul>
-                </div>
-                <div>
-                  <b>Media:</b>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                    {profile.media.map(m =>
-                      <div key={m.id} className="rounded-xl overflow-hidden ring-1 ring-black/10 bg-black/5">
-                        {m.kind === 'image'
-                          ? <img src={m.url} className="h-40 w-full object-cover" />
-                          : <video src={m.url} className="h-40 w-full object-cover" controls />}
-                        {m.caption && <div className="text-xs text-gray-600 text-center">{m.caption}</div>}
+              </Card>
+            )}
+
+            {step === "events" && (
+              <Card title="Oportunități Recurente" subtitle="Evenimente sau programe pe care le organizați frecvent.">
+                <div className="space-y-4">
+                  {profile.events.map((ev, i) => (
+                    <div key={ev.id} className="p-4 rounded-2xl bg-gray-50 border border-gray-100 relative group transition-all hover:bg-white hover:shadow-lg">
+                      <div className="grid md:grid-cols-[2fr,1fr] gap-4">
+                        <Field label="Nume Eveniment"><TextInput value={ev.title} onChange={e => handleChange("events", profile.events.map(x => x.id === ev.id ? { ...x, title: e.target.value } : x))} placeholder="Ex: Tabăra de Vară" /></Field>
+                        <Field label="Data"><TextInput type="month" value={ev.date} onChange={e => handleChange("events", profile.events.map(x => x.id === ev.id ? { ...x, date: e.target.value } : x))} /></Field>
                       </div>
-                    )}
-                  </div>
+                      <div className="mt-2">
+                        <TextInput value={ev.description || ""} onChange={e => handleChange("events", profile.events.map(x => x.id === ev.id ? { ...x, description: e.target.value } : x))} placeholder="Scurtă descriere a impactului..." />
+                      </div>
+                      <button onClick={() => handleChange("events", profile.events.filter(x => x.id !== ev.id))} className="absolute top-2 right-2 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors opacity-0 group-hover:opacity-100">🗑️</button>
+                    </div>
+                  ))}
+                  <Button onClick={() => handleChange("events", [...profile.events, { id: uid(), title: "", date: "", description: "" }])} variant="secondary" className="w-full py-4 border-2 border-dashed border-gray-200 bg-gray-50 hover:bg-white hover:border-blue-400 text-gray-400 hover:text-blue-500 text-lg font-bold group">
+                    <span className="group-hover:scale-110 transition-transform text-2xl mr-2">+</span> Adaugă Eveniment
+                  </Button>
                 </div>
-              </div>
+              </Card>
+            )}
 
-            </Card >
-          )
-        }
+            {step === "people" && (
+              <Card title="Echipa Noastră" subtitle="Oamenii cheie care fac magia să se întâmple.">
+                <div className="grid md:grid-cols-2 gap-4">
+                  {profile.keyPeople.map((p) => (
+                    <div key={p.id} className="p-5 rounded-[2rem] bg-gray-50 border border-gray-100 group hover:shadow-xl hover:bg-white transition-all relative">
+                      <div className="flex gap-4 items-center mb-3">
+                        <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-100 to-white grid place-items-center text-xl shadow-inner">👤</div>
+                        <div className="flex-1">
+                          <input className="bg-transparent font-bold text-lg text-gray-900 placeholder:text-gray-400 w-full outline-none" placeholder="Nume" value={p.name} onChange={e => handleChange("keyPeople", profile.keyPeople.map(x => x.id === p.id ? { ...x, name: e.target.value } : x))} />
+                          <input className="bg-transparent text-sm font-medium text-blue-600 placeholder:text-blue-300 w-full outline-none" placeholder="Rol / Funcție" value={p.role} onChange={e => handleChange("keyPeople", profile.keyPeople.map(x => x.id === p.id ? { ...x, role: e.target.value } : x))} />
+                        </div>
+                      </div>
+                      <Textarea placeholder="Responsabilități..." value={p.responsibilities || ""} onChange={e => handleChange("keyPeople", profile.keyPeople.map(x => x.id === p.id ? { ...x, responsibilities: e.target.value } : x))} className="min-h-[80px] bg-white text-sm" />
+                      <button onClick={() => handleChange("keyPeople", profile.keyPeople.filter(x => x.id !== p.id))} className="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors">✕</button>
+                    </div>
+                  ))}
+                  <button onClick={() => handleChange("keyPeople", [...profile.keyPeople, { id: uid(), name: "", role: "", responsibilities: "" }])} className="p-5 rounded-[2rem] border-2 border-dashed border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all flex flex-col items-center justify-center gap-2 min-h-[200px] text-gray-400 hover:text-blue-500">
+                    <span className="text-3xl">+</span>
+                    <span className="font-bold">Adaugă Membru</span>
+                  </button>
+                </div>
+              </Card>
+            )}
 
-        {/* Footer actions */}
-        <div className="sticky bottom-4 z-10">
-          <div className="bg-white/95 backdrop-blur ring-1 ring-black/10 rounded-2xl p-3 flex flex-wrap items-center gap-3 shadow">
-            <GhostButton onClick={prev}>Înapoi</GhostButton>
+            {step === "contact" && (
+              <Card title="Informații de Contact" subtitle="Cine poate fi contactat pentru parteneriate?">
+                <div className="space-y-4">
+                  {profile.contactPersons.map((p) => (
+                    <div key={p.id} className="p-6 rounded-[2rem] bg-white border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center group">
+                      <div className="flex-1 w-full grid md:grid-cols-3 gap-4">
+                        <TextInput value={p.name} onChange={e => handleChange("contactPersons", profile.contactPersons.map(x => x.id === p.id ? { ...x, name: e.target.value } : x))} placeholder="Nume Contact" />
+                        <TextInput value={p.email} onChange={e => handleChange("contactPersons", profile.contactPersons.map(x => x.id === p.id ? { ...x, email: e.target.value } : x))} placeholder="Email" />
+                        <TextInput value={p.phone} onChange={e => handleChange("contactPersons", profile.contactPersons.map(x => x.id === p.id ? { ...x, phone: e.target.value } : x))} placeholder="Telefon" />
+                      </div>
+                      <Button variant="ghost" onClick={() => handleChange("contactPersons", profile.contactPersons.filter(x => x.id !== p.id))} className="text-red-400 hover:bg-red-50 hover:text-red-600 px-3">Șterge</Button>
+                    </div>
+                  ))}
+                  <Button onClick={() => handleChange("contactPersons", [...profile.contactPersons, { id: uid(), name: "", email: "", phone: "" }])} variant="secondary" className="w-full">+ Adaugă Persoană Contact</Button>
+                </div>
+              </Card>
+            )}
 
-            <Button onClick={save} disabled={saving}>
-              {saving ? "Se salvează…" : "Salvează"}
-            </Button>
-
-            {step !== "review" && (
-              <Button onClick={next} disabled={!validateStep(step, profile)}>Continuă</Button>
+            {step === "media" && (
+              <Card title="Media & Vizual" subtitle="Personalizează aspectul paginii voastre.">
+                <BannerUploader value={profile.bannerUrl} onChange={v => handleChange("bannerUrl", v)} />
+                <div className="h-8"></div>
+                <h4 className="font-bold text-gray-800 mb-4">Video de Prezentare</h4>
+                <SingleVideoUploader media={profile.media} setMedia={v => handleChange("media", v)} />
+              </Card>
             )}
 
             {step === "review" && (
-              <Button
-                className="ml-2"
-                onClick={() => router.push("/organization/profile/preview")}
-                type="button"
-              >
-                Previzualizează profilul
-              </Button>
+              <Card title="Suntem gata?" subtitle="Verifică cum arată totul înainte de a salva.">
+                <div className="rounded-3xl bg-gray-50 p-6 md:p-10 border border-gray-100 text-center">
+                  <div className="mx-auto w-32 h-32 rounded-[2rem] bg-white p-1 shadow-xl mb-6 overflow-hidden">
+                    <img src={profile.avatarUrl || "https://placehold.co/200"} className="w-full h-full object-cover rounded-[1.8rem]" />
+                  </div>
+                  <h2 className="text-3xl font-black text-gray-900 mb-2">{profile.name || "Nume Organizație"}</h2>
+                  <p className="text-xl text-blue-600 font-medium mb-6">{profile.headline || "Headline..."}</p>
+                  <p className="text-gray-600 leading-relaxed max-w-2xl mx-auto mb-8">{profile.bio || "Descriere..."}</p>
+                  <div className="flex justify-center gap-4">
+                    <Button onClick={() => router.push("/organization/profile/preview")} variant="secondary">👀 Previzualizează Profil Public</Button>
+                  </div>
+                </div>
+              </Card>
             )}
 
-            <div className="ml-auto text-sm text-gray-600 flex items-center gap-2">
-              <span className="px-2 py-1 rounded bg-black/5">XP: {xp}</span>
-              <span className="px-2 py-1 rounded bg-black/5">{pct}%</span>
+            {/* Bottom Actions */}
+            <div className="sticky bottom-6 mt-8 z-30 px-4 md:px-0">
+              <div className="bg-white/90 backdrop-blur-xl border border-white/40 shadow-2xl shadow-blue-900/10 rounded-2xl p-2 px-4 flex items-center justify-between max-w-3xl mx-auto ring-1 ring-black/5">
+                <Button variant="ghost" onClick={prev} disabled={step === "basics"} className={cls(step === "basics" ? "opacity-0" : "", "px-2 md:px-4")}>
+                  <span className="hidden md:inline">← Înapoi</span>
+                  <span className="md:hidden text-lg">←</span>
+                </Button>
+
+                <div className="flex items-center gap-2">
+                  <Button onClick={save} variant="primary" disabled={saving} className="min-w-[40px] md:min-w-[140px] px-3 md:px-6 text-sm md:text-base">
+                    {saving ? <span className="animate-pulse">...</span> : <span className="hidden md:inline">Salvează Modificări</span>}
+                    <span className="md:hidden text-lg">💾</span>
+                  </Button>
+                  {step !== "review" && (
+                    <Button onClick={next} variant="secondary" className="bg-gray-100 hover:bg-gray-200 px-3 md:px-6">
+                      <span className="hidden md:inline">Continuă →</span>
+                      <span className="md:hidden text-lg">→</span>
+                    </Button>
+                  )}
+                </div>
+
+                {msg && (
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-4 bg-emerald-500 text-white px-6 py-2 rounded-full shadow-lg text-sm font-bold animate-in slide-in-from-bottom-2 fade-in whitespace-nowrap z-50">
+                    {msg}
+                  </div>
+                )}
+              </div>
             </div>
-            {msg && <span className={cls("text-sm", msg === "Salvat!" ? "text-success" : "text-primary")}>{msg}</span>}
+
           </div>
         </div>
-      </div >
-    </div >
+      </div>
+    </div>
   );
-}
-
-// Validation
-function validateStep(step: StepKey, p: OrgProfilePayload) {
-  switch (step) {
-    case "basics": return !!p.name && !!p.headline && !!p.bio && !!p.avatarUrl && !!p.location && !!p.volunteers;
-    case "events": return p.events.length > 0 && p.events.every(e => e.title && e.date);
-    case "people": return p.keyPeople.length > 0 && p.keyPeople.every(x => x.name && x.role);
-    case "contact": return p.contactPersons.length > 0 && p.contactPersons.every(c => c.name && c.email);
-    case "media": return p.media.length > 0;
-    case "review": return true;
-  }
 }

@@ -26,7 +26,7 @@ export default function OrgPostsBar({
     return Math.ceil(safeData.length / 6);
   }, [safeData.length]);
 
-  const max = useMemo(() => Math.max(1, ...safeData.map((d) => d.value)), [safeData]);
+
   const avg = useMemo(() => {
     if (!safeData.length) return 0;
     const v = safeData.reduce((s, d) => s + d.value, 0) / safeData.length;
@@ -38,9 +38,13 @@ export default function OrgPostsBar({
   const LEFT_PAD = 12;
   const RIGHT_PAD = 12;
   const LABEL_PAD = 32;
-  const TOP_PAD = 18;
+  const TOP_PAD = 30; // Increased padding to prevent overlap
   const innerH = height - (LABEL_PAD + TOP_PAD);
   const width = LEFT_PAD + RIGHT_PAD + safeData.length * barW + (safeData.length - 1) * gap;
+
+  // Ensure max has a floor of 5 to prevent single events appearing huge
+  const dataMax = Math.max(0, ...safeData.map((d) => d.value));
+  const max = Math.max(5, dataMax);
 
   const avgH = Math.round((avg / max) * innerH);
   const ticks = [0.25, 0.5, 0.75];
@@ -55,66 +59,28 @@ export default function OrgPostsBar({
         <span className="text-xs text-gray-500">ultimele {safeData.length} săpt.</span>
       </div>
 
-      <div className="w-full overflow-x-auto" style={{ height }}>
-        <svg width={width} height={height} role="img" aria-label="Postări organizații">
-          <defs>
-            <linearGradient id="barGrad" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#fbbf24" />
-              <stop offset="100%" stopColor="#f59e0b" />
-            </linearGradient>
-          </defs>
-
-          {ticks.map((t, i) => {
-            const y = height - LABEL_PAD - Math.round(t * innerH);
-            return <line key={i} x1={LEFT_PAD} x2={width - RIGHT_PAD} y1={y} y2={y} className="stroke-gray-200" strokeDasharray="3 6" />;
-          })}
-
-          <line
-            x1={LEFT_PAD}
-            x2={width - RIGHT_PAD}
-            y1={height - LABEL_PAD - avgH}
-            y2={height - LABEL_PAD - avgH}
-            className="stroke-amber-700/40"
-            strokeDasharray="4 4"
-          />
-          <rect x={LEFT_PAD + 4} y={height - LABEL_PAD - avgH - 16} width="56" height="18" rx="9" className="fill-white" />
-          <text x={LEFT_PAD + 32} y={height - LABEL_PAD - avgH - 3} textAnchor="middle" fontSize="10" className="fill-amber-700">
-            avg {avg}
-          </text>
-
-          {safeData.map((d, i) => {
-            const h = Math.round((d.value / max) * innerH);
-            const x = LEFT_PAD + i * (barW + gap);
-            const y = height - LABEL_PAD - h;
-
-            const showLabel = i % showEvery === 0 || i === safeData.length - 1;
-            const label = String(d.label).replace("Săpt.", "S").replace(/\s+/g, " ").trim();
-
-            return (
-              <g key={i}>
-                <rect
-                  x={x}
-                  y={y}
-                  width={barW}
-                  height={h}
-                  rx="7"
-                  className="drop-shadow-sm"
-                  fill="url(#barGrad)"
-                  onMouseEnter={() => setTt({ show: true, x: tt.x, y: tt.y, text: `${d.label}: ${d.value} postări / săpt.` })}
-                  onMouseLeave={() => setTt((t) => ({ ...t, show: false }))}
-                />
-                <text x={x + barW / 2} y={y - 6} textAnchor="middle" fontSize="10" className="fill-gray-700">
-                  {d.value}
-                </text>
-                {showLabel && (
-                  <text x={x + barW / 2} y={height - 10} textAnchor="middle" fontSize="10" className="fill-gray-600">
-                    {label}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
+      <div className="w-full h-full flex items-end justify-between gap-2 overflow-hidden" style={{ height: innerH }}>
+        {safeData.slice(-7).map((d, i) => {
+          // Use logarithmic scaling for large values to prevent bars from dominating
+          const scaledValue = dataMax > 20 ? Math.log2(d.value + 1) : d.value;
+          const scaledMax = dataMax > 20 ? Math.log2(max + 1) : max;
+          const h = Math.round((scaledValue / scaledMax) * innerH);
+          const isZero = d.value === 0;
+          return (
+            <div key={i} className="flex-1 flex flex-col items-center group relative min-w-0">
+              <div
+                className="w-full max-w-[30px] rounded-t-lg bg-gradient-to-t from-amber-500 to-amber-400 group-hover:from-amber-400 group-hover:to-amber-300 transition-all relative"
+                style={{ height: `${Math.max(Math.min(h, innerH), 4)}px`, opacity: isZero ? 0.2 : 1 }}
+              >
+                {/* Tooltip */}
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-bold py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                  {d.value} postări
+                </div>
+              </div>
+              <span className="text-[10px] text-gray-400 mt-2 font-medium truncate max-w-full">{String(d.label).split(' ')[0]}</span>
+            </div>
+          );
+        })}
       </div>
 
       {isAllZeroBars(safeData) && (

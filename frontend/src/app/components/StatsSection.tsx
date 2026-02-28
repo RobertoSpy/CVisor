@@ -1,4 +1,4 @@
-"use client";
+// Server Component — no "use client" for SEO
 import { FiStar, FiHelpCircle, FiSmile, FiUsers, FiBriefcase } from "react-icons/fi";
 
 const infoCards = [

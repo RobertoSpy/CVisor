@@ -2,14 +2,20 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import DashboardCard from "./DashboardCard";
 import { DASHBOARD_STRINGS } from "../../constants";
+import ApiClient from "../../../../lib/api/client";
+
+type Opportunity = {
+  id: string;
+  title?: string;
+  [key: string]: unknown;
+};
 
 export default function TodaysOpportunities() {
-  const [opps, setOpps] = useState<any[]>([]);
+  const [opps, setOpps] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/opportunities?period=today", { credentials: "include" })
-      .then(res => res.json())
+    ApiClient.get<Opportunity[] | unknown>("/api/opportunities", { period: "today" })
       .then(data => {
         if (Array.isArray(data)) setOpps(data.slice(0, 5)); // Top 5
         setLoading(false);

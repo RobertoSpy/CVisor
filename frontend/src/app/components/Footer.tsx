@@ -1,4 +1,4 @@
-"use client";
+// Server Component — no "use client" for SEO
 import Link from "next/link";
 
 export default function Footer() {

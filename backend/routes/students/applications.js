@@ -1,6 +1,7 @@
 const express = require("express");
 const { pool } = require("../../db");
 const verifyToken = require("../../middleware/verifyToken");
+const { validate, applicationSchema } = require("../../middleware/validation");
 
 const router = express.Router();
 
@@ -25,8 +26,8 @@ router.get("/", verifyToken, async (req, res) => {
 });
 
 // POST /api/applications { opportunityId }
-router.post("/", verifyToken, async (req, res) => {
-  const { opportunityId } = req.body || {};
+router.post("/", verifyToken, validate(applicationSchema), async (req, res) => {
+  const { opportunityId } = req.body;
   if (!opportunityId) return res.status(400).json({ message: "opportunityId required" });
 
   try {

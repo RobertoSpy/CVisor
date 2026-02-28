@@ -155,7 +155,7 @@ const fileUploadSchema = z.object({
   }),
 
   size: z.number()
-    .max(100 * 1024 * 1024, "Fișier prea mare. Maxim 100MB")
+    .max(30 * 1024 * 1024, "Fișier prea mare. Maxim 30MB")
     .positive("Fișier invalid")
 });
 
@@ -176,12 +176,103 @@ const opportunitySchema = z.object({
   }).optional(),
 
   skills: z.array(z.string()).optional(),
-
   deadline: z.string().optional(),
-
   location: z.string().max(255, "Locație prea lungă").optional(),
+  price: z.number().min(0, "Prețul nu poate fi negativ").optional(),
+  available_spots: z.number().int().min(0).optional(),
+  promo_video: z.string().optional(),
+  banner_image: z.string().optional(),
+  gallery: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+  agenda: z.any().optional(),
+  faq: z.any().optional(),
+  cta_url: z.string().url().optional().or(z.literal('')),
+}); // No .strict() — extra fields stripped silently
 
-  price: z.number().min(0, "Prețul nu poate fi negativ").optional()
+// ==================== ORGANIZATION PROFILE SCHEMA ====================
+
+const orgProfileSchema = z.object({
+  name: z.string().min(2, "Numele trebuie să aibă minim 2 caractere").max(200, "Numele prea lung").optional(),
+  headline: z.string().max(255, "Headline prea lung").optional(),
+  bio: z.string().max(5000, "Bio prea lung").optional(),
+  avatarUrl: z.string().url().optional().or(z.literal("")),
+  bannerUrl: z.string().url().optional().or(z.literal("")),
+  location: z.string().max(255, "Locație prea lungă").optional(),
+  volunteers: z.number().int().min(0).optional(),
+  social: z.array(z.any()).optional(),
+  events: z.array(z.any()).optional(),
+  keyPeople: z.array(z.any()).optional(),
+  contactPersons: z.array(z.any()).optional(),
+  media: z.array(z.any()).optional(),
+  history: z.string().max(10000, "Istoric prea lung").optional(),
+  videoUrl: z.string().url().optional().or(z.literal(""))
+});
+
+// ==================== BADGE UNLOCK SCHEMA ====================
+
+const badgeUnlockSchema = z.object({
+  badge_code: z.string()
+    .min(1, "Badge code obligatoriu")
+    .max(50, "Badge code prea lung")
+    .regex(/^[a-zA-Z0-9_-]+$/, "Badge code invalid")
+}).strict();
+
+// ==================== POINTS ADD SCHEMA (ORG) ====================
+
+const pointsAddSchema = z.object({
+  points_delta: z.number({ required_error: "points_delta obligatoriu" }).int("Trebuie să fie număr întreg"),
+  reason: z.string().min(1, "Reason obligatoriu").max(100, "Reason prea lung")
+}).strict();
+
+// ==================== STUDENT POINTS ADD SCHEMA ====================
+
+const studentPointsAddSchema = z.object({
+  points_delta: z.number({ required_error: "points_delta obligatoriu" }).int("Trebuie să fie număr întreg"),
+  reason: z.string().min(1, "Reason obligatoriu").max(100, "Reason prea lung"),
+  repaired_date: z.string().optional()
+}).strict();
+
+// ==================== APPLICATION SCHEMA ====================
+
+const applicationSchema = z.object({
+  opportunityId: z.union([
+    z.string().min(1, "opportunityId obligatoriu"),
+    z.number().int().positive("opportunityId invalid")
+  ])
+}).strict();
+
+// ==================== PAGEVIEW SCHEMA ====================
+
+const pageviewSchema = z.object({
+  badge_code: z.string()
+    .max(50, "Badge code prea lung")
+    .regex(/^[a-zA-Z0-9_-]+$/, "Badge code invalid")
+    .optional()
+}).strict();
+
+// ==================== NEWSLETTER UNSUBSCRIBE SCHEMA ====================
+
+const newsletterUnsubscribeSchema = z.object({
+  email: z.string().email("Email invalid"),
+  token: z.string().min(1, "Token obligatoriu")
+}).strict();
+
+// ==================== PUSH SUBSCRIBE SCHEMA ====================
+
+const pushSubscribeSchema = z.object({
+  subscription: z.object({
+    endpoint: z.string().url("Endpoint invalid"),
+    keys: z.object({
+      p256dh: z.string().min(1, "p256dh obligatoriu"),
+      auth: z.string().min(1, "auth obligatoriu")
+    })
+  })
+});
+
+// ==================== PUSH UNSUBSCRIBE SCHEMA ====================
+
+const pushUnsubscribeSchema = z.object({
+  endpoint: z.string().url("Endpoint invalid")
 }).strict();
 
 // ==================== MIDDLEWARE FUNCTIONS ====================
@@ -197,8 +288,9 @@ function validate(schema) {
       const result = schema.safeParse(req.body);
 
       if (!result.success) {
-        // Formatează erorile pentru frontend
-        const errors = result.error.errors.map(err => ({
+        // Zod v4 uses .issues (v3 used .errors)
+        const issues = result.error.issues || result.error.errors || [];
+        const errors = issues.map(err => ({
           field: err.path.join('.'),
           message: err.message
         }));
@@ -276,6 +368,15 @@ module.exports = {
   contactSchema,
   fileUploadSchema,
   opportunitySchema,
+  orgProfileSchema,
+  badgeUnlockSchema,
+  pointsAddSchema,
+  studentPointsAddSchema,
+  applicationSchema,
+  pageviewSchema,
+  newsletterUnsubscribeSchema,
+  pushSubscribeSchema,
+  pushUnsubscribeSchema,
 
   // Middleware
   validate,

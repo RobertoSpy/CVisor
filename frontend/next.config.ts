@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import withPWA from "@ducanh2912/next-pwa";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   async rewrites() {
     return [
       { source: "/api/:path*", destination: "http://backend:5000/api/:path*" },
@@ -15,14 +16,14 @@ const nextConfig: NextConfig = {
 
 export default withPWA({
   dest: "public",
-  disable: process.env.NODE_ENV === "development", // Enable in production
-  register: true,
+  disable: false, // Enable PWA
+  register: true, // Auto-register Service Worker
   workboxOptions: {
     importScripts: ["/custom-sw.js"],
     skipWaiting: true,
     runtimeCaching: [
       {
-        urlPattern: /^https:\/\/.*\.(?:png|jpg|jpeg|svg|gif|webp)/i,
+        urlPattern: /^https?:\/\/.*\.(?:png|jpg|jpeg|svg|gif|webp)/i,
         handler: "CacheFirst",
         options: {
           cacheName: "image-assets",

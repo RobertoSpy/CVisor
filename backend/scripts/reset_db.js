@@ -1,4 +1,4 @@
-const { pool } = require('./db');
+const { pool } = require('../db');
 const readline = require('readline');
 
 const rl = readline.createInterface({

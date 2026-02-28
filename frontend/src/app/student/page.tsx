@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import confetti from "canvas-confetti";
 import Link from "next/link";
+import { FaStar, FaTrophy, FaCalendarCheck, FaMapMarkedAlt, FaFire, FaArrowRight, FaMedal } from "react-icons/fa";
 
 import GentleBanner from "./components/dashboard/GentleBanner";
 import GoalRing from "./components/charts/GoalRing";
@@ -14,6 +15,8 @@ import StreakHeroCard from "./components/streak/StreakHeroCard";
 import StudentStatsRow from "./components/dashboard/StudentStatsRow";
 import InstallPrompt from "./components/InstallPrompt";
 import TodaysOpportunities from "./components/dashboard/TodaysOpportunities";
+import PremiumStatCard from "../components/shared/PremiumStatCard";
+import ApiClient from "../../lib/api/client";
 
 import useStudentData from "./hooks/useStudentData";
 import { DASHBOARD_STRINGS } from "./constants";
@@ -23,8 +26,6 @@ import {
   derivePresenceMetrics,
   deriveRawPresence,
   nextMilestoneFor,
-  repairGap,
-  LS_KEYS,
 } from "./lib/streak";
 
 export default function StudentHome() {
@@ -40,8 +41,6 @@ export default function StudentHome() {
   } = useStudentData();
 
   const [celebrate, setCelebrate] = useState<number | null>(null);
-  const [lastFreezeUsed, setLastFreezeUsed] = useState<string | null>(null);
-  const [lastRepairUsed, setLastRepairUsed] = useState<string | null>(null);
   const [lsTick, setLsTick] = useState(0);
   const hasLoggedPageview = useRef(false);
 
@@ -59,24 +58,15 @@ export default function StudentHome() {
     );
   }, [heatmapData, createdAt]);
 
-  // --- Init ---
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setLastRepairUsed(localStorage.getItem(LS_KEYS.lastRepairUsed));
-      setLastFreezeUsed(localStorage.getItem(LS_KEYS.lastFreezeUsed));
-    }
-  }, []);
-
   // --- Pageview / Daily Login ---
   useEffect(() => {
     if (hasLoggedPageview.current) return;
     hasLoggedPageview.current = true;
 
-    fetch("/api/students/stats/pageview", {
-      method: "POST",
-      credentials: "include",
-    })
-      .then((res) => res.json())
+    ApiClient.post<{ ok: boolean; points_awarded: boolean; unlockedBadges?: { label?: string; code: string }[] }>(
+      "/api/students/stats/pageview",
+      {}
+    )
       .then((data) => {
         if (data.ok) {
           if (data.points_awarded) {
@@ -92,7 +82,7 @@ export default function StudentHome() {
             });
           }
           if (data.unlockedBadges && data.unlockedBadges.length > 0) {
-            data.unlockedBadges.forEach((b: any) => {
+            data.unlockedBadges.forEach((b) => {
               toast.success(DASHBOARD_STRINGS.BADGE_UNLOCK_TOAST(b.label || b.code), {
                 icon: "🏅",
                 duration: 6000
@@ -122,7 +112,7 @@ export default function StudentHome() {
     if (!Array.isArray(badges) || badges.length === 0) return null;
     const userBadges = BADGES.filter(b => badges.includes(b.code));
     if (userBadges.length === 0) return null;
-    return userBadges.reduce((acc, b) => (b.streak > acc.streak ? b : acc), userBadges[0]);
+    return userBadges.reduce((acc, b) => (b.points > acc.points ? b : acc), userBadges[0]);
   }, [badges]);
 
   // --- Repair Handler ---
@@ -133,7 +123,7 @@ export default function StudentHome() {
     const totalCost = daysToRepair * 20;
 
     if (points < totalCost) {
-      toast.error(`Nu ai suficiente puncte! Îți trebuie ${totalCost} XP pentru a repara ${daysToRepair} zile.`);
+      toast.error(`Nu ai suficiente puncte! Îți trebuie ${totalCost} puncte pentru a repara ${daysToRepair} zile.`);
       return;
     }
 
@@ -148,28 +138,20 @@ export default function StudentHome() {
     }
 
     try {
-      // Repair each day
+      // Repair each day sequentially via ApiClient
       for (const dateStr of dates) {
-        await fetch("/api/students/points/add", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            points_delta: -20,
-            reason: "repair",
-            repaired_date: dateStr
-          })
-        }).then(r => {
-          if (!r.ok) throw new Error("Failed to repair date: " + dateStr);
-          return r.json();
+        await ApiClient.post<{ points: number }>("/api/students/points/add", {
+          points_delta: -20,
+          reason: "repair",
+          repaired_date: dateStr,
         });
       }
 
-      // Refresh via SWR
-      mutatePoints();
-      mutatePresence();
+      // Wait briefly for DB to commit, then force SWR to refetch from server
+      await new Promise(r => setTimeout(r, 500));
+      await mutatePresence(undefined, { revalidate: true });
+      await mutatePoints(undefined, { revalidate: true });
 
-      repairGap(presence.gapInfo, 20); // Local update helper
       setLsTick(t => t + 1);
       toast.dismiss(toastId);
       toast.success("Streak reparat cu succes! 🛠️");
@@ -183,78 +165,124 @@ export default function StudentHome() {
 
 
   return (
-    <div className="space-y-8 mt-10">
-      {/* PWA Install Prompt */}
-      <InstallPrompt />
+    <div className="min-h-screen bg-transparent pb-20 overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-12">
+        <InstallPrompt />
 
-      {/* statistici rapide */}
-      <StudentStatsRow
-        points={points}
-        badgesCount={Array.isArray(badges) ? badges.length : 0}
-        bestBadge={bestBadge}
-      />
-
-      {/* gamification row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="space-y-2">
-          <StreakHeroCard
-            currentStreak={displayStreak}
-            bestStreak={presence.bestStreak}
-            goal={streakGoalForUI}
-            todayVisited={raw.todayVisited}
-            nextMilestone={nextMilestone}
-            celebrate={celebrate}
-            onCloseCelebrate={() => setCelebrate(null)}
+        {/* Stats Grid - 2 cols on mobile */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 animate-in slide-in-from-bottom-4 duration-500">
+          <PremiumStatCard
+            title="Puncte"
+            value={points}
+            icon={<FaStar />}
+            color="amber"
+            subtext="Total acumulat"
           />
+          <PremiumStatCard
+            title="Badge-uri"
+            value={badges ? badges.length : 0}
+            icon={<FaTrophy />}
+            color="indigo"
+            subtext="Colecționate"
+          />
+          <PremiumStatCard
+            title="Cel mai bun"
+            value={bestBadge ? bestBadge.emoji : "—"}
+            icon={<FaMedal />}
+            color="purple"
+            subtext={bestBadge ? bestBadge.label : "Niciun badge"}
+          />
+          <PremiumStatCard
+            title="Streak Maxim"
+            value={presence.bestStreak}
+            icon={<FaFire />}
+            color="red"
+            subtext="Record personal"
+          />
+        </div>
 
-          {/* A) auto-freeze aplicat azi */}
-          {presence.usedAutoFreezeNow && (
-            <GentleBanner>
-              {DASHBOARD_STRINGS.AUTO_FREEZE_MESSAGE}
-            </GentleBanner>
-          )}
-
-          {/* B) pauză -> repair (DOAR DACĂ NU e mai mare de 1 zi / 2 zile since last login) */}
-          {presence.gapInfo && presence.gapInfo.length === 1 && (
-            <GentleBanner>
-              {DASHBOARD_STRINGS.GAP_MESSAGE(presence.gapInfo.length)} ({presence.gapInfo.start}).{" "}
-              {DASHBOARD_STRINGS.REPAIR_PROMPT}
-              <button
-                onClick={handleRepair}
-                className="ml-2 px-2 py-1 rounded-md bg-amber-600 text-white hover:bg-amber-700 transition"
-              >
-                {DASHBOARD_STRINGS.REPAIR_BUTTON}
-              </button>
-            </GentleBanner>
-          )}
-
-          {/* Mesaj pentru gap prea mare (nereparabil) */}
-          {presence.gapInfo && presence.gapInfo.length > 1 && (
-            <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl border border-red-100 text-sm">
-              Ai ratat {presence.gapInfo.length} zile. E prea târziu pentru a repara streak-ul. 😢
+        {/* Map Button */}
+        <Link href="/student/map" className="block w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 rounded-2xl shadow-lg shadow-blue-500/20 flex items-center justify-between group hover:scale-[1.01] transition-transform">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-full bg-white/20 grid place-items-center text-2xl">🗺️</div>
+            <div>
+              <div className="font-bold text-lg">Harta Progresului</div>
+              <div className="text-blue-100 text-sm">Continuă aventura ta de voluntariat</div>
             </div>
-          )}
+          </div>
+          <div className="bg-white text-blue-600 px-4 py-2 rounded-xl font-bold text-sm group-hover:bg-blue-50 transition-colors">
+            Deschide Harta →
+          </div>
+        </Link>
 
-          <div className="text-[11px] text-gray-500">
-            {DASHBOARD_STRINGS.LAST_FREEZE_LABEL} {lastFreezeUsed ?? "—"}
-            <span className="text-gray-400"> • </span>
-            {DASHBOARD_STRINGS.LAST_REPAIR_LABEL} {lastRepairUsed ?? "—"}
+        <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
+          {/* Left Column: Streak & Notifications */}
+          <div className="lg:col-span-1 space-y-4 md:space-y-6">
+            {/* Streak Card - Light Theme */}
+            <div className="bg-white rounded-[2rem] border-2 border-indigo-50 p-1 shadow-lg shadow-indigo-500/5 overflow-hidden">
+              <div className="p-4 md:p-6">
+                <StreakHeroCard
+                  currentStreak={displayStreak}
+                  bestStreak={presence.bestStreak}
+                  goal={streakGoalForUI}
+                  todayVisited={raw.todayVisited}
+                  nextMilestone={nextMilestone}
+                  celebrate={celebrate}
+                  onCloseCelebrate={() => setCelebrate(null)}
+                />
+              </div>
+            </div>
+
+            {/* Notifications */}
+            <div className="space-y-3">
+              {presence.usedAutoFreezeNow && (
+                <GentleBanner>
+                  ❄️ <b>Streak Înghețat!</b> Salvat pentru azi.
+                </GentleBanner>
+              )}
+              {presence.gapInfo && (
+                <GentleBanner>
+                  ⚠️ Ai ratat {presence.gapInfo.length === 1 ? "o zi" : `${presence.gapInfo.length} zile`} ({presence.gapInfo.start}{presence.gapInfo.length > 1 ? ` → ${presence.gapInfo.end}` : ""}).
+                  <button onClick={handleRepair} className="ml-2 bg-amber-600 text-white px-2 py-1 rounded text-xs hover:bg-amber-700">
+                    Repară pentru {presence.gapInfo.length * 20} puncte
+                  </button>
+                </GentleBanner>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Heatmap & Charts */}
+          <div className="lg:col-span-2 space-y-4 md:space-y-6">
+            {/* Heatmap */}
+            <div className="bg-white rounded-[2rem] p-6 border border-gray-100 shadow-lg shadow-gray-200/50">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Activitate</h3>
+                  <p className="text-gray-400 text-xs font-medium">Heatmap Zilnic</p>
+                </div>
+              </div>
+              <ActivityHeatmap data={heatmapData} />
+            </div>
+
+            {/* Charts Grid */}
+            <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+              <div className="bg-white rounded-[2rem] p-5 border border-gray-100 shadow-md">
+                <h4 className="font-bold text-gray-800 mb-4 px-1 text-sm">Postări Organizații</h4>
+                <OrgPostsBar data={orgBars} />
+              </div>
+              <div className="bg-white rounded-[2rem] p-5 border border-gray-100 shadow-md flex flex-col justify-center">
+                <h4 className="font-bold text-gray-800 mb-4 px-1 text-sm">Obiectiv Săptămânal</h4>
+                <div className="flex-1 grid place-items-center py-2">
+                  <GoalRing current={raw.weekCount} target={WEEK_GOAL} />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Ținta săptămânală și activitatea pe 14 zile — bazate pe RAW */}
-        <GoalRing current={raw.weekCount} target={WEEK_GOAL} />
-        <SparklineCard values={raw.last14Flags} />
+        {/* Todays Opportunities */}
+        <TodaysOpportunities />
       </div>
-
-      {/* grafice */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ActivityHeatmap data={heatmapData} />
-        <OrgPostsBar data={orgBars} />
-      </div>
-
-      {/* oportunități de azi */}
-      <TodaysOpportunities />
     </div>
   );
 }

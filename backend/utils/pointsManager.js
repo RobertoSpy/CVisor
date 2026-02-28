@@ -44,7 +44,7 @@ async function performTransaction(callback) {
  */
 async function addPoints(userId, pointsDelta, reason, client = pool) {
   // Validare parametri
-  if (!userId || typeof pointsDelta !== 'number' || !reason) {
+  if (!userId || typeof pointsDelta !== 'number' || !reason || typeof reason !== 'string') {
     throw new Error('Invalid parameters for addPoints');
   }
 

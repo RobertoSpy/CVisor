@@ -1,6 +1,7 @@
 const express = require("express");
 const { pool } = require("../../db");
 const verifyToken = require("../../middleware/verifyToken");
+const { validate, orgProfileSchema } = require("../../middleware/validation");
 
 const router = express.Router();
 
@@ -48,7 +49,7 @@ router.get("/profile", verifyToken, async (req, res) => {
 });
 
 // POST /api/organization/profile
-router.post("/profile", verifyToken, async (req, res) => {
+router.post("/profile", verifyToken, validate(orgProfileSchema), async (req, res) => {
   const uid = req.user.id;
   const {
     name, headline, bio, avatarUrl, bannerUrl, location, volunteers,

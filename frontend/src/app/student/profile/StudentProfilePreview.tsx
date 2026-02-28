@@ -26,17 +26,17 @@ type ProfilePayload = {
 export default function StudentProfilePreview({ profile, points = 0, badges = [] }: { profile: ProfilePayload | null, points?: number, badges?: any[] }) {
   if (!profile) return <div className="py-10 text-center text-red-500 font-semibold text-lg">Nu s-au găsit date de profil.</div>;
 
-  // Calculăm nivelul bazat pe cel mai mare BADGE de streak deblocat
+  // Calculăm nivelul bazat pe cel mai mare BADGE deblocat (puncte)
   let levelLabel = "LVL 1"; // Default
 
-  // Sortăm badge-urile din definiții descrescător după streak ca să-l găsim pe cel mai mare primul
-  const sortedBadgesDefs = [...BADGES].sort((a, b) => b.streak - a.streak);
+  // Sortăm badge-urile descrescător după puncte ca să-l găsim pe cel mai mare primul
+  const sortedBadgesDefs = [...BADGES].sort((a, b) => b.points - a.points);
 
   for (const def of sortedBadgesDefs) {
     // Verificăm dacă userul are acest badge (fie ca string code, fie ca object)
     const hasBadge = badges.some((b: any) => {
       const code = typeof b === "string" ? b : b.code;
-      return code === def.code || code === `streak_${def.streak}`;
+      return code === def.code || code === `lvl${def.points}`;
     });
 
     if (hasBadge) {
@@ -55,7 +55,7 @@ export default function StudentProfilePreview({ profile, points = 0, badges = []
 
     // Căutăm în definițiile locale
     // Încercăm match direct (ex: "novice") sau parse la streak (ex: "streak_7")
-    const def = BADGES.find(d => d.code === code) || BADGES.find(d => `streak_${d.streak}` === code);
+    const def = BADGES.find(d => d.code === code) || BADGES.find(d => `lvl${d.points}` === code);
 
     if (def) {
       return {
@@ -139,7 +139,7 @@ export default function StudentProfilePreview({ profile, points = 0, badges = []
           <div className="w-px bg-primary/10"></div>
           <div className="text-center">
             <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Puncte</div>
-            <div className="text-2xl font-bold text-accent">{points} XP</div>
+            <div className="text-2xl font-bold text-accent">{points} Puncte</div>
           </div>
         </div>
 

@@ -1,7 +1,6 @@
 "use client";
 import React, { useMemo, useState } from "react";
-import { classNames, fmtDate, isAllZeroMap } from "../../lib/utils";
-import CursorTooltip from "../dashboard/CursorTooltip";
+import { classNames, fmtDate } from "../../lib/utils";
 
 export default function ActivityHeatmap({
   title = "Prezență în aplicație (ultimele 35 zile)",
@@ -12,12 +11,7 @@ export default function ActivityHeatmap({
   data: Record<string, number>;
   days?: number;
 }) {
-  const [tt, setTt] = useState<{ show: boolean; x: number; y: number; text: string }>({
-    show: false,
-    x: 0,
-    y: 0,
-    text: "",
-  });
+  const [selectedCell, setSelectedCell] = useState<{ date: string; value: number } | null>(null);
 
   const cells = useMemo(() => {
     const arr: { date: string; value: number }[] = [];
@@ -44,7 +38,7 @@ export default function ActivityHeatmap({
 
   const monthLabelFor = (iso: string) => {
     const d = new Date(iso + "T00:00:00");
-    return d.toLocaleString(undefined, { month: "short" });
+    return d.toLocaleString("ro-RO", { month: "short" });
   };
   const firstOfMonth = new Set(
     cells
@@ -58,49 +52,69 @@ export default function ActivityHeatmap({
   const palette = ["bg-indigo-50", "bg-emerald-200", "bg-emerald-400", "bg-emerald-600", "bg-emerald-700"];
   const isToday = (s: string) => s === fmtDate(new Date());
 
+  const formatDate = (iso: string) => {
+    const d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString("ro-RO", { day: "numeric", month: "short", year: "numeric" });
+  };
+
+  const dayName = (iso: string) => {
+    const d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString("ro-RO", { weekday: "long" });
+  };
+
   return (
-    <div
-      className="relative bg-card rounded-2xl p-5 ring-1 ring-black/5 shadow-[0_6px_24px_rgba(0,0,0,0.06)]"
-      onMouseMove={(e) => setTt((t) => ({ ...t, x: e.clientX, y: e.clientY }))}
-    >
+    <div className="relative bg-card rounded-2xl p-4 md:p-5 ring-1 ring-black/5 shadow-[0_6px_24px_rgba(0,0,0,0.06)]">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
-        <div className="flex items-center gap-2 text-xs text-gray-500">
+        <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
           <span>0</span>
           {palette.map((c, i) => (
-            <span key={i} className={classNames("w-3.5 h-3.5 rounded-[4px] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]", c)} />
+            <span key={i} className={classNames("w-3 h-3 rounded-[3px] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]", c)} />
           ))}
           <span>max</span>
         </div>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto pb-1">
+      {/* Heatmap Grid */}
+      <div className="flex gap-[3px] overflow-x-auto pb-1">
         {weeks.map((w, wi) => (
-          <div key={wi} className="flex flex-col gap-1">
+          <div key={wi} className="flex flex-col gap-[3px]">
             {w.map((c, ci) => (
-              <div
+              <button
                 key={c.date + "-" + ci}
-                onMouseEnter={() => setTt({ show: true, x: tt.x, y: tt.y, text: `${c.date}: ${c.value} vizite` })}
-                onMouseLeave={() => setTt((t) => ({ ...t, show: false }))}
+                type="button"
+                onClick={() => setSelectedCell(selectedCell?.date === c.date ? null : c)}
                 className={classNames(
-                  "w-3.5 h-3.5 rounded-[4px] transition-transform duration-150 hover:scale-[1.08] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]",
+                  "w-4 h-4 md:w-3.5 md:h-3.5 rounded-[4px] transition-all duration-150 hover:scale-110 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] cursor-pointer",
                   palette[level(c.value)],
-                  isToday(c.date) && "ring-2 ring-white"
+                  isToday(c.date) && "ring-2 ring-blue-400",
+                  selectedCell?.date === c.date && "ring-2 ring-amber-400 scale-125"
                 )}
+                aria-label={`${c.date}: ${c.value} vizite`}
               />
             ))}
             {firstOfMonth.has(w[0]?.date) && (
-              <div className="h-4 text-[10px] text-gray-500 text-center mt-1">{monthLabelFor(w[0].date)}</div>
+              <div className="h-4 text-[9px] text-gray-500 text-center mt-1">{monthLabelFor(w[0].date)}</div>
             )}
           </div>
         ))}
       </div>
 
-
-
-      <CursorTooltip show={tt.show} x={tt.x} y={tt.y}>
-        {tt.text}
-      </CursorTooltip>
+      {/* Selected cell info panel (mobile-friendly tap) */}
+      {selectedCell && (
+        <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between animate-in fade-in duration-200">
+          <div>
+            <div className="text-sm font-semibold text-gray-800 capitalize">{dayName(selectedCell.date)}</div>
+            <div className="text-xs text-gray-500">{formatDate(selectedCell.date)}</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={classNames("w-4 h-4 rounded-[4px]", palette[level(selectedCell.value)])} />
+            <span className="text-sm font-bold text-gray-700">
+              {selectedCell.value === 0 ? "Nicio vizită" : `${selectedCell.value} ${selectedCell.value === 1 ? "vizită" : "vizite"}`}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

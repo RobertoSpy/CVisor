@@ -2,6 +2,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   FaFacebook,
   FaInstagram,
@@ -65,6 +66,9 @@ export default function OrganizationProfilePreview({
   points = 0,
   badges = []
 }: Props) {
+  const pathname = usePathname();
+  const isAdminView = pathname?.startsWith('/admin');
+
   if (!profile) return <div className="py-10 text-center text-red-500 font-semibold text-lg">Nu s-au găsit date de profil.</div>;
 
   const level = Math.floor(points / 100) + 1;
@@ -189,11 +193,27 @@ export default function OrganizationProfilePreview({
               <div className="w-px bg-blue-200"></div>
               <div className="text-center">
                 <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Puncte</div>
-                <div className="text-2xl font-bold text-indigo-600">{points} XP</div>
+                <div className="text-2xl font-bold text-indigo-600">{points} Puncte</div>
               </div>
             </div>
 
-            {/* Badges Showcase Removed */}
+            {/* Badges Showcase */}
+            {badges && badges.length > 0 && (
+              <div className="mb-6 w-full">
+                <div className="font-semibold text-gray-800 mb-4 text-center">Insigne Deblocate</div>
+                <div className="flex flex-wrap gap-4 justify-center">
+                  {badges.map((b: any, i: number) => {
+                    const code = typeof b === 'string' ? b : b.code;
+                    return (
+                      <div key={code || i} className="flex flex-col items-center p-3 bg-white rounded-xl shadow-sm border border-gray-100 w-24 transition hover:scale-105" title={code}>
+                        <div className="text-3xl mb-1">🎖️</div>
+                        <div className="text-[10px] text-center font-medium leading-tight text-gray-600">{code}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           <hr className="border-gray-100 my-8" />
@@ -208,20 +228,20 @@ export default function OrganizationProfilePreview({
 
           {/* Team Section */}
           {safeProfile.keyPeople.length > 0 && (
-            <div className="mb-10">
-              <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2 justify-center">
-                <FaUsers className="text-primary" /> Echipa Noastră
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="mb-8 w-full">
+              <div className="font-semibold text-gray-800 mb-4 text-center">Echipa Noastră</div>
+              <div className="flex flex-wrap gap-6 justify-center">
                 {safeProfile.keyPeople.map((pers: KeyPerson) => (
-                  <div key={pers.id || pers.name} className="flex items-start gap-4 p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold flex-shrink-0 text-lg">
-                      {pers.name.charAt(0)}
+                  <div key={pers.id || pers.name} className="flex items-center gap-5 p-6 rounded-2xl shadow-lg border-b-4 border-primary/30 bg-white/80 transition hover:scale-105 w-full max-w-md">
+                    <div className="flex-shrink-0">
+                      <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
+                        {pers.name.charAt(0)}
+                      </div>
                     </div>
                     <div>
-                      <div className="font-bold text-gray-900">{pers.name}</div>
-                      <div className="text-sm text-primary font-medium">{pers.role}</div>
-                      {pers.responsibilities && <div className="text-xs text-gray-500 mt-1">{pers.responsibilities}</div>}
+                      <div className="font-bold text-primary text-lg">{pers.name}</div>
+                      <div className="text-gray-700 text-md">{pers.role}</div>
+                      {pers.responsibilities && <div className="text-gray-500 text-sm mt-1">{pers.responsibilities}</div>}
                     </div>
                   </div>
                 ))}
@@ -231,23 +251,23 @@ export default function OrganizationProfilePreview({
 
           {/* Contact Section */}
           {safeProfile.contactPersons.length > 0 && (
-            <div className="mb-10">
-              <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2 justify-center">
-                <FaIdCard className="text-primary" /> Contact
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="mb-8 w-full">
+              <div className="font-semibold text-gray-800 mb-4 text-center">Contact</div>
+              <div className="flex flex-wrap gap-6 justify-center">
                 {safeProfile.contactPersons.map((person: ContactPerson) => (
-                  <div key={person.id || person.email} className="flex items-start gap-4 p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition">
-                    <div className="h-12 w-12 rounded-full bg-green-50 flex items-center justify-center text-green-600 font-bold flex-shrink-0 text-lg">
-                      <FaPhone />
+                  <div key={person.id || person.email} className="flex items-center gap-5 p-6 rounded-2xl shadow-lg border-b-4 border-primary/30 bg-white/80 transition hover:scale-105 w-full max-w-md">
+                    <div className="flex-shrink-0">
+                      <div className="h-14 w-14 rounded-full bg-green-50 flex items-center justify-center text-green-600 text-xl">
+                        <FaPhone />
+                      </div>
                     </div>
                     <div>
-                      <div className="font-bold text-gray-900">{person.name}</div>
-                      <div className="text-sm text-gray-600 flex items-center gap-1 mt-1">
-                        <FaEnvelope className="text-[14px]" /> {person.email}
+                      <div className="font-bold text-primary text-lg">{person.name}</div>
+                      <div className="text-gray-700 flex items-center gap-2 mt-1">
+                        <FaEnvelope className="text-sm" /> {person.email}
                       </div>
-                      <div className="text-sm text-gray-600 flex items-center gap-1">
-                        <FaPhoneAlt className="text-[14px]" /> {person.phone}
+                      <div className="text-gray-500 flex items-center gap-2 text-sm">
+                        <FaPhoneAlt className="text-sm" /> {person.phone}
                       </div>
                     </div>
                   </div>
@@ -257,44 +277,33 @@ export default function OrganizationProfilePreview({
           )}
 
           {/* Media / Video Section */}
-          {(safeProfile.videoUrl || safeProfile.media.length > 0) && (
+          {(safeProfile.videoUrl || safeProfile.media.some((m: Media) => m.kind === 'video')) && (
             <div className="mb-10">
-              <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">Media & Prezentare</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">Prezentare Video</h2>
 
-              {/* Video URL */}
-              {safeProfile.videoUrl && (
-                <div className="mb-8 w-full max-w-2xl mx-auto">
-                  <div className="w-full rounded-2xl shadow-xl ring-2 ring-gray-100 bg-black overflow-hidden flex items-center justify-center">
+              <div className="mb-8 w-full max-w-2xl mx-auto px-4">
+                <div className="w-full rounded-2xl shadow-xl ring-4 ring-white bg-black overflow-hidden aspect-video relative group">
+                  {safeProfile.videoUrl ? (
                     <iframe
                       src={safeProfile.videoUrl.includes("youtube.com") ? safeProfile.videoUrl.replace("watch?v=", "embed/") : safeProfile.videoUrl}
-                      className="w-full aspect-video"
+                      className="w-full h-full"
                       allow="autoplay; encrypted-media"
                       allowFullScreen
                       title="Video organizatie"
-                      style={{ minHeight: "300px" }}
                     />
-                  </div>
+                  ) : (
+                    (() => {
+                      const vid = safeProfile.media.find((m: Media) => m.kind === 'video');
+                      return vid ? <video src={vid.url} controls className="w-full h-full object-cover" /> : null;
+                    })()
+                  )}
                 </div>
-              )}
-
-              {/* Gallery */}
-              <div className="flex flex-wrap gap-6 justify-center">
-                {safeProfile.media.map((m: Media) => (
-                  <div key={m.id || m.url} className="max-w-md w-full rounded-2xl shadow-md overflow-hidden bg-black">
-                    {m.kind === "image" ? (
-                      <img src={m.url} className="w-full object-contain" style={{ maxHeight: "300px" }} alt={m.caption || "media"} />
-                    ) : (
-                      <video src={m.url} controls className="w-full aspect-video" style={{ background: "#000" }} />
-                    )}
-                    {m.caption && <div className="p-2 text-xs text-gray-300 text-center bg-gray-900">{m.caption}</div>}
-                  </div>
-                ))}
               </div>
             </div>
           )}
 
-          {/* Oportunități (Moved to bottom) */}
-          <div className="mb-6">
+          {/* Oportunități (Moved to bottom) — ascunse în admin */}
+          {!isAdminView && <div className="mb-6">
             <div className="flex items-center justify-between mb-4 px-2">
               <h2 className="text-xl font-bold text-gray-800">🔥 Oportunități</h2>
             </div>
@@ -310,7 +319,7 @@ export default function OrganizationProfilePreview({
                     key={opp.id}
                     className="min-w-[280px] md:min-w-[320px] snap-center bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group relative flex-shrink-0"
                   >
-                    <Link href={`/student/opportunities/${opp.id}`} className="block h-full">
+                    <Link href={`/student/opportunities/${opp.id}`} className="block h-full" {...(isAdminView ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
                       <div className="h-36 bg-gray-200 relative">
                         {opp.banner_image ? (
                           <img src={opp.banner_image} alt={opp.title} className="w-full h-full object-cover" />
@@ -356,7 +365,7 @@ export default function OrganizationProfilePreview({
                 ))}
               </div>
             )}
-          </div>
+          </div>}
 
         </div>
       </div>

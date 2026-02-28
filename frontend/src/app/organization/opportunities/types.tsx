@@ -1,23 +1,3 @@
+import { Opportunity } from "@/lib/types";
 
-export type Opportunity = {
-  id: string;
-  title: string;
-  deadline: string;
-  type: "party" | "self-development";
-  skills: string[];
-  available_spots: number;
-  price: number;
-  banner_image?: string;
-  promo_video?: string;
-  gallery?: string[];
-  participants?: any;
-  location: string;
-  tags?: string[];
-  agenda?: string;
-  faq?: string;
-  reviews?: string;
-  description: string;
-  cta_url: string;
-  organization_name?: string;
-  orgName?: string;
-};
+export type { Opportunity };

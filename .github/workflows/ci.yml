@@ -1,0 +1,137 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  # ─── Stage 1: Backend Quality ── Tests + Coverage + Lint + Security ──
+  quality-backend:
+    name: "🔍 Backend Quality Gate"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      # ── Tests + Coverage (min 60%) ──────────────────────────
+      - name: "✅ Run Tests with Coverage"
+        working-directory: backend
+        run: |
+          npx jest --detectOpenHandles --forceExit --ci --coverage \
+            --coverageReporters=text --coverageReporters=text-summary --coverageReporters=lcov \
+            --coverageThreshold='{"global":{"branches":40,"functions":40,"lines":60,"statements":60}}'
+        env:
+          NODE_ENV: test
+
+      # ── Code Smells / Bugs (ESLint) ────────────────────────
+      - name: "🐛 Lint — Bugs & Code Smells"
+        working-directory: backend
+        run: npx eslint . --ext .js --format compact --no-error-on-unmatched-pattern || true
+
+      # ── Security Vulnerabilities (npm audit) ───────────────
+      - name: "🔒 Security — npm audit"
+        working-directory: backend
+        run: npm audit --audit-level=critical || true
+
+      # ── Upload Coverage Report ─────────────────────────────
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage/
+          retention-days: 7
+
+  # ─── Stage 2: Frontend Quality ── Build + Lint ───────────────────
+  quality-frontend:
+    name: "🎨 Frontend Quality Gate"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # ── TypeScript & Next.js Lint ──────────────────────────
+      - name: "🐛 Lint — TypeScript Errors"
+        working-directory: frontend
+        run: npx next lint || true
+
+      # ── Build (catches compile errors) ─────────────────────
+      - name: "🏗️ Build Next.js"
+        working-directory: frontend
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ''
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+
+      # ── Security ───────────────────────────────────────────
+      - name: "🔒 Security — npm audit"
+        working-directory: frontend
+        run: npm audit --audit-level=critical || true
+
+  # ─── Stage 3: Docker Build (validate images build correctly) ──────
+  docker-build:
+    name: "🐳 Docker Build"
+    needs: [quality-backend, quality-frontend]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Backend Image
+        run: docker build -t cvisor-backend:${{ github.sha }} ./backend
+
+      - name: Build Frontend Image
+        run: docker build -t cvisor-frontend:${{ github.sha }} ./frontend
+        env:
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+
+  # ─── Stage 4: Deploy (only on main branch push) ───────────────────
+  deploy:
+    name: "🚀 Deploy to Production"
+    needs: docker-build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/cvisor
+            git pull origin main
+            docker compose down
+            docker compose up -d --build
+            docker system prune -f

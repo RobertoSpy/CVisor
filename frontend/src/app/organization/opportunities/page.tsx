@@ -23,11 +23,9 @@ export default function OpportunitiesPage() {
     description: "",
     banner_image: "",
     promo_video: "",
-    gallery: "",
     tags: "",
     agenda: "",
     faq: "",
-    reviews: "",
     cta_url: "",
   });
 
@@ -44,7 +42,6 @@ export default function OpportunitiesPage() {
     description: "",
     banner_image: "",
     promo_video: "",
-    gallery: "",
     tags: "",
     agenda: "",
     faq: "",
@@ -110,221 +107,284 @@ export default function OpportunitiesPage() {
   return (
     <div className="space-y-8 mt-10">
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Oportunitățile Tale
-        </h1>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
+        <div>
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
+            Oportunități
+          </h1>
+          <p className="text-gray-500 mt-2 text-lg">Gestionează și promovează oportunitățile tale.</p>
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-center">
-          {/* Status Toggles */}
-          <div className="flex bg-gray-200 p-1 rounded-xl">
+          {/* Status Toggles - Modern Tabs */}
+          <div className="flex bg-gray-100/80 p-1.5 rounded-2xl w-full sm:w-auto">
             <button
               onClick={() => setStatusFilter("active")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${statusFilter === "active" ? "bg-white shadow text-primary" : "text-gray-500 hover:text-gray-700"}`}
+              className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${statusFilter === "active" ? "bg-white shadow-md text-gray-900 ring-1 ring-black/5" : "text-gray-500 hover:text-gray-700"}`}
             >
               Active
             </button>
             <button
               onClick={() => setStatusFilter("archived")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${statusFilter === "archived" ? "bg-white shadow text-primary" : "text-gray-500 hover:text-gray-700"}`}
+              className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${statusFilter === "archived" ? "bg-white shadow-md text-gray-900 ring-1 ring-black/5" : "text-gray-500 hover:text-gray-700"}`}
             >
-              🗄️ Arhivă
+              Arhivă
             </button>
           </div>
 
-          {/* Category Filter */}
-          <div className="flex bg-gray-100 p-1 rounded-xl">
+          {/* Category Filter - Modern Pills */}
+          <div className="flex bg-gray-100/80 p-1.5 rounded-2xl w-full sm:w-auto overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setSelectedType(null)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${!selectedType ? "bg-white shadow text-primary" : "text-gray-500 hover:text-gray-700"}`}
+              className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 whitespace-nowrap ${!selectedType ? "bg-white shadow-md text-gray-900 ring-1 ring-black/5" : "text-gray-500 hover:text-gray-700"}`}
             >
               Toate
             </button>
             <button
               onClick={() => setSelectedType("party")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${selectedType === "party" ? "bg-white shadow text-primary" : "text-gray-500 hover:text-gray-700"}`}
+              className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 whitespace-nowrap ${selectedType === "party" ? "bg-white shadow-md text-gray-900 ring-1 ring-black/5" : "text-gray-500 hover:text-gray-700"}`}
             >
               🎉 Party
             </button>
             <button
               onClick={() => setSelectedType("self-development")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${selectedType === "self-development" ? "bg-white shadow text-primary" : "text-gray-500 hover:text-gray-700"}`}
+              className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 whitespace-nowrap ${selectedType === "self-development" ? "bg-white shadow-md text-gray-900 ring-1 ring-black/5" : "text-gray-500 hover:text-gray-700"}`}
             >
               🧠 Self-dev
             </button>
           </div>
 
           <button
-            className="px-6 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 transition shadow-lg font-semibold flex items-center gap-2 transform hover:-translate-y-0.5 whitespace-nowrap"
+            className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 transition shadow-xl shadow-blue-600/20 font-bold flex items-center justify-center gap-2 transform hover:-translate-y-0.5"
             onClick={() => setShowForm(true)}
           >
-            <span className="text-xl">+</span> Postează
+            <span className="text-xl leading-none">+</span> Postează
           </button>
         </div>
       </div>
 
 
 
-      {/* MODAL ADAUGARE */}
+      {/* MODAL ADAUGARE - PREMIUM DESIGN */}
       {showForm && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-gray-900/90 backdrop-blur-xl flex items-center justify-center z-50 p-4"
           onClick={e => {
-            // Închide modalul dacă se dă click pe overlay, nu pe formular
             if (e.target === e.currentTarget) setShowForm(false);
           }}
         >
           <form
             onSubmit={handleSubmit}
-            className="bg-white rounded-3xl p-8 shadow-2xl flex flex-col gap-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-blue-500/60 scrollbar-track-gray-100 animate-in fade-in zoom-in duration-200"
+            className="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-500/10 flex flex-col w-full max-w-4xl max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-300 ring-1 ring-black/5"
           >
-            {/* Top: Titlu, Locuri, Deadline */}
-            <div className="flex flex-col gap-4 border-b pb-6">
-              <div className="flex justify-between items-center">
-                <h2 className="font-bold text-3xl text-gray-800">Adaugă oportunitate nouă</h2>
-                <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            {/* Header */}
+            <div className="flex justify-between items-center p-8 border-b border-gray-100 bg-gray-50/50">
+              <div>
+                <h2 className="font-extrabold text-3xl text-gray-900 tracking-tight">Postează Oportunitate</h2>
+                <p className="text-gray-500 font-medium mt-1">Completează detaliile pentru a atrage cei mai buni studenți.</p>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="Titlu Oportunitate"
-                  value={form.title}
-                  onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                  className="border border-gray-200 p-4 rounded-xl col-span-1 md:col-span-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white text-lg font-medium"
-                  required
-                />
-                <input
-                  type="number"
-                  placeholder="Număr locuri disponibile"
-                  value={form.available_spots}
-                  onChange={e => setForm(f => ({ ...f, available_spots: e.target.value }))}
-                  className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white"
-                  required min="1"
-                />
-                <input
-                  type="date"
-                  placeholder="Deadline"
-                  value={form.deadline}
-                  onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white"
-                  required
-                  title="Deadline-ul trebuie să fie în viitor"
-                />
-              </div>
-            </div>
-
-            {/* Banner + Video + Galerie */}
-            <div className="flex flex-col gap-4 bg-blue-50/50 rounded-2xl p-6 border border-blue-100">
-              <h3 className="font-semibold text-blue-900 mb-2">Media & Vizual</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-blue-800 mb-1">Banner (Imagine)</label>
-                  <input type="file" accept="image/*" onChange={handleBannerChange}
-                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-blue-800 mb-1">Video Promo</label>
-                  <input type="file" accept="video/*" onChange={handlePromoChange}
-                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Detalii generale */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <select
-                value={form.type}
-                onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-                className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white"
-                required
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="h-10 w-10 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-100 hover:bg-red-50 transition-all shadow-sm"
               >
-                <option value="">Alege tipul oportunității</option>
-                <option value="party">🎉 Party</option>
-                <option value="self-development">🧠 Self-development</option>
-              </select>
-              <div className="relative">
-                <input
-                  type="number"
-                  placeholder="Preț"
-                  value={form.price}
-                  onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
-                  className="border border-gray-200 p-4 rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white pl-16"
-                  required min="0"
-                />
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold bg-gray-100 px-2 py-1 rounded text-sm">RON</span>
-              </div>
-              <input
-                type="text"
-                placeholder="Locație (ex: București, Online)"
-                value={form.location}
-                onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-                className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Tag-uri (separate prin virgulă)"
-                value={form.tags}
-                onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
-                className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white"
-              />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
             </div>
 
-            {/* Descriere, skilluri, agenda, FAQ, reviews */}
-            <div className="flex flex-col gap-4">
-              <textarea
-                placeholder="Descriere detaliată a oportunității..."
-                value={form.description}
-                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white min-h-[120px]"
-                required
-              />
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="Skilluri dobândite (virgulă)"
-                  value={form.skills}
-                  onChange={e => setForm(f => ({ ...f, skills: e.target.value }))}
-                  className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white"
-                />
-                <textarea
-                  placeholder="Agenda evenimentului"
-                  value={form.agenda}
-                  onChange={e => setForm(f => ({ ...f, agenda: e.target.value }))}
-                  className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white min-h-[100px]"
-                />
-              </div>
+              {/* 1. Basic Info */}
+              <section>
+                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-blue-100/50 text-blue-600 flex items-center justify-center text-sm">01</span>
+                  Detalii Principale
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Titlu Oportunitate</label>
+                    <input
+                      type="text"
+                      placeholder="ex: Internship Front-End Development"
+                      value={form.title}
+                      onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                      className="w-full border-0 bg-gray-50 rounded-2xl p-5 text-lg font-semibold focus:ring-2 focus:ring-blue-500 transition-all placeholder-gray-400 hover:bg-gray-100/80"
+                      required
+                    />
+                  </div>
 
-              <textarea
-                placeholder="FAQ (Întrebări frecvente)"
-                value={form.faq}
-                onChange={e => setForm(f => ({ ...f, faq: e.target.value }))}
-                className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white min-h-[100px]"
-              />
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Locuri Disponibile</label>
+                    <input
+                      type="number"
+                      placeholder="ex: 5"
+                      value={form.available_spots}
+                      onChange={e => setForm(f => ({ ...f, available_spots: e.target.value }))}
+                      className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-blue-500 transition-all hover:bg-gray-100/80"
+                      required min="1"
+                    />
+                  </div>
 
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Deadline Aplicare</label>
+                    <input
+                      type="date"
+                      value={form.deadline}
+                      onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-blue-500 transition-all hover:bg-gray-100/80"
+                      required
+                    />
+                  </div>
+                </div>
+              </section>
 
-              <input
-                type="url"
-                placeholder="Link extern de înscriere (opțional)"
-                value={form.cta_url || ""}
-                onChange={e => setForm(f => ({ ...f, cta_url: e.target.value }))}
-                className="border border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition bg-gray-50 focus:bg-white"
-                autoComplete="off"
-              />
+              <hr className="border-gray-100" />
+
+              {/* 2. Media */}
+              <section>
+                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-purple-100/50 text-purple-600 flex items-center justify-center text-sm">02</span>
+                  Vizual & Media
+                </h3>
+                <div className="bg-purple-50/30 border border-purple-100 rounded-3xl p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                    <label className="block text-sm font-bold text-purple-900 mb-3">Banner Imagine</label>
+                    <div className="relative group">
+                      <input type="file" accept="image/*" onChange={handleBannerChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                      <div className="border-2 border-dashed border-purple-200 rounded-2xl p-8 text-center bg-white/50 group-hover:bg-white group-hover:border-purple-400 transition-all">
+                        <div className="text-3xl mb-2">🖼️</div>
+                        <p className="text-sm font-semibold text-purple-800">{bannerFile ? bannerFile.name : "Alege sau trage o imagine"}</p>
+                        <p className="text-xs text-purple-400 mt-1">PNG, JPG pana la 5MB</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-purple-900 mb-3">Video Promo</label>
+                    <div className="relative group">
+                      <input type="file" accept="video/*" onChange={handlePromoChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                      <div className="border-2 border-dashed border-purple-200 rounded-2xl p-8 text-center bg-white/50 group-hover:bg-white group-hover:border-purple-400 transition-all">
+                        <div className="text-3xl mb-2">🎥</div>
+                        <p className="text-sm font-semibold text-purple-800">{promoFile ? promoFile.name : "Alege sau trage un video"}</p>
+                        <p className="text-xs text-purple-400 mt-1">MP4, WebM</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <hr className="border-gray-100" />
+
+              {/* 3. Specifics */}
+              <section>
+                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-green-100/50 text-green-600 flex items-center justify-center text-sm">03</span>
+                  Detalii Specifice
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <select
+                    value={form.type}
+                    onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
+                    className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-green-500 transition-all hover:bg-gray-100/80"
+                    required
+                  >
+                    <option value="">Tip Oportunitate</option>
+                    <option value="party">🎉 Party / Event</option>
+                    <option value="self-development">🧠 Self-Development / Workshop</option>
+                  </select>
+
+                  <div className="relative">
+                    <input
+                      type="number"
+                      placeholder="Preț"
+                      value={form.price}
+                      onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
+                      className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-green-500 transition-all hover:bg-gray-100/80 pl-16 text-lg"
+                      required min="0"
+                    />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold bg-white px-2 py-1 rounded text-xs shadow-sm">RON</span>
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2">
+                    <input
+                      type="text"
+                      placeholder="Locație (ex: București, Online)"
+                      value={form.location}
+                      onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
+                      className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-green-500 transition-all hover:bg-gray-100/80"
+                      required
+                    />
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2">
+                    <input
+                      type="text"
+                      placeholder="Tag-uri (separate prin virgulă)"
+                      value={form.tags}
+                      onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
+                      className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-green-500 transition-all hover:bg-gray-100/80"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <hr className="border-gray-100" />
+
+              {/* 4. Content */}
+              <section className="space-y-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-orange-100/50 text-orange-600 flex items-center justify-center text-sm">04</span>
+                  Conținut & Info
+                </h3>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Descriere Detaliată</label>
+                  <textarea
+                    placeholder="Descrie oportunitatea în detaliu..."
+                    value={form.description}
+                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                    className="w-full border-0 bg-gray-50 rounded-2xl p-5 font-medium focus:ring-2 focus:ring-orange-500 transition-all hover:bg-gray-100/80 min-h-[150px]"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <textarea
+                    placeholder="Agenda (Markdown supportat)"
+                    value={form.agenda}
+                    onChange={e => setForm(f => ({ ...f, agenda: e.target.value }))}
+                    className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-orange-500 transition-all hover:bg-gray-100/80 min-h-[100px]"
+                  />
+                  <textarea
+                    placeholder="FAQ - Întrebări Frecvente"
+                    value={form.faq}
+                    onChange={e => setForm(f => ({ ...f, faq: e.target.value }))}
+                    className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-orange-500 transition-all hover:bg-gray-100/80 min-h-[100px]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Link Extern (Opțional)</label>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={form.cta_url || ""}
+                    onChange={e => setForm(f => ({ ...f, cta_url: e.target.value }))}
+                    className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-orange-500 transition-all hover:bg-gray-100/80"
+                    autoComplete="off"
+                  />
+                </div>
+              </section>
 
             </div>
 
-            {/* Butoane */}
-            <div className="flex gap-4 justify-end pt-4 border-t mt-2">
-              <button type="button" className="text-gray-500 hover:text-gray-800 px-6 py-3 rounded-xl transition font-medium" onClick={() => setShowForm(false)}>
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-4 rounded-b-[2.5rem]">
+              <button type="button" className="text-gray-600 hover:text-gray-900 px-8 py-4 rounded-2xl transition font-bold" onClick={() => setShowForm(false)}>
                 Anulează
               </button>
-              <button type="submit" className="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-600 transition font-bold transform hover:-translate-y-0.5">
+              <button type="submit" className="bg-blue-600 text-white px-10 py-4 rounded-2xl shadow-xl shadow-blue-600/20 hover:shadow-2xl hover:bg-blue-700 transition-all font-bold transform hover:-translate-y-1">
                 Postează Oportunitatea
               </button>
             </div>
@@ -335,164 +395,241 @@ export default function OpportunitiesPage() {
 
 
       {/* MODAL EDITARE */}
-      {
-        editId && (
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={e => {
-              if (e.target === e.currentTarget) setEditId(null);
-            }}
+      {editId && (
+        <div
+          className="fixed inset-0 bg-gray-900/90 backdrop-blur-xl flex items-center justify-center z-50 p-4"
+          onClick={e => {
+            if (e.target === e.currentTarget) setEditId(null);
+          }}
+        >
+          <form
+            onSubmit={handleEditSubmit}
+            className="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-500/10 flex flex-col w-full max-w-4xl max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-300 ring-1 ring-black/5"
           >
-            <form
-              onSubmit={handleEditSubmit}
-              className="bg-white rounded-3xl p-8 shadow-2xl flex flex-col gap-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-blue-500/60 scrollbar-track-gray-100"
-            >
-              {/* Top: Titlu, Locuri, Deadline */}
-              <div className="flex flex-col gap-4 border-b pb-6">
-                <div className="flex justify-between items-center">
-                  <h2 className="font-bold text-2xl text-gray-800">Editează oportunitatea</h2>
-                  <button type="button" onClick={() => setEditId(null)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            {/* Header */}
+            <div className="flex justify-between items-center p-8 border-b border-gray-100 bg-gray-50/50">
+              <div>
+                <h2 className="font-extrabold text-3xl text-gray-900 tracking-tight">Editează Oportunitatea</h2>
+                <p className="text-gray-500 font-medium mt-1">Modifică detaliile pentru a menține informațiile actualizate.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditId(null)}
+                className="h-10 w-10 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-100 hover:bg-red-50 transition-all shadow-sm"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
+
+              {/* 1. Basic Info */}
+              <section>
+                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-blue-100/50 text-blue-600 flex items-center justify-center text-sm">01</span>
+                  Detalii Principale
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Titlu Oportunitate</label>
+                    <input
+                      type="text"
+                      placeholder="ex: Internship Front-End Development"
+                      value={editForm.title}
+                      onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+                      className="w-full border-0 bg-gray-50 rounded-2xl p-5 text-lg font-semibold focus:ring-2 focus:ring-blue-500 transition-all placeholder-gray-400 hover:bg-gray-100/80"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Locuri Disponibile</label>
+                    <input
+                      type="number"
+                      placeholder="ex: 5"
+                      value={editForm.available_spots}
+                      onChange={e => setEditForm(f => ({ ...f, available_spots: e.target.value }))}
+                      className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-blue-500 transition-all hover:bg-gray-100/80"
+                      required min="1"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Deadline Aplicare</label>
+                    <input
+                      type="date"
+                      value={editForm.deadline}
+                      onChange={e => setEditForm(f => ({ ...f, deadline: e.target.value }))}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-blue-500 transition-all hover:bg-gray-100/80"
+                      required
+                    />
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    placeholder="Titlu"
-                    value={editForm.title}
-                    onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
-                    className="border border-gray-200 p-3 rounded-xl col-span-1 md:col-span-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              </section>
+
+              <hr className="border-gray-100" />
+
+              {/* 2. Media */}
+              <section>
+                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-purple-100/50 text-purple-600 flex items-center justify-center text-sm">02</span>
+                  Vizual & Media
+                </h3>
+                <div className="bg-purple-50/30 border border-purple-100 rounded-3xl p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                    <label className="block text-sm font-bold text-purple-900 mb-3">Banner Imagine</label>
+                    <div className="relative group">
+                      <input type="file" accept="image/*" onChange={handleEditBannerChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                      <div className="border-2 border-dashed border-purple-200 rounded-2xl p-8 text-center bg-white/50 group-hover:bg-white group-hover:border-purple-400 transition-all">
+                        <div className="text-3xl mb-2">🖼️</div>
+                        <p className="text-sm font-semibold text-purple-800">
+                          {editBannerFile
+                            ? editBannerFile.name
+                            : (editForm.banner_image ? "Imagine existentă (Schimbă)" : "Alege sau trage o imagine")
+                          }
+                        </p>
+                        <p className="text-xs text-purple-400 mt-1">PNG, JPG pana la 5MB</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-purple-900 mb-3">Video Promo</label>
+                    <div className="relative group">
+                      <input type="file" accept="video/*" onChange={handleEditPromoChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                      <div className="border-2 border-dashed border-purple-200 rounded-2xl p-8 text-center bg-white/50 group-hover:bg-white group-hover:border-purple-400 transition-all">
+                        <div className="text-3xl mb-2">🎥</div>
+                        <p className="text-sm font-semibold text-purple-800">
+                          {editPromoFile
+                            ? editPromoFile.name
+                            : (editForm.promo_video ? "Video existent (Schimbă)" : "Alege sau trage un video")
+                          }
+                        </p>
+                        <p className="text-xs text-purple-400 mt-1">MP4, WebM</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <hr className="border-gray-100" />
+
+              {/* 3. Specifics */}
+              <section>
+                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-green-100/50 text-green-600 flex items-center justify-center text-sm">03</span>
+                  Detalii Specifice
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <select
+                    value={editForm.type}
+                    onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))}
+                    className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-green-500 transition-all hover:bg-gray-100/80"
+                    required
+                  >
+                    <option value="">Tip Oportunitate</option>
+                    <option value="party">🎉 Party / Event</option>
+                    <option value="self-development">🧠 Self-Development / Workshop</option>
+                  </select>
+
+                  <div className="relative">
+                    <input
+                      type="number"
+                      placeholder="Preț"
+                      value={editForm.price}
+                      onChange={e => setEditForm(f => ({ ...f, price: e.target.value }))}
+                      className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-green-500 transition-all hover:bg-gray-100/80 pl-16 text-lg"
+                      required min="0"
+                    />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold bg-white px-2 py-1 rounded text-xs shadow-sm">RON</span>
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2">
+                    <input
+                      type="text"
+                      placeholder="Locație (ex: București, Online)"
+                      value={editForm.location}
+                      onChange={e => setEditForm(f => ({ ...f, location: e.target.value }))}
+                      className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-green-500 transition-all hover:bg-gray-100/80"
+                      required
+                    />
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2">
+                    <input
+                      type="text"
+                      placeholder="Tag-uri (separate prin virgulă)"
+                      value={editForm.tags}
+                      onChange={e => setEditForm(f => ({ ...f, tags: e.target.value }))}
+                      className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-green-500 transition-all hover:bg-gray-100/80"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <hr className="border-gray-100" />
+
+              {/* 4. Content */}
+              <section className="space-y-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-orange-100/50 text-orange-600 flex items-center justify-center text-sm">04</span>
+                  Conținut & Info
+                </h3>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Descriere Detaliată</label>
+                  <textarea
+                    placeholder="Descrie oportunitatea în detaliu..."
+                    value={editForm.description}
+                    onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                    className="w-full border-0 bg-gray-50 rounded-2xl p-5 font-medium focus:ring-2 focus:ring-orange-500 transition-all hover:bg-gray-100/80 min-h-[150px]"
                     required
                   />
-                  <input
-                    type="number"
-                    placeholder="Număr locuri"
-                    value={editForm.available_spots}
-                    onChange={e => setEditForm(f => ({ ...f, available_spots: e.target.value }))}
-                    className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                    required min="1"
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <textarea
+                    placeholder="Agenda (Markdown supportat)"
+                    value={editForm.agenda}
+                    onChange={e => setEditForm(f => ({ ...f, agenda: e.target.value }))}
+                    className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-orange-500 transition-all hover:bg-gray-100/80 min-h-[100px]"
                   />
-                  <input
-                    type="date"
-                    placeholder="Deadline"
-                    value={editForm.deadline}
-                    onChange={e => setEditForm(f => ({ ...f, deadline: e.target.value }))}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                    required
-                    title="Deadline-ul trebuie să fie în viitor"
+                  <textarea
+                    placeholder="FAQ - Întrebări Frecvente"
+                    value={editForm.faq}
+                    onChange={e => setEditForm(f => ({ ...f, faq: e.target.value }))}
+                    className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-orange-500 transition-all hover:bg-gray-100/80 min-h-[100px]"
                   />
                 </div>
-              </div>
 
-              {/* Banner + Video + Galerie */}
-              <div className="flex flex-col gap-3 bg-blue-50/50 rounded-xl p-4 border border-blue-100">
-                <label className="font-semibold text-blue-900 text-sm">Banner imagine</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleEditBannerChange}
-                  className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition"
-                />
-                <label className="font-semibold text-blue-900 text-sm mt-2">Video promo</label>
-                <input
-                  type="file"
-                  accept="video/*"
-                  onChange={handleEditPromoChange}
-                  className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition"
-                />
-              </div>
-
-              {/* Detalii generale */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <select
-                  value={editForm.type}
-                  onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))}
-                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  required
-                >
-                  <option value="">Alege tipul oportunității</option>
-                  <option value="party">🎉 Party</option>
-                  <option value="self-development">🧠 Self-development</option>
-                </select>
-                <div className="relative">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Link Extern (Opțional)</label>
                   <input
-                    type="number"
-                    placeholder="Preț"
-                    value={editForm.price}
-                    onChange={e => setEditForm(f => ({ ...f, price: e.target.value }))}
-                    className="border border-gray-200 p-3 rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 pl-16"
-                    required min="0"
+                    type="url"
+                    placeholder="https://..."
+                    value={editForm.cta_url || ""}
+                    onChange={e => setEditForm(f => ({ ...f, cta_url: e.target.value }))}
+                    className="w-full border-0 bg-gray-50 rounded-2xl p-4 font-medium focus:ring-2 focus:ring-orange-500 transition-all hover:bg-gray-100/80"
+                    autoComplete="off"
                   />
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold bg-gray-100 px-2 py-1 rounded text-xs">RON</span>
                 </div>
-                <input
-                  type="text"
-                  placeholder="Locație"
-                  value={editForm.location}
-                  onChange={e => setEditForm(f => ({ ...f, location: e.target.value }))}
-                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Tag-uri (virgulă)"
-                  value={editForm.tags}
-                  onChange={e => setEditForm(f => ({ ...f, tags: e.target.value }))}
-                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
+              </section>
 
-                <input
-                  type="url"
-                  placeholder="Link extern de înscriere (opțional)"
-                  value={editForm.cta_url || ""}
-                  onChange={e => setEditForm(f => ({ ...f, cta_url: e.target.value }))}
-                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  autoComplete="off"
-                />
-              </div>
+            </div>
 
-              {/* Descriere, skilluri, agenda, FAQ, reviews */}
-              <div className="flex flex-col gap-3">
-                <textarea
-                  placeholder="Descriere"
-                  value={editForm.description}
-                  onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
-                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[100px]"
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Skilluri (virgulă)"
-                  value={editForm.skills}
-                  onChange={e => setEditForm(f => ({ ...f, skills: e.target.value }))}
-                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-                <textarea
-                  placeholder="Agenda"
-                  value={editForm.agenda}
-                  onChange={e => setEditForm(f => ({ ...f, agenda: e.target.value }))}
-                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[100px]"
-                />
-                <textarea
-                  placeholder="FAQ"
-                  value={editForm.faq}
-                  onChange={e => setEditForm(f => ({ ...f, faq: e.target.value }))}
-                  className="border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[100px]"
-                />
-              </div>
-
-              {/* Butoane */}
-              <div className="flex gap-3 justify-end pt-4 border-t">
-                <button type="button" className="text-gray-500 hover:text-gray-800 px-4 py-2 rounded-lg transition" onClick={() => setEditId(null)}>
-                  Anulează
-                </button>
-                <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition shadow">
-                  Salvează Modificările
-                </button>
-              </div>
-            </form>
-          </div>
-        )
-      }
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-4 rounded-b-[2.5rem]">
+              <button type="button" className="text-gray-600 hover:text-gray-900 px-8 py-4 rounded-2xl transition font-bold" onClick={() => setEditId(null)}>
+                Anulează
+              </button>
+              <button type="submit" className="bg-blue-600 text-white px-10 py-4 rounded-2xl shadow-xl shadow-blue-600/20 hover:shadow-2xl hover:bg-blue-700 transition-all font-bold transform hover:-translate-y-1">
+                Salvează Modificările
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <OpportunityGrid
         opportunities={filteredOpps}

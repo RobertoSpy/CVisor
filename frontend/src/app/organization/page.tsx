@@ -1,23 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import confetti from "canvas-confetti";
+import {
+  FaChartLine,
+  FaUserFriends,
+  FaStar,
+  FaTrophy,
+  FaMapMarkedAlt,
+  FaCalendarCheck,
+  FaFire,
+  FaArrowRight
+} from "react-icons/fa";
 
-import Stat from "../student/components/dashboard/Stat";
-import GentleBanner from "../student/components/dashboard/GentleBanner";
-import GoalRing from "../student/components/charts/GoalRing";
-import SparklineCard from "../student/components/charts/SparklineCard";
-import ActivityHeatmap from "../student/components/charts/ActivityHeatmap";
-import OrgPostsBar from "../student/components/charts/OrgPostsBar";
-import StreakHeroCard from "../student/components/streak/StreakHeroCard";
-import InstallPrompt from "../student/components/InstallPrompt";
+import {
+  PremiumStatCard,
+  GentleBanner,
+  GoalRing,
+  SparklineCard,
+  ActivityHeatmap,
+  OrgPostsBar,
+  StreakHeroCard,
+  InstallPrompt,
+} from "../components/shared";
 
-import useOrganizationData from "./hooks/useOrganizationData"; // [NEW] SWR Hook
+import useOrganizationData from "./hooks/useOrganizationData";
+import ApiClient from "../../lib/api/client";
 import {
   BADGES,
-  STREAK_MILESTONES,
   computeStreakAuto,
   derivePresenceMetrics,
   deriveRawPresence,
@@ -26,14 +38,43 @@ import {
   LS_KEYS,
 } from "../student/lib/streak";
 
+
+function DashboardHeader({ name }: { name: string }) {
+  const dateStr = new Date().toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long" });
+  return (
+    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+      <div>
+        <div className="flex items-center gap-2 text-sm font-bold text-blue-600 uppercase tracking-wider mb-2">
+          <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+          {dateStr}
+        </div>
+        <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
+          Salut, <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">{name || "Partener"}</span>! 👋
+        </h1>
+        <p className="text-lg text-gray-500 font-medium mt-2 max-w-xl">
+          Iată o privire de ansamblu asupra impactului pe care îl aveți în comunitate.
+        </p>
+      </div>
+      <Link href="/organization/map" className="group flex items-center gap-3 bg-white px-5 py-3 rounded-2xl shadow-lg shadow-blue-900/5 ring-1 ring-black/5 hover:ring-blue-500/30 transition-all">
+        <div className="h-10 w-10 rounded-full bg-blue-50 text-blue-600 grid place-items-center text-lg">
+          <FaMapMarkedAlt />
+        </div>
+        <div className="text-left">
+          <div className="text-xs font-bold text-gray-400 uppercase">Explorare</div>
+          <div className="font-bold text-gray-800 group-hover:text-blue-600 transition-colors">Mapa Progres</div>
+        </div>
+        <FaArrowRight className="text-gray-300 group-hover:text-blue-500 transition-colors ml-2" />
+      </Link>
+    </div>
+  );
+}
+
 export default function OrganizationHome() {
-  // ========== local state ==========
   const [celebrate, setCelebrate] = useState<number | null>(null);
   const [lastFreezeUsed, setLastFreezeUsed] = useState<string | null>(null);
-  const hasLoggedPageview = React.useRef(false);
+  const hasLoggedPageview = useRef(false);
   const [lsTick, setLsTick] = useState(0);
 
-  // [FIX] Use SWR Hook
   const {
     points,
     badges,
@@ -52,13 +93,11 @@ export default function OrganizationHome() {
     const cDate = new Date(createdAt);
     cDate.setHours(0, 0, 0, 0);
     return Object.fromEntries(
-      Object.entries(heatmapData).filter(
-        ([day, _]) => {
-          const d = new Date(day);
-          d.setHours(0, 0, 0, 0);
-          return d >= cDate;
-        }
-      )
+      Object.entries(heatmapData).filter(([day]) => {
+        const d = new Date(day);
+        d.setHours(0, 0, 0, 0);
+        return d >= cDate;
+      })
     );
   }, [heatmapData, createdAt]);
 
@@ -67,121 +106,71 @@ export default function OrganizationHome() {
     setLastRepairUsed(localStorage.getItem(LS_KEYS.lastRepairUsed));
   }, []);
 
-  // [FIX] Log Pageview for Streak Tracking
   useEffect(() => {
     if (hasLoggedPageview.current) return;
     hasLoggedPageview.current = true;
-
-    fetch("/api/organizations/stats/pageview", {
-      method: "POST",
-      credentials: "include",
-    })
-      .then((res) => res.json())
+    ApiClient.post<{ ok: boolean; points_awarded?: boolean }>("/api/organizations/stats/pageview", {})
       .then((data) => {
         if (data.ok) {
-          // Reload metrics after login logged
           mutatePresence();
           mutatePoints();
           if (data.points_awarded) {
             toast.success("Ai primit 5 puncte! 💎");
-            confetti({
-              particleCount: 100,
-              spread: 70,
-              origin: { y: 0.6 },
-              colors: ["#3b82f6", "#60a5fa", "#ffffff"]
-            });
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ["#3b82f6", "#60a5fa", "#ffffff"] });
           }
         }
       })
       .catch(console.error);
   }, [mutatePresence, mutatePoints]);
 
-  // ========== calcule ==========
   const presence = useMemo(() => computeStreakAuto(filteredHeatmap), [filteredHeatmap, lsTick]);
   const metrics = useMemo(() => derivePresenceMetrics(filteredHeatmap), [filteredHeatmap, lsTick]);
   const raw = useMemo(() => deriveRawPresence(filteredHeatmap), [filteredHeatmap]);
-
   const displayStreak = presence.currentStreak;
   const nextMilestone = useMemo(() => nextMilestoneFor(displayStreak), [displayStreak]);
   const streakGoalForUI = nextMilestone ?? 3;
   const WEEK_GOAL = 5;
 
-  // [MODIFIED] Badge Logic: Level is determined by badges, Points are currency.
-  // Unlock Next Level cost: 100 XP.
   useEffect(() => {
     if (!Array.isArray(badges)) return;
-
-    // 1. Determine current level from badges
-    const lvlBadges = badges
-      .filter((b) => b.startsWith("lvl"))
-      .map((b) => parseInt(b.replace("lvl", ""), 10))
-      .sort((a, b) => b - a);
-
+    const lvlBadges = badges.filter((b) => b.startsWith("lvl")).map((b) => parseInt(b.replace("lvl", ""), 10)).sort((a, b) => b - a);
     const currentLevel = lvlBadges.length > 0 ? lvlBadges[0] : 1;
-
-    // 2. Check if eligible for upgrade
-    // Cost formula: LVL 1->2 (100pts), LVL 2->3 (200pts), LVL 3->4 (300pts)...
-    // Cost = CurrentLevel * 100
     const upgradeCost = currentLevel * 100;
 
     if (points >= upgradeCost && currentLevel < 5) {
       const nextLevel = currentLevel + 1;
       const nextBadgeCode = `lvl${nextLevel}`;
-      const badge = BADGES.find((b) => b.code === nextBadgeCode);
 
-      if (!badge) return; // Should not happen if < 5
+      // We check if we already have it to avoid loop logic, though API is safe
+      if (badges.includes(nextBadgeCode)) return;
 
-      // STAGE 2 (ATOMIC): Perform transaction: Deduct Cost + Unlock Badge (Single Call)
-      fetch("/api/students/points/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          points_delta: -upgradeCost,
-          reason: `upgrade_lvl${nextLevel}`,
-        }),
+      ApiClient.post<{ points: number }>("/api/organizations/points/add", {
+        points_delta: -upgradeCost,
+        reason: `upgrade_lvl${nextLevel}`
       })
-        .then((res) => res.json())
         .then((d) => {
-          if (d.points !== undefined) { // Check for success response (points returned)
-            confetti({
-              particleCount: 200,
-              spread: 120,
-              origin: { y: 0.6 },
-              colors: ["#FFD700", "#FFA500", "#FFFFFF"],
-            });
-            toast.success(
-              `Nivel Upgradat! Ai cheltuit ${upgradeCost} XP și ai atins Nivelul ${nextLevel}! 🚀`,
-              {
-                duration: 6000,
-                icon: "🆙",
-              }
-            );
+          if (d.points !== undefined) {
+            confetti({ particleCount: 200, spread: 120, origin: { y: 0.6 }, colors: ["#FFD700", "#FFA500", "#FFFFFF"] });
+            toast.success(`Nivel Upgradat! Nivel ${nextLevel} atins! 🚀`, { duration: 6000, icon: "🆙" });
             mutatePoints();
             mutateBadges();
           }
         })
-        .catch((err) => {
-          console.error("Level up transaction failed", err);
-          toast.error("Eroare la upgrade-ul nivelului.");
-        });
+        .catch(console.error);
     }
   }, [points, badges, mutatePoints, mutateBadges]);
 
   const handleRepair = async () => {
     if (!presence.gapInfo) return;
-
     const daysToRepair = presence.gapInfo.length;
     const totalCost = daysToRepair * 20;
 
     if (points < totalCost) {
-      toast.error(`Nu ai suficiente puncte! Îți trebuie ${totalCost} XP pentru a repara ${daysToRepair} zile.`);
+      toast.error(`Necesari ${totalCost} XP pentru a repara ${daysToRepair} zile.`);
       return;
     }
 
     const toastId = toast.loading("Se repară streak-ul...");
-
-    // Generate array of dates to repair
     const dates: string[] = [];
     const start = new Date(presence.gapInfo.start);
     const end = new Date(presence.gapInfo.end);
@@ -190,117 +179,149 @@ export default function OrganizationHome() {
     }
 
     try {
-      // Repair each day
       for (const dateStr of dates) {
-        await fetch("/api/students/points/add", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            points_delta: -20,
-            reason: "repair",
-            repaired_date: dateStr
-          })
-        }).then(r => {
-          if (!r.ok) throw new Error("Failed to repair date: " + dateStr);
-          return r.json();
+        await ApiClient.post("/api/organizations/points/add", {
+          points_delta: -20,
+          reason: "repair",
+          repaired_date: dateStr
         });
       }
-
-      // Refresh via SWR
       mutatePoints();
       mutatePresence();
-
-      repairGap(presence.gapInfo, 20); // Local update helper
+      repairGap(presence.gapInfo, 20);
       setLsTick(t => t + 1);
       toast.dismiss(toastId);
       toast.success("Streak reparat cu succes! 🛠️");
-
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.dismiss(toastId);
-      toast.error("Eroare la reparare. Verifică punctele.");
+      toast.error("Eroare la reparare.");
     }
   };
 
-  const bestBadge = useMemo(() => {
-    if (!Array.isArray(badges) || badges.length === 0) return null;
-    const userBadges = BADGES.filter(b => badges.includes(b.code));
-    if (userBadges.length === 0) return null;
-    return userBadges.reduce((acc, b) => (b.streak > acc.streak ? b : acc), userBadges[0]);
-  }, [badges]);
+  const level = Array.isArray(badges) ? Math.max(1, ...badges.filter(b => b.startsWith('lvl')).map(b => parseInt(b.replace('lvl', '')) || 0)) : 1;
+
+  // Mock Org Name (Should fetch from profile context)
+  const orgName = ""; // Or fetch this if needed, for now empty string triggers "Partener"
 
   return (
-    <div className="space-y-8 mt-10">
-      {/* PWA Install FAB */}
-      <InstallPrompt />
+    <div className="min-h-screen bg-transparent pb-20 overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-12">
+        <InstallPrompt />
 
-      {/* statistici rapide */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-        <Stat title="Puncte" value={points} />
-        <Stat title="Badge-uri" value={Array.isArray(badges) ? badges.length : 0} />
-        <Stat
-          title="Nivel Curent"
-          value={(() => {
-            const maxLvl = Array.isArray(badges)
-              ? Math.max(1, ...badges.filter(b => b.startsWith('lvl')).map(b => parseInt(b.replace('lvl', '')) || 0))
-              : 1;
-            return `LVL ${maxLvl}`;
-          })()}
-        />
-        <Link
-          href="/organization/map"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-900 to-blue-500 text-white hover:opacity-90 px-4 py-2 rounded transition shadow-md"
-        >
-          🗺️ Mapa progres
-        </Link>
-      </div>
-
-      {/* gamification row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="space-y-2">
-          <StreakHeroCard
-            currentStreak={displayStreak}
-            bestStreak={presence.bestStreak}
-            goal={streakGoalForUI}
-            todayVisited={raw.todayVisited}
-            nextMilestone={nextMilestone}
-            celebrate={celebrate}
-            onCloseCelebrate={() => setCelebrate(null)}
+        {/* Stats Grid - 2 cols on mobile for compactness */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 animate-in slide-in-from-bottom-4 duration-500">
+          <PremiumStatCard
+            title="Puncte"
+            value={points}
+            icon={<FaStar />}
+            color="amber"
+            subtext={`Next: ${level * 100}`}
           />
-          {presence.usedAutoFreezeNow && (
-            <GentleBanner>
-              Bine că ai revenit! 💛 Ți-am „înghețat” streak-ul pentru o zi lipsă — se mai întâmplă.
-            </GentleBanner>
-          )}
-          {presence.gapInfo && (
-            <GentleBanner>
-              Ai avut o pauză de <b>{presence.gapInfo.length}</b> zile ({presence.gapInfo.start} → {presence.gapInfo.end}).{" "}
-              Poți repara streakul:
-              <button
-                onClick={handleRepair}
-                className="ml-2 px-2 py-1 rounded-md bg-amber-600 text-white hover:bg-amber-700 transition"
-              >
-                Repară pentru 20 puncte
-              </button>
-            </GentleBanner>
-          )}
-          <div className="text-[11px] text-gray-500">
-            Ultimul auto-freeze: {lastFreezeUsed ?? "—"}
-            <span className="text-gray-400"> • </span>
-            Ultimul repair: {lastRepairUsed ?? "—"}
+
+          <PremiumStatCard
+            title="Nivel"
+            value={`LVL ${level}`}
+            icon={<FaTrophy />}
+            color="indigo"
+          />
+
+          <PremiumStatCard
+            title="Badge-uri"
+            value={Array.isArray(badges) ? badges.length : 0}
+            icon={<FaCalendarCheck />}
+            color="pink"
+          />
+
+          <PremiumStatCard
+            title="Voluntari"
+            value="--"
+            icon={<FaUserFriends />}
+            color="emerald"
+          />
+        </div>
+
+        {/* Map Button - Clearly visible now */}
+        <Link href="/organization/map" className="block w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 rounded-2xl shadow-lg shadow-blue-500/20 flex items-center justify-between group hover:scale-[1.01] transition-transform">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-full bg-white/20 grid place-items-center text-2xl">🗺️</div>
+            <div>
+              <div className="font-bold text-lg">Harta Progresului</div>
+              <div className="text-blue-100 text-sm">Vezi nivelul tău și recompensele următoare</div>
+            </div>
+          </div>
+          <div className="bg-white text-blue-600 px-4 py-2 rounded-xl font-bold text-sm group-hover:bg-blue-50 transition-colors">
+            Deschide Harta →
+          </div>
+        </Link>
+
+        {/* Gamification & Heatmap Row */}
+        <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
+          <div className="lg:col-span-1 space-y-4 md:space-y-6">
+            {/* Streak Card - Light Theme */}
+            <div className="bg-white rounded-[2rem] border-2 border-indigo-50 p-1 shadow-lg shadow-indigo-500/5 overflow-hidden">
+              {/* Pass light theme prop or style wrapper */}
+              <div className="p-4 md:p-6">
+                <StreakHeroCard
+                  currentStreak={displayStreak}
+                  bestStreak={presence.bestStreak}
+                  goal={streakGoalForUI}
+                  todayVisited={raw.todayVisited}
+                  nextMilestone={nextMilestone}
+                  celebrate={celebrate}
+                  onCloseCelebrate={() => setCelebrate(null)}
+                />
+              </div>
+            </div>
+
+            {/* Notifications / Banners - Compact */}
+            <div className="space-y-3">
+              {presence.usedAutoFreezeNow && (
+                <GentleBanner>
+                  ❄️ <b>Streak Înghețat!</b> Salvat pentru azi.
+                </GentleBanner>
+              )}
+              {presence.gapInfo && (
+                <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100 flex items-center justify-between">
+                  <div className="text-sm text-amber-800">
+                    <p className="font-bold">Streak pierdut ({presence.gapInfo.length} zile)</p>
+                  </div>
+                  <button onClick={handleRepair} className="bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm">
+                    Repară (20 XP)
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="lg:col-span-2 space-y-4 md:space-y-6">
+            {/* Heatmap Card */}
+            <div className="bg-white rounded-[2rem] p-6 border border-gray-100 shadow-lg shadow-gray-200/50">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Activitate</h3>
+                  <p className="text-gray-400 text-xs font-medium">Consistența în timp</p>
+                </div>
+                {/* Year tag removed for space */}
+              </div>
+              <ActivityHeatmap data={heatmapData} />
+            </div>
+
+            {/* Charts Grid */}
+            <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+              <div className="bg-white rounded-[2rem] p-5 border border-gray-100 shadow-md">
+                <h4 className="font-bold text-gray-800 mb-4 px-1 text-sm">Postări / Săptămână</h4>
+                <OrgPostsBar data={orgBars} />
+              </div>
+              <div className="bg-white rounded-[2rem] p-5 border border-gray-100 shadow-md flex flex-col justify-center">
+                <h4 className="font-bold text-gray-800 mb-4 px-1 text-sm">Obiectiv Săptămânal</h4>
+                <div className="flex-1 grid place-items-center py-2">
+                  <GoalRing current={raw.weekCount} target={WEEK_GOAL} />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <GoalRing current={raw.weekCount} target={WEEK_GOAL} />
-        <SparklineCard values={raw.last14Flags} />
-      </div>
-
-      {/* grafice */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ActivityHeatmap data={heatmapData} />
-        <OrgPostsBar data={orgBars} />
       </div>
     </div>
   );
-
 }

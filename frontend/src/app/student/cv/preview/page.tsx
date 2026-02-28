@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import ApiClient from "../../../../lib/api/client";
 
 type SocialLinks = { github?: string; linkedin?: string; website?: string };
 type EducationItem = { id: string; school: string; degree: string; start: string; end?: string; details?: string };
@@ -30,13 +31,8 @@ export default function CVPreviewPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/users/me", { credentials: "include" });
-        if (res.ok) {
-          const json = await res.json();
-          setData(json as ProfilePayload);
-        } else {
-          throw new Error("fallback");
-        }
+        const json = await ApiClient.get<ProfilePayload>("/api/users/me");
+        setData(json);
       } catch {
         // fallback localStorage
         const raw = typeof window !== "undefined" ? localStorage.getItem("cvisor_profile") : null;

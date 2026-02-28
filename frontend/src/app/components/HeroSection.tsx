@@ -1,4 +1,4 @@
-"use client";
+// Server Component — no "use client" for SEO
 import Image from "next/image";
 
 export default function HeroSection() {
@@ -34,7 +34,7 @@ export default function HeroSection() {
             <div className="absolute inset-0 bg-blue-400 rounded-full filter blur-[120px] opacity-30"></div>
             <Image
               src="/albastru.svg"
-              alt="Lightbulb"
+              alt="CVISOR Logo - Platforma de oportunități pentru studenți"
               fill
               className="object-contain drop-shadow-2xl"
               priority

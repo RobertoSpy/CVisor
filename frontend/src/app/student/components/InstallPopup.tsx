@@ -25,10 +25,35 @@ interface InstallPopupProps {
 
 export default function InstallPopup({ isOpen, onClose }: InstallPopupProps) {
   const [mounted, setMounted] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstructions, setShowInstructions] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      // Auto-open if appropriate? No, wait for user action.
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+        onClose();
+      }
+    } else {
+      // No prompt available (iOS or Desktop without support), show instructions
+      setShowInstructions(true);
+    }
+  };
 
   if (!mounted || !isOpen) return null;
 
@@ -59,46 +84,57 @@ export default function InstallPopup({ isOpen, onClose }: InstallPopupProps) {
           </div>
 
           <h3 className="text-xl font-bold text-gray-900">Instalează CVisor</h3>
-          <p className="text-sm text-gray-500 max-w-[260px]">
-            Din cauza restricțiilor Apple, instalarea automată nu este posibilă. Urmează pașii:
-          </p>
 
-          <div className="w-full h-px bg-gray-100 my-2" />
-
-          {/* Step 1: Share */}
-          <div className="flex items-center gap-4 w-full text-left p-3 rounded-xl hover:bg-blue-50/50 transition-colors">
-            <div className="flex-shrink-0 w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-blue-600 animate-pulse">
-              <ShareIcon />
+          {!showInstructions && deferredPrompt && (
+            <div className="w-full">
+              <p className="text-sm text-gray-500 mb-4">
+                Instalează aplicația pentru o experiență mai bună, notificări și acces rapid.
+              </p>
+              <button
+                onClick={handleInstallClick}
+                className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                📲 Instalează Acum
+              </button>
+              <button
+                onClick={() => setShowInstructions(true)}
+                className="mt-3 text-xs text-gray-400 font-medium hover:text-blue-500 underline"
+              >
+                Nu merge butonul? Arată instrucțiuni manuale
+              </button>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-gray-900">1. Apasă butonul "Share"</p>
-              <p className="text-xs text-gray-500">În bara de jos a browserului</p>
-            </div>
-          </div>
+          )}
 
-          {/* Step 2: Add to Home */}
-          <div className="flex items-center gap-4 w-full text-left p-3 rounded-xl hover:bg-blue-50/50 transition-colors">
-            <div className="flex-shrink-0 w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-700">
-              <PlusSquareIcon />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-gray-900">2. Alege "Add to Home Screen"</p>
-              <p className="text-xs text-gray-500">Derulează în jos dacă e necesar</p>
-            </div>
-          </div>
+          {/* Fallback Instructions (iOS/Desktop Manual) */}
+          {(showInstructions || !deferredPrompt) && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 w-full">
+              <p className="text-sm text-gray-500 mb-4 px-2">
+                Nu putem instala automat. Te rugăm să urmezi pașii de mai jos:
+              </p>
 
-          {/* Animating Arrow pointing down to browser chrome */}
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full pb-8 pointer-events-none">
-            {/* This arrow will conceptually point to the bottom of the screen where Safari share button is */}
-          </div>
-        </div>
+              <div className="w-full h-px bg-gray-100 my-2" />
 
-        {/* Visual Cue Animation */}
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center animate-bounce opacity-50 mt-4">
-          <span className="text-xs font-medium text-blue-500 mb-1">Butonul e aici</span>
-          <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-          </svg>
+              <div className="flex items-center gap-4 w-full text-left p-3 rounded-xl hover:bg-blue-50/50 transition-colors">
+                <div className="flex-shrink-0 w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-blue-600 animate-pulse">
+                  <ShareIcon />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-900">1. Apasă butonul "Share" / "Menu"</p>
+                  <p className="text-xs text-gray-500">De obicei în bara de jos sau sus-dreapta</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 w-full text-left p-3 rounded-xl hover:bg-blue-50/50 transition-colors">
+                <div className="flex-shrink-0 w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-700">
+                  <PlusSquareIcon />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-900">2. Alege "Add to Home Screen"</p>
+                  <p className="text-xs text-gray-500">"Adaugă la Ecranul Principal"</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>,

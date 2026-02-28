@@ -1,142 +1,164 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { MAP_NODES } from "../lib/streak";
+import { FaLock, FaCheck, FaStar, FaQuestion, FaFire } from "react-icons/fa";
+import { MAP_NODES, BADGES } from "../lib/streak";
+import ApiClient from "../../../lib/api/client";
 
 export default function StudentMapPage() {
-  const [currentStreak, setCurrentStreak] = useState(0);
-  const [maxBadgeStreak, setMaxBadgeStreak] = useState(0);
+  const [currentPoints, setCurrentPoints] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Fetch badges to determine max unlocked streak
-    fetch("/api/students/badges", {
-      credentials: "include"
-    })
-      .then(r => r.json())
+    // Fetch points to determine progress on the map
+    ApiClient.get<{ points?: number }>("/api/students/points")
       .then(d => {
-        if (d.badges && Array.isArray(d.badges)) {
-          const maxBadge = d.badges
-            .filter((b: string) => b.startsWith("streak_"))
-            .map((b: string) => parseInt(b.replace("streak_", "")))
-            .sort((a: number, b: number) => b - a)[0];
-          if (maxBadge) setMaxBadgeStreak(maxBadge);
-        }
-      });
-
-    // 2. Fetch live presence to get current streak
-    fetch("/api/students/stats/presence", { credentials: "include" })
-      .then(r => r.json())
-      .then(d => {
-        // Logică simplificată streak: ne uităm la zile consecutive mergând înapoi de la azi
-        if (d.map) {
-          const today = new Date().toISOString().slice(0, 10);
-          let strk = 0;
-          // verificăm 365 zile în urmă
-          for (let i = 0; i < 365; i++) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().slice(0, 10);
-            if (d.map[dateStr] > 0) {
-              strk++;
-            } else {
-              // dacă e azi și nu am intrat încă, nu rupem streak-ul dacă ieri am intrat
-              if (i === 0) continue;
-              break;
-            }
-          }
-          setCurrentStreak(strk);
-        }
+        if (d.points !== undefined) setCurrentPoints(d.points);
+        setLoading(false);
       })
-      .catch(e => console.error("Map streak fetch err:", e));
+      .catch((e) => {
+        console.error("Map points fetch err:", e);
+        setLoading(false);
+      });
   }, []);
 
-  // HIGHEST WATERMARK LOGIC:
-  // Progresul pe hartă e dat de Maximul dintre (Streak Curent) și (Cel mai mare Badge).
-  // Dacă pierzi streak-ul, rămâi la nivelul badge-ului.
-  // Dacă faci un nou record, avansezi.
-  const effectiveStreak = Math.max(currentStreak, maxBadgeStreak);
+  // Merge MAP_NODES with BADGES data for rich UI
+  const richNodes = useMemo(() => {
+    return MAP_NODES.map(node => {
+      const badgeInfo = BADGES.find(b => b.points === node.points);
+      return {
+        ...node,
+        icon: badgeInfo?.emoji,
+        description: badgeInfo?.description,
+        feature: badgeInfo?.feature
+      };
+    });
+  }, []);
+
+  const MAX_VAL = richNodes[richNodes.length - 2]?.points || 1000; // Use second to last as max (last is SOON)
+  const progressPercent = Math.min(100, (currentPoints / MAX_VAL) * 100);
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-4 md:p-8 flex flex-col items-center relative overflow-hidden">
-      {/* Background decoration - subtle */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-gray-200/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-gray-200/20 rounded-full blur-3xl" />
+    <div className="min-h-screen bg-[#f8fafc] overflow-x-hidden relative">
+      {/* Background Elements */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-indigo-100/40 rounded-full blur-3xl translate-x-1/3 translate-y-1/3" />
       </div>
 
-      <div className="max-w-3xl w-full z-10">
-        <div className="flex items-center justify-between mb-12">
-          <Link href="/student" className="flex items-center gap-2 text-gray-600 hover:text-primary transition font-medium bg-white/80 backdrop-blur px-4 py-2 rounded-full shadow-sm">
-            <span>←</span> Înapoi la Dashboard
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+          <Link href="/student" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition font-bold bg-white px-4 py-2 rounded-full border border-gray-200 hover:border-blue-200 shadow-sm">
+            <span>←</span> Dashboard
           </Link>
-          <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">Mapa Progresului</h1>
+          <div className="flex items-center gap-3">
+            <div className="text-right hidden sm:block">
+              <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">Puncte Totale</div>
+              <div className="text-lg font-black text-blue-600">{currentPoints} Puncte</div>
+            </div>
+            <div className="h-10 w-10 rounded-full bg-blue-50 text-blue-500 grid place-items-center border-2 border-white shadow-md">
+              <FaStar />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Map Container */}
+      <div className="max-w-xl mx-auto px-4 py-20 relative z-10">
+
+        {/* Path */}
+        <div className="absolute top-20 bottom-32 left-1/2 -translate-x-1/2 w-4 bg-gray-200 rounded-full -z-10">
+          <div
+            className="w-full bg-blue-500 rounded-full transition-all duration-1000"
+            style={{ height: `${progressPercent}%` }}
+          />
         </div>
 
-        <div className="relative flex flex-col items-center space-y-12 py-10 pb-32">
-          {/* Connecting Line */}
-          <div className="absolute top-10 bottom-10 w-2 bg-gray-200 -z-10 rounded-full overflow-hidden">
-            <div
-              className="w-full bg-gradient-to-b from-green-400 to-blue-500 transition-all duration-1000"
-              style={{ height: `${Math.min(100, (effectiveStreak / 150) * 100)}%` }}
-            />
-          </div>
+        {/* Nodes */}
+        <div className="flex flex-col gap-24 relative">
+          {richNodes.map((node, index) => {
+            if (node.type === 'soon') return null;
 
-          {MAP_NODES.map((node, index) => {
-            const isUnlocked = effectiveStreak >= node.streak;
-            const isNext = !isUnlocked && (index === 0 || effectiveStreak >= MAP_NODES[index - 1].streak);
-            const isBadge = node.type === "badge";
-            const isSoon = node.type === "soon";
+            const isUnlocked = currentPoints >= node.points;
+            const isNext = !isUnlocked && (index === 0 || currentPoints >= richNodes[index - 1].points);
+            const isRight = index % 2 === 0;
 
-            if (isSoon) {
-              return (
-                <div key={index} className="relative flex items-center justify-center w-24 h-24 rounded-full bg-gray-100 border-4 border-gray-200 text-gray-400 shadow-inner">
-                  <span className="font-bold text-sm">SOON</span>
-                </div>
-              )
-            }
+            const sideClass = isRight ? "translate-x-12 sm:translate-x-24" : "-translate-x-12 sm:-translate-x-24";
 
             return (
-              <div
-                key={index}
-                className={`relative group flex items-center justify-center transition-all duration-500 transform 
-                  ${isBadge ? "w-28 h-28 border-4" : "w-16 h-16 border-2"}
-                  ${isUnlocked
-                    ? "bg-gradient-to-br from-blue-500 to-indigo-600 border-white text-white scale-100 shadow-xl"
-                    : isNext
-                      ? "bg-white border-blue-400 text-blue-400 animate-pulse scale-105 shadow-lg"
-                      : "bg-gray-100 border-gray-200 text-gray-300 grayscale blur-[1px] opacity-70 scale-95"
-                  }
-                  rounded-full
-                `}
-              >
-                <div className="text-center relative z-10">
-                  <div className={`${isBadge ? "text-2xl" : "text-lg"} font-black`}>{node.streak}</div>
-                  {isBadge && <div className="text-[10px] uppercase font-bold tracking-wider">Zile</div>}
+              <div key={index} className={`flex ${isRight ? 'justify-end' : 'justify-start'} relative min-h-[120px]`}>
+                <div className={`
+                    bg-white relative transition-all duration-500 hover:scale-105 z-10
+                    ${node.type === 'badge' ? 'p-6 rounded-[2rem] w-56' : 'p-3 rounded-2xl w-32'}
+                    ${isUnlocked ? 'shadow-xl shadow-blue-500/10 border-blue-100' : 'shadow-sm grayscale border-gray-100 opacity-70'}
+                    border
+                    flex flex-col items-center text-center
+                    ${node.type === 'badge' ? sideClass : 'mx-auto'} 
+                `}>
+
+                  {node.type === 'badge' && (
+                    <div className={`absolute top-1/2 -z-10 h-1 w-24 bg-gray-200 ${isRight ? 'right-full' : 'left-full'}`}>
+                      <div className={`h-full bg-blue-500 transition-all duration-1000 ${isUnlocked ? 'w-full' : 'w-0'}`} />
+                    </div>
+                  )}
+
+                  <div className={`
+                      h-16 w-16 rounded-2xl grid place-items-center text-3xl mb-2 shadow-inner
+                      ${isUnlocked ? 'bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600' : 'bg-gray-100 text-gray-400'}
+                    `}>
+                    {node.icon || (isUnlocked ? <FaCheck className="text-xl" /> : <FaLock className="text-xl" />)}
+                  </div>
+
+                  <div className="font-bold text-gray-800 leading-tight">
+                    {node.label}
+                  </div>
+                  <div className="text-xs font-semibold text-gray-400 mt-1">
+                    {node.points} Puncte
+                  </div>
+
+                  {(node.feature && node.type === 'badge') && (
+                    <div className="mt-2 text-[10px] text-gray-500 font-medium bg-gray-50 px-2 py-1 rounded-lg">
+                      {node.feature}
+                    </div>
+                  )}
+
+                  {isNext && (
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-xl animate-bounce whitespace-nowrap border-2 border-white">
+                      📍 ȚINTA TA
+                    </div>
+                  )}
                 </div>
 
-                {/* Label Tooltip/Badge */}
-                <div className={`absolute left-full ml-6 px-4 py-2 rounded-xl shadow-md whitespace-nowrap font-bold text-sm transition-all duration-300 z-20 ${isUnlocked
-                  ? "bg-white text-gray-800 translate-x-0 opacity-100"
-                  : "bg-gray-100 text-gray-400 -translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0"
-                  }`}>
-                  {node.label}
-                  {isUnlocked && <span className="ml-2 text-green-500">✓</span>}
-                  <div className={`absolute top-1/2 -left-2 w-4 h-4 transform -translate-y-1/2 rotate-45 ${isUnlocked ? "bg-white" : "bg-gray-100"}`}></div>
-                </div>
+                {node.type === 'step' && (
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white border-4 border-gray-100 rounded-full z-20 shadow-sm flex items-center justify-center">
+                    {isUnlocked && <div className="w-3 h-3 bg-blue-500 rounded-full" />}
+                  </div>
+                )}
+
               </div>
             );
           })}
         </div>
 
-        {/* Fog Effect Overlay */}
-        <div className="fixed bottom-0 left-0 w-full h-1/3 pointer-events-none z-20 bg-gradient-to-t from-gray-200/90 via-gray-100/60 to-transparent backdrop-blur-[2px]"></div>
+        {/* End Mystery Node */}
+        <div className="mt-24 flex justify-center pb-20 relative">
+          <div className="absolute -top-24 bottom-20 left-1/2 -translate-x-1/2 w-4 bg-gray-200 rounded-full -z-10" />
 
-        <div className="text-center mt-16 p-6 bg-white/60 backdrop-blur-md rounded-2xl shadow-sm border border-white/50 relative z-30">
-          <p className="text-gray-600 font-medium">
-            Continuă să intri zilnic pentru a debloca noi nivele și a elimina "ceața" de pe hartă! 🌫️
-          </p>
+          <div className={`
+             relative bg-gradient-to-b from-indigo-500 to-purple-600 p-1 rounded-full 
+             grayscale opacity-50
+           `}>
+            <div className="bg-white rounded-full p-8 border-4 border-indigo-200">
+              <div className="text-6xl text-indigo-400"><FaQuestion /></div>
+            </div>
+            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 text-center whitespace-nowrap">
+              <div className="font-black text-gray-800 uppercase tracking-widest text-sm">LEGENDARY</div>
+              <div className="font-bold text-indigo-400">Soon</div>
+            </div>
+          </div>
         </div>
+
       </div>
     </div>
   );

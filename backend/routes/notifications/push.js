@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../../db');
 const webpush = require('web-push');
+const { validate, pushSubscribeSchema, pushUnsubscribeSchema } = require('../../middleware/validation');
 
 // Configurare web-push
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -15,16 +16,9 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 }
 
 // POST /subscribe - Salvează subscripția
-router.post('/subscribe', async (req, res) => {
+router.post('/subscribe', validate(pushSubscribeSchema), async (req, res) => {
   const { subscription } = req.body;
-  // req.user este populat dacă folosim middleware verifyToken pe ruta principală, 
-  // dar pentru PWA generic poate fi anonim. 
-  // Totuși, vrem să trimitem la studenți.
   const userId = req.user ? req.user.id : null;
-
-  if (!subscription || !subscription.endpoint) {
-    return res.status(400).json({ error: 'Invalid subscription' });
-  }
 
   try {
     await pool.query(
@@ -42,7 +36,7 @@ router.post('/subscribe', async (req, res) => {
 });
 
 // POST /unsubscribe - Șterge subscripția
-router.post('/unsubscribe', async (req, res) => {
+router.post('/unsubscribe', validate(pushUnsubscribeSchema), async (req, res) => {
   const { endpoint } = req.body;
   try {
     await pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [endpoint]);

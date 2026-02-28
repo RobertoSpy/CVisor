@@ -116,18 +116,7 @@ export default function ExploreDetailPage() {
                 : <span className="italic text-gray-400">-</span>}
             </div>
           </div>
-          <div className="bg-white/70 rounded-xl shadow-sm p-5 border border-primary/10 animate-fade-in">
-            <h3 className="text-primary font-bold mb-2 flex items-center gap-2"><FaStar className="text-yellow-500" /> Reviews</h3>
-            <div className="text-gray-700 text-sm">
-              {opp.reviews
-                ? Array.isArray(opp.reviews)
-                  ? opp.reviews.map((item: any, i: number) => <div key={i} className="mb-1">{item.text ?? JSON.stringify(item)}</div>)
-                  : typeof opp.reviews === "object"
-                    ? opp.reviews.text ?? JSON.stringify(opp.reviews)
-                    : opp.reviews
-                : <span className="italic text-gray-400">-</span>}
-            </div>
-          </div>
+
         </div>
 
         {/* Galerie */}

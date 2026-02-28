@@ -1,27 +1,56 @@
 "use client";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
+import ApiClient from "../../lib/api/client";
+import usePushNotifications from "../../hooks/usePushNotifications";
+
+// Page title configuration
+const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
+  "/student": { title: "", subtitle: "Bine ai venit în zona studentului." },
+  "/student/opportunities": { title: "Explorează Oportunități", subtitle: "Descoperă ce e nou pentru tine." },
+  "/student/profile": { title: "Profilul Tău", subtitle: "Gestionează informațiile contului tău." },
+  "/student/organizations": { title: "Organizații", subtitle: "Descoperă organizațiile din platformă." },
+  "/student/map": { title: "Harta Progresului", subtitle: "Continuă aventura ta de voluntariat." },
+  "/student/cv": { title: "CV-ul Tău", subtitle: "Construiește-ți CV-ul profesional." },
+  "/student/applications": { title: "Aplicațiile Tale", subtitle: "Urmărește statusul aplicațiilor." },
+};
+
+function getPageInfo(pathname: string, name: string) {
+  // Exact match first
+  const exact = PAGE_TITLES[pathname];
+  if (exact) {
+    return {
+      title: exact.title || (name ? `Salut, ${name}!` : "Salut!"),
+      subtitle: exact.subtitle,
+    };
+  }
+  // Fallback for deep routes (e.g. /student/opportunities/[id])
+  const parentPath = pathname.split("/").slice(0, 3).join("/");
+  const parent = PAGE_TITLES[parentPath];
+  if (parent) {
+    return {
+      title: parent.title,
+      subtitle: parent.subtitle,
+    };
+  }
+  return { title: name ? `Salut, ${name}!` : "Salut!", subtitle: "" };
+}
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [studentName, setStudentName] = useState("");
 
   useEffect(() => {
-    // Fetch user profile to get the name
-    fetch("/api/users/me", { credentials: "include" })
-      .then(res => {
-        if (res.ok) return res.json();
-        throw new Error("Not logged in");
-      })
+    ApiClient.get<{ name?: string }>("/api/users/me")
       .then(data => {
         if (data.name) setStudentName(data.name);
       })
       .catch(() => {
-        // If not logged in, clear local storage and redirect to home
         localStorage.removeItem("role");
         localStorage.removeItem("email");
         router.push("/");
@@ -29,14 +58,16 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
   }, []);
 
   function handleLogout() {
-    fetch("/api/auth/logout", { method: "POST", credentials: "include" })
-      .then(() => {
-        localStorage.removeItem("token"); // Cleanup just in case
+    ApiClient.post("/api/auth/logout", {})
+      .finally(() => {
+        localStorage.removeItem("token");
         localStorage.removeItem("role");
         localStorage.removeItem("email");
         router.push("/");
       });
   }
+
+  const pageInfo = getPageInfo(pathname, studentName);
 
   return (
     <div className="min-h-screen bg-neutral relative">
@@ -74,7 +105,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                 <Link
                   key={href}
                   href={href}
-                  className="hover:text-white hover:bg-white/10 px-3 py-1.5 rounded-lg transition-all"
+                  className={`hover:text-white hover:bg-white/10 px-3 py-1.5 rounded-lg transition-all ${pathname === href ? "bg-white/15 text-white" : ""}`}
                   onClick={() => setMenuOpen(false)}
                 >
                   {label}
@@ -95,15 +126,17 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      {/* Hero Section with Greeting - Same color as navbar */}
+      {/* Hero Section with contextual title */}
       <div className="w-full bg-gradient-to-r from-blue-900 via-blue-700 to-blue-500 shadow-md">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 text-white">
           <h1 className="text-2xl md:text-3xl font-bold">
-            {studentName ? `Salut, ${studentName}!` : "Salut!"}
+            {pageInfo.title}
           </h1>
-          <p className="text-blue-100 mt-1 opacity-90">
-            Bine ai venit în zona studentului.
-          </p>
+          {pageInfo.subtitle && (
+            <p className="text-blue-100 mt-1 opacity-90">
+              {pageInfo.subtitle}
+            </p>
+          )}
         </div>
       </div>
 
@@ -115,7 +148,6 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
   );
 }
 
-import usePushNotifications from "../../hooks/usePushNotifications";
 
 function NotificationButton() {
   const { isSubscribed, subscribe, permission } = usePushNotifications();

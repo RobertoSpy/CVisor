@@ -4,27 +4,34 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 // ===================== Types =====================
 type SocialLinks = { github?: string; linkedin?: string; website?: string; instagram?: string };
-
 type EducationItem = { id: string; school: string; degree: string; start: string; end?: string; details?: string };
-
 type ExperienceItem = { id: string; role: string; company: string; start: string; end?: string; details?: string };
-
 type Media = { id: string; kind: "image" | "video"; url: string; caption?: string };
-
 type OppRef = { id: string; title: string; role?: string; org?: string; date?: string; tags?: string[]; cover?: string; media?: Media[]; rating?: number; testimonial?: string; certificateUrl?: string };
 
-type ProfilePayload = { name: string; headline?: string; bio?: string; avatarDataUrl?: string; location?: string; skills: string[]; social: SocialLinks; education: EducationItem[]; experience: ExperienceItem[]; portfolioMedia: Media[]; opportunityRefs: OppRef[] };
+type ProfilePayload = {
+  name: string;
+  headline?: string;
+  bio?: string;
+  avatarDataUrl?: string;
+  location?: string;
+  skills: string[];
+  social: SocialLinks;
+  education: EducationItem[];
+  experience: ExperienceItem[];
+  portfolioMedia: Media[];
+  opportunityRefs: OppRef[];
+};
 
 // ===================== Utils =====================
 const uid = () => Math.random().toString(36).slice(2, 9);
-const cls = (...x: Array<string | false | undefined>) => x.filter(Boolean).join(" ");
+const cls = (...x: Array<string | false | undefined | null>) => x.filter(Boolean).join(" ");
 
 // Progress helpers
 function pctProfile(p: ProfilePayload) {
   const checks = [!!p.name, !!p.headline, !!p.bio, p.skills.length > 0, p.education.length > 0, p.experience.length > 0, p.opportunityRefs.length > 0, p.portfolioMedia.length > 0];
   return Math.round(checks.reduce((a, b) => a + (b ? 1 : 0), 0) / checks.length * 100);
 }
-function xpOf(p: ProfilePayload) { return p.skills.length * 10 + p.opportunityRefs.length * 20 + p.portfolioMedia.length * 5 + (p.education.length + p.experience.length) * 8; }
 
 // Debounce helper
 function useDebouncedCallback<T extends any[]>(fn: (...args: T) => void, delay = 600) {
@@ -32,79 +39,104 @@ function useDebouncedCallback<T extends any[]>(fn: (...args: T) => void, delay =
   return (...args: T) => { if (t.current) clearTimeout(t.current); t.current = setTimeout(() => fn(...args), delay); };
 }
 
-// ===================== Minimal UI atoms =====================
-function Button({ children, className, onClick, disabled, type = "button" }: { children: React.ReactNode; className?: string; onClick?: () => void; disabled?: boolean; type?: "button" | "submit" }) {
+// ===================== UI Atoms (Premium) =====================
+function Button({ children, className, onClick, disabled, type = "button", variant = "primary" }: { children: React.ReactNode; className?: string; onClick?: () => void; disabled?: boolean; type?: "button" | "submit"; variant?: "primary" | "secondary" | "ghost" }) {
+  const base = "px-6 py-3 rounded-xl font-bold transition-all transform active:scale-95 shadow-sm flex items-center justify-center gap-2";
+  const vars = {
+    primary: "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/20 hover:shadow-lg hover:-translate-y-0.5",
+    secondary: "bg-gray-100 text-gray-700 hover:bg-gray-200",
+    ghost: "bg-transparent text-gray-500 hover:text-gray-900 hover:bg-gray-50",
+  };
   return (
-    <button type={type} onClick={onClick} disabled={disabled} className={cls("px-4 py-2.5 rounded-xl text-sm shadow-sm transition inline-flex items-center justify-center", disabled ? "bg-black/10 text-gray-500 cursor-not-allowed" : "bg-primary text-white hover:bg-accent", className)}>{children}</button>
+    <button type={type} onClick={onClick} disabled={disabled} className={cls(base, vars[variant], disabled && "opacity-50 cursor-not-allowed pointer-events-none", className)}>
+      {children}
+    </button>
   );
 }
-function GhostButton({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
-  return <button type="button" onClick={onClick} className="px-3 py-2 rounded-xl text-sm bg-black/5 hover:bg-black/10">{children}</button>;
-}
-function Field({ label, children, required = false, hint, error }: { label: string; children: React.ReactNode; required?: boolean; hint?: string; error?: string }) {
+
+function Field({ label, children, required, hint, error }: { label: string; children: React.ReactNode; required?: boolean; hint?: string; error?: string }) {
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-1">
-        <label className="text-sm text-gray-800 font-medium">{label}</label>
-        {required && <span className="text-[11px] px-1 py-0.5 rounded bg-amber-100 text-amber-700">obligatoriu</span>}
+    <div className="group">
+      <div className="flex items-center justify-between mb-1.5 pl-1">
+        <label className="text-sm font-semibold text-gray-700 group-focus-within:text-blue-600 transition-colors flex items-center gap-1.5">
+          {label}
+          {required && <span className="h-1.5 w-1.5 rounded-full bg-red-400" title="Obligatoriu" />}
+        </label>
+        {hint && <span className="text-[11px] text-gray-400 font-medium tracking-wide uppercase">{hint}</span>}
       </div>
       {children}
-      {hint && <p className="text-[12px] text-gray-500 mt-1">{hint}</p>}
-      {error && <p className="text-[12px] text-accent mt-1">{error}</p>}
+      {error && <p className="text-xs text-red-500 mt-1.5 pl-1 font-medium animate-in slide-in-from-top-1">{error}</p>}
     </div>
   );
 }
+
 function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={cls("w-full rounded-xl border border-black/10 bg-white/90 px-3.5 py-3 outline-none focus:ring-2 focus:ring-primary/30 transition placeholder:text-gray-400", props.className)} />;
+  return <input {...props} className={cls("w-full rounded-2xl bg-gray-50 border-transparent px-5 py-4 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-gray-800 placeholder:text-gray-400 hover:bg-gray-100/80 shadow-inner shadow-gray-200/50", props.className)} />;
 }
+
 function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={cls("w-full rounded-xl border border-black/10 bg-white/90 px-3.5 py-3 min-h-[120px] outline-none focus:ring-2 focus:ring-primary/30 transition placeholder:text-gray-400", props.className)} />;
-}
-function Pill({ children }: { children: React.ReactNode }) { return <span className="text-[11px] px-2 py-1 rounded-md bg-primary/10 text-primary">{children}</span>; }
-
-function Card({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cls("bg-white/90 backdrop-blur rounded-2xl p-5 ring-1 ring-black/10 shadow-[0_6px_24px_rgba(0,0,0,0.06)]", className)}>{children}</div>;
+  return <textarea {...props} className={cls("w-full rounded-2xl bg-gray-50 border-transparent px-5 py-4 min-h-[140px] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-gray-800 placeholder:text-gray-400 hover:bg-gray-100/80 shadow-inner shadow-gray-200/50 resize-y", props.className)} />;
 }
 
-function CheckRow({ ok, label, sub }: { ok: boolean; label: string; sub?: string }) {
+function Card({ children, className, title, subtitle }: { children: React.ReactNode; className?: string; title?: string; subtitle?: string }) {
   return (
-    <div className="flex items-start gap-3">
-      <div className={cls("mt-0.5 h-4 w-4 rounded-full grid place-items-center text-[10px]", ok ? "bg-emerald-500 text-white" : "bg-black/10 text-gray-500")}>{ok ? "✓" : "!"}</div>
-      <div className="text-sm">
-        <div className="font-medium">{label}</div>
-        {sub && <div className="text-gray-500 text-xs">{sub}</div>}
-      </div>
+    <div className={cls("bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white shadow-xl shadow-gray-200/40 relative overflow-hidden", className)}>
+      {(title || subtitle) && (
+        <div className="mb-8 relative z-10">
+          {title && <h3 className="text-2xl font-bold text-gray-800 tracking-tight">{title}</h3>}
+          {subtitle && <p className="text-gray-500 mt-1 font-medium">{subtitle}</p>}
+        </div>
+      )}
+      <div className="relative z-10">{children}</div>
+      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50/50 to-purple-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 -z-0" />
     </div>
   );
+}
+
+function Pill({ children, className }: { children: React.ReactNode, className?: string }) {
+  return <span className={cls("text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-100", className)}>{children}</span>;
 }
 
 // ===================== Stepper =====================
 const STEPS = [
-  { key: "basics", label: "Date de bază" },
-  { key: "skills", label: "Skill‑uri" },
-  { key: "edu", label: "Educație" },
-  { key: "exp", label: "Experiență" },
-  { key: "opps", label: "Oportunități" },
-  { key: "portfolio", label: "Portofoliu" },
-  { key: "review", label: "Verificare & Salvare" },
+  { key: "basics", label: "Despre Tine", icon: "👤" },
+  { key: "skills", label: "Skill-uri", icon: "⚡" },
+  { key: "edu", label: "Educație", icon: "🎓" },
+  { key: "exp", label: "Experiență", icon: "💼" },
+  { key: "opps", label: "Proiecte", icon: "🚀" },
+  { key: "portfolio", label: "Portofoliu", icon: "🖼️" },
+  { key: "review", label: "Verificare", icon: "✅" },
 ] as const;
 
 type StepKey = typeof STEPS[number]["key"];
 
 function Stepper({ current, completeMap, go }: { current: StepKey; completeMap: Record<StepKey, boolean>; go: (k: StepKey) => void }) {
   return (
-    <nav className="sticky top-4 space-y-2">
+    <nav className="sticky top-24 space-y-2 max-h-[calc(100vh-8rem)] overflow-y-auto pr-2 no-scrollbar">
       {STEPS.map((s, idx) => {
         const done = completeMap[s.key];
-        const isNow = current === s.key;
+        const active = current === s.key;
         return (
-          <button key={s.key} onClick={() => go(s.key)} className={cls(
-            "w-full text-left px-3 py-3 rounded-xl ring-1",
-            isNow ? "bg-primary text-white ring-primary/60 shadow" : "bg-white ring-black/10 hover:bg-black/5"
-          )}>
-            <div className="flex items-center gap-3">
-              <div className={cls("h-6 w-6 rounded-full grid place-items-center text-xs", done ? "bg-emerald-500 text-white" : "bg-black/10 text-gray-600")}>{done ? "✓" : idx + 1}</div>
-              <div className="text-sm font-medium">{s.label}</div>
+          <button
+            key={s.key}
+            onClick={() => go(s.key)}
+            className={cls(
+              "group w-full text-left px-4 py-3.5 rounded-2xl transition-all duration-300 relative overflow-hidden",
+              active ? "bg-white shadow-lg shadow-blue-500/10 scale-[1.02]" : "hover:bg-gray-50 text-gray-500 hover:text-gray-800"
+            )}
+          >
+            {active && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500 rounded-r-full" />}
+            <div className="flex items-center gap-4 relative z-10">
+              <div className={cls(
+                "h-10 w-10 rounded-xl grid place-items-center text-lg font-bold transition-all bg-gradient-to-br shadow-inner",
+                active ? "from-blue-500 to-indigo-600 text-white shadow-blue-500/20" : done ? "from-emerald-500 to-teal-600 text-white" : "from-gray-100 to-gray-200 text-gray-400"
+              )}>
+                {done && !active ? "✓" : s.icon}
+              </div>
+              <div className="flex flex-col">
+                <span className={cls("text-sm font-bold tracking-tight", active ? "text-gray-800" : "text-gray-500 group-hover:text-gray-700")}>{s.label}</span>
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 transform scale-0 group-hover:scale-100 transition origin-left h-0 group-hover:h-auto">Pasul {idx + 1}</span>
+              </div>
             </div>
           </button>
         );
@@ -117,14 +149,17 @@ function Stepper({ current, completeMap, go }: { current: StepKey; completeMap: 
 function AvatarUploader({ value, onChange }: { value?: string; onChange: (dataUrl?: string) => void }) {
   function handleFile(file: File) { const reader = new FileReader(); reader.onload = () => onChange(reader.result as string); reader.readAsDataURL(file); }
   return (
-    <div className="flex items-center gap-4">
-      <div className="h-24 w-24 rounded-full ring-1 ring-black/10 overflow-hidden bg-black/5">
-        {value ? <img src={value} alt="avatar" className="h-full w-full object-cover" /> : <div className="h-full w-full grid place-items-center text-xs text-gray-500">Avatar</div>}
+    <div className="flex flex-col items-center gap-4 group">
+      <div className="relative">
+        <div className={cls("h-32 w-32 rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-300 group-hover:rotate-3 group-hover:scale-105 border-4 border-white", !value && "bg-gray-100 flex items-center justify-center")}>
+          {value ? <img src={value} alt="avatar" className="h-full w-full object-cover" /> : <span className="text-3xl text-gray-300">👤</span>}
+        </div>
+        <label className="absolute -bottom-3 -right-3 h-10 w-10 bg-blue-600 text-white rounded-full grid place-items-center cursor-pointer shadow-lg shadow-blue-600/30 hover:bg-blue-700 transition-transform hover:scale-110 active:scale-90">
+          📷
+          <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+        </label>
       </div>
-      <label className="inline-flex items-center gap-2 bg-secondary text-white px-3.5 py-2.5 rounded-xl hover:bg-accent transition cursor-pointer shadow">Încarcă
-        <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-      </label>
-      {value && <button type="button" onClick={() => onChange(undefined)} className="text-sm underline underline-offset-4 decoration-primary hover:text-primary">Elimină</button>}
+      {value && <button onClick={() => onChange(undefined)} className="text-xs font-semibold text-red-500 hover:bg-red-50 px-3 py-1 rounded-full transition-colors">Șterge Avatar</button>}
     </div>
   );
 }
@@ -141,19 +176,21 @@ function Timeline({ education, experience, opps }: { education: EducationItem[];
   const color = (k: Entry["kind"]) => k === "edu" ? "from-blue-500/20 to-blue-500/5" : k === "exp" ? "from-emerald-500/20 to-emerald-500/5" : "from-amber-500/20 to-amber-500/5";
   const label = (k: Entry["kind"]) => k === "edu" ? "Educație" : k === "exp" ? "Experiență" : "Oportunitate";
 
-  if (!items.length) return <div className="text-sm text-gray-500">Completează datele pentru a vedea timeline‑ul.</div>;
+  if (!items.length) return <div className="text-sm text-gray-500 italic p-4 text-center">Completează datele pentru a vedea timeline‑ul tău profesional.</div>;
 
   return (
-    <ol className="relative pl-4">
-      <div className="absolute left-0 top-0 bottom-0 w-px bg-black/10" />
+    <ol className="relative pl-6 border-l border-gray-100 space-y-8">
       {items.map((it) => (
-        <li key={it.id} className="mb-6">
-          <div className="absolute -left-1 mt-2 h-2 w-2 rounded-full bg-primary" />
-          <div className={cls("rounded-2xl p-5 ring-1 ring-black/10 bg-gradient-to-br", color(it.kind))}>
-            <div className="text-xs text-gray-500 flex items-center gap-2"><Pill>{label(it.kind)}</Pill><span>{it.start}{it.end ? ` — ${it.end}` : ""}</span></div>
-            <div className="font-medium mt-1">{it.title}</div>
-            <div className="text-sm text-gray-600">{it.org}</div>
-            {it.tags && it.tags.length > 0 && (<div className="flex flex-wrap gap-1 mt-2">{it.tags.map(t => <Pill key={t}>{t}</Pill>)}</div>)}
+        <li key={it.id} className="relative pl-6">
+          <div className="absolute -left-[30px] top-4 h-4 w-4 rounded-full border-2 border-white bg-blue-500 ring-4 ring-blue-50 shadow-sm" />
+          <div className={cls("rounded-[1.5rem] p-6 border border-white/50 shadow-sm bg-gradient-to-br", color(it.kind))}>
+            <div className="flex items-center gap-3 mb-2">
+              <Pill className="bg-white/50 border-0 shadow-sm text-xs py-1">{label(it.kind)}</Pill>
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">{it.start}{it.end ? ` — ${it.end}` : ""}</span>
+            </div>
+            <h4 className="font-bold text-lg text-gray-900">{it.title}</h4>
+            <div className="text-gray-600 font-medium">{it.org}</div>
+            {it.tags && it.tags.length > 0 && (<div className="flex flex-wrap gap-1 mt-3">{it.tags.map(t => <span key={t} className="text-[10px] px-2 py-1 rounded bg-white/50 text-gray-600 font-semibold">#{t}</span>)}</div>)}
           </div>
         </li>
       ))}
@@ -164,22 +201,44 @@ function Timeline({ education, experience, opps }: { education: EducationItem[];
 // ===================== Editors =====================
 function SkillsEditor({ skills, setSkills }: { skills: string[]; setSkills: (v: string[]) => void }) {
   const [input, setInput] = useState("");
-  const SUG = ["React", "TypeScript", "Java", "SQL", "Oracle", "Spring", "HTML", "CSS", "Node", "Git", "Docker", "Teamwork"];
-  function add() { const parts = input.split(",").map(x => x.trim()).filter(Boolean); if (!parts.length) return; setSkills(Array.from(new Set([...skills, ...parts]))); setInput(""); }
+  const SUG = ["React", "TypeScript", "Java", "SQL", "HTML/CSS", "Node.js", "Git", "Docker", "Figma", "Communication", "Leadership"];
+
+  function add() {
+    const parts = input.split(",").map(x => x.trim()).filter(Boolean);
+    if (!parts.length) return;
+    setSkills(Array.from(new Set([...skills, ...parts])));
+    setInput("");
+  }
+
   function toggle(s: string) { setSkills(skills.includes(s) ? skills.filter(x => x !== s) : [...skills, s]); }
+
   return (
-    <div className="space-y-4">
-      <div className="flex gap-3 max-w-xl">
-        <TextInput placeholder="Ex: React, TypeScript, Teamwork" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} />
-        <Button onClick={add}>Adaugă</Button>
+    <div className="space-y-6">
+      <div className="flex gap-3">
+        <TextInput placeholder="Ex: React, Public Speaking..." value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} />
+        <Button onClick={add} variant="secondary">Adaugă</Button>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {skills.map(s => (
-          <span key={s} className="text-xs px-2 py-1 rounded-md bg-primary/10 text-primary flex items-center gap-1">{s}<button className="opacity-60 hover:opacity-100" onClick={() => setSkills(skills.filter(x => x !== s))}>×</button></span>
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-2 pt-1">
-        {SUG.map(s => <button key={s} onClick={() => toggle(s)} className={cls("text-xs px-2 py-1 rounded-full", skills.includes(s) ? "bg-primary text-white" : "bg-black/5 hover:bg-black/10")}>{s}</button>)}
+
+      {skills.length > 0 && (
+        <div className="flex flex-wrap gap-2 p-4 rounded-2xl bg-gray-50 border border-gray-100">
+          {skills.map(s => (
+            <span key={s} className="group text-sm font-semibold px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-700 shadow-sm flex items-center gap-2">
+              {s}
+              <button className="text-gray-400 hover:text-red-500 transition-colors" onClick={() => setSkills(skills.filter(x => x !== s))}>✕</button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div>
+        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Sugestii Populare</div>
+        <div className="flex flex-wrap gap-2">
+          {SUG.map(s => (
+            <button key={s} onClick={() => toggle(s)} className={cls("text-xs font-semibold px-3 py-1.5 rounded-full transition-all border", skills.includes(s) ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50")}>
+              {skills.includes(s) ? "✓ " : "+ "}{s}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -188,19 +247,23 @@ function SkillsEditor({ skills, setSkills }: { skills: string[]; setSkills: (v: 
 function EduEditor({ items, setItems }: { items: EducationItem[]; setItems: (v: EducationItem[]) => void }) {
   function up(id: string, p: Partial<EducationItem>) { setItems(items.map(it => it.id === id ? { ...it, ...p } : it)); }
   function add() { setItems([...items, { id: uid(), school: "", degree: "", start: "", end: "" }]); }
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {items.map(it => (
-        <Card key={it.id}>
+        <div key={it.id} className="p-6 rounded-[2rem] bg-gray-50 border border-gray-100 relative group transition-all hover:bg-white hover:shadow-lg">
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Program / Diplomă" required><TextInput value={it.degree} onChange={e => up(it.id, { degree: e.target.value })} placeholder="Licență Informatică" /></Field>
-            <Field label="Instituție" required><TextInput value={it.school} onChange={e => up(it.id, { school: e.target.value })} placeholder="FII – UAIC Iași" /></Field>
-            <Field label="Start" required><TextInput type="month" value={it.start} onChange={e => up(it.id, { start: e.target.value })} /></Field>
+            <Field label="Grad / Diplomă"><TextInput value={it.degree} onChange={e => up(it.id, { degree: e.target.value })} placeholder="Ex: Licență Informatică" /></Field>
+            <Field label="Instituție"><TextInput value={it.school} onChange={e => up(it.id, { school: e.target.value })} placeholder="Ex: Universitatea..." /></Field>
+            <Field label="Început"><TextInput type="month" value={it.start} onChange={e => up(it.id, { start: e.target.value })} /></Field>
             <Field label="Sfârșit (opțional)"><TextInput type="month" value={it.end || ""} onChange={e => up(it.id, { end: e.target.value })} /></Field>
           </div>
-        </Card>
+          <button onClick={() => setItems(items.filter(x => x.id !== it.id))} className="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors p-2">🗑️</button>
+        </div>
       ))}
-      <Button onClick={add}>+ Adaugă educație</Button>
+      <Button onClick={add} variant="secondary" className="w-full border-2 border-dashed border-gray-200 bg-transparent hover:bg-gray-50 hover:border-blue-300 text-gray-400 hover:text-blue-500 py-4 font-bold rounded-2xl">
+        + Adaugă Educație
+      </Button>
     </div>
   );
 }
@@ -208,19 +271,23 @@ function EduEditor({ items, setItems }: { items: EducationItem[]; setItems: (v: 
 function ExpEditor({ items, setItems }: { items: ExperienceItem[]; setItems: (v: ExperienceItem[]) => void }) {
   function up(id: string, p: Partial<ExperienceItem>) { setItems(items.map(it => it.id === id ? { ...it, ...p } : it)); }
   function add() { setItems([...items, { id: uid(), role: "", company: "", start: "", end: "" }]); }
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {items.map(it => (
-        <Card key={it.id}>
+        <div key={it.id} className="p-6 rounded-[2rem] bg-gray-50 border border-gray-100 relative group transition-all hover:bg-white hover:shadow-lg">
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Rol" required><TextInput value={it.role} onChange={e => up(it.id, { role: e.target.value })} placeholder="Frontend Intern" /></Field>
-            <Field label="Organizație" required><TextInput value={it.company} onChange={e => up(it.id, { company: e.target.value })} placeholder="Start-up local" /></Field>
-            <Field label="Start" required><TextInput type="month" value={it.start} onChange={e => up(it.id, { start: e.target.value })} /></Field>
+            <Field label="Rol / Funcție"><TextInput value={it.role} onChange={e => up(it.id, { role: e.target.value })} placeholder="Ex: Intern Frontend" /></Field>
+            <Field label="Companie / Org"><TextInput value={it.company} onChange={e => up(it.id, { company: e.target.value })} placeholder="Ex: Google" /></Field>
+            <Field label="Început"><TextInput type="month" value={it.start} onChange={e => up(it.id, { start: e.target.value })} /></Field>
             <Field label="Sfârșit (opțional)"><TextInput type="month" value={it.end || ""} onChange={e => up(it.id, { end: e.target.value })} /></Field>
           </div>
-        </Card>
+          <button onClick={() => setItems(items.filter(x => x.id !== it.id))} className="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors p-2">🗑️</button>
+        </div>
       ))}
-      <Button onClick={add}>+ Adaugă experiență</Button>
+      <Button onClick={add} variant="secondary" className="w-full border-2 border-dashed border-gray-200 bg-transparent hover:bg-gray-50 hover:border-blue-300 text-gray-400 hover:text-blue-500 py-4 font-bold rounded-2xl">
+        + Adaugă Experiență
+      </Button>
     </div>
   );
 }
@@ -229,70 +296,113 @@ function OppsEditor({ items, setItems }: { items: OppRef[]; setItems: (v: OppRef
   function up(id: string, p: Partial<OppRef>) { setItems(items.map(it => it.id === id ? { ...it, ...p } : it)); }
   function add() { setItems([...items, { id: uid(), title: "", role: "", org: "", date: "", tags: [], cover: "", media: [], rating: 0, testimonial: "" }]); }
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {items.map(o => (
-        <Card key={o.id}>
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Titlu" required><TextInput value={o.title} onChange={e => up(o.id, { title: e.target.value })} placeholder="Hackathon – App Challenge" /></Field>
-            <Field label="Rol" required><TextInput value={o.role || ""} onChange={e => up(o.id, { role: e.target.value })} placeholder="Participant / Frontend" /></Field>
-            <Field label="Organizație"><TextInput value={o.org || ""} onChange={e => up(o.id, { org: e.target.value })} placeholder="Fundația X" /></Field>
-            <Field label="Lună" required><TextInput type="month" value={o.date || ""} onChange={e => up(o.id, { date: e.target.value })} /></Field>
+        <div key={o.id} className="p-6 rounded-[2rem] bg-gray-50 border border-gray-100 relative group transition-all hover:bg-white hover:shadow-lg">
+          <div className="grid md:grid-cols-2 gap-4 mb-4">
+            <Field label="Titlu Proiect"><TextInput value={o.title} onChange={e => up(o.id, { title: e.target.value })} placeholder="Ex: Hackathon Winner" /></Field>
+            <Field label="Rolul Tău"><TextInput value={o.role || ""} onChange={e => up(o.id, { role: e.target.value })} placeholder="Ex: Team Lead" /></Field>
+            <Field label="Organizator/Loc"><TextInput value={o.org || ""} onChange={e => up(o.id, { org: e.target.value })} placeholder="Ex: Asociația X" /></Field>
+            <Field label="Data"><TextInput type="month" value={o.date || ""} onChange={e => up(o.id, { date: e.target.value })} /></Field>
           </div>
-          <div className="mt-3">
-            <Field label="Taguri (Enter)" hint="ex: react, voluntariat">
-              <TextInput onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const v = (e.target as HTMLInputElement).value.trim(); if (v) up(o.id, { tags: Array.from(new Set([...(o.tags || []), v])) }); (e.target as HTMLInputElement).value = ''; } }} />
-            </Field>
-            <div className="flex flex-wrap gap-2 mt-2">{(o.tags || []).map(t => <Pill key={t}>{t}</Pill>)}</div>
-          </div>
-        </Card>
+          <Field label="Tag-uri (separate prin Enter)">
+            <TextInput
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const v = (e.target as HTMLInputElement).value.trim();
+                  if (v) up(o.id, { tags: Array.from(new Set([...(o.tags || []), v])) });
+                  (e.target as HTMLInputElement).value = '';
+                }
+              }}
+              placeholder="Adaugă tehnologii sau skill-uri..."
+            />
+          </Field>
+          {o.tags && o.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {o.tags.map(t => (
+                <span key={t} className="text-xs font-semibold px-2 py-1 bg-blue-100 text-blue-600 rounded-md">
+                  #{t} <button className="ml-1 hover:text-red-500" onClick={() => up(o.id, { tags: o.tags?.filter(x => x !== t) })}>×</button>
+                </span>
+              ))}
+            </div>
+          )}
+          <button onClick={() => setItems(items.filter(x => x.id !== o.id))} className="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors p-2">🗑️</button>
+        </div>
       ))}
-      <Button onClick={add}>+ Adaugă oportunitate</Button>
+      <Button onClick={add} variant="secondary" className="w-full border-2 border-dashed border-gray-200 bg-transparent hover:bg-gray-50 hover:border-blue-300 text-gray-400 hover:text-blue-500 py-4 font-bold rounded-2xl">
+        + Adaugă Oportunitate / Proiect
+      </Button>
     </div>
   );
 }
 
 function MediaEditor({ media, setMedia }: { media: Media[]; setMedia: (v: Media[]) => void }) {
-  async function add(files: FileList | null) {
-    if (!files) return;
-    const next: Media[] = [];
-    for (const f of Array.from(files)) {
-      // Upload către backend!
-      const formData = new FormData();
-      formData.append("file", f);
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      // Endpoint pentru upload (vezi backend mai jos)
-      const resp = await fetch("/api/upload", {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-      });
-      const data = await resp.json();
-      const url = data.url; // url public returnat de backend
-
-      const isVideo = /video/.test(f.type) || /\.(mp4|webm|ogg)$/i.test(f.name);
-      next.push({ id: uid(), kind: isVideo ? "video" : "image", url, caption: f.name });
+    // Validate video type
+    if (!file.type.startsWith("video/") && !/\.(mp4|webm|ogg|mov)$/i.test(file.name)) {
+      alert("Te rugăm să încarci doar fișiere video (MP4, WebM, MOV).");
+      return;
     }
-    setMedia([...media, ...next]);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const resp = await fetch("/api/upload", { method: "POST", credentials: "include", body: formData });
+      if (!resp.ok) throw new Error("Upload failed");
+      const data = await resp.json();
+
+      // Replace existing media with this single video
+      setMedia([{ id: uid(), kind: "video", url: data.url, caption: "" }]);
+    } catch (err) {
+      console.error(err);
+      alert("Eroare la încărcare video.");
+    }
   }
-  function remove(id: string) { setMedia(media.filter(m => m.id !== id)); }
+
+  const currentVideo = media.find(m => m.kind === "video");
+
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {media.map(m => (
-          <div key={m.id} className="relative rounded-xl overflow-hidden ring-1 ring-black/10 bg-black/5">
-            {m.kind === 'image' ? <img src={m.url} className="h-40 w-full object-cover" /> : <video src={m.url} className="h-40 w-full object-cover" controls />}
-            <button onClick={() => remove(m.id)} className="absolute top-2 right-2 text-xs bg-white/90 rounded px-2 py-1">Șterge</button>
-          </div>
-        ))}
-      </div>
-      <label className="inline-flex items-center gap-2 bg-secondary text-white px-4 py-2.5 rounded-xl hover:bg-accent transition cursor-pointer shadow">Adaugă media
-        <input type="file" multiple accept="image/*,video/*" className="hidden" onChange={(e) => add(e.target.files)} />
-      </label>
+    <div className="space-y-6">
+      {currentVideo ? (
+        <div className="relative w-full max-w-2xl mx-auto rounded-[2rem] overflow-hidden shadow-2xl shadow-blue-900/10 border border-gray-100 bg-gray-50 group">
+          <video
+            src={currentVideo.url}
+            className="w-full h-auto max-h-[500px] object-cover"
+            controls
+            playsInline
+          />
+          <button
+            onClick={() => setMedia([])}
+            className="absolute top-4 right-4 bg-white/90 backdrop-blur text-red-500 hover:text-red-600 p-3 rounded-full shadow-lg transition-transform hover:scale-110 z-10"
+            title="Șterge Video"
+          >
+            🗑️
+          </button>
+        </div>
+      ) : (
+        <div className="max-w-xl mx-auto">
+          <label className="flex flex-col items-center justify-center w-full h-64 border-3 border-dashed border-gray-300 rounded-[2.5rem] cursor-pointer bg-gray-50 hover:bg-blue-50/50 hover:border-blue-400 transition-all group">
+            <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
+              <div className="h-16 w-16 bg-blue-100 text-blue-600 rounded-full grid place-items-center text-3xl mb-4 group-hover:scale-110 transition-transform shadow-sm">
+                🎥
+              </div>
+              <p className="mb-2 text-lg font-bold text-gray-700 group-hover:text-blue-700">Încarcă Video de Prezentare</p>
+              <p className="text-sm text-gray-400 font-medium">MP4, WebM sau MOV (Max 100MB)</p>
+            </div>
+            <input type="file" accept="video/*" className="hidden" onChange={handleUpload} />
+          </label>
+        </div>
+      )}
     </div>
   );
 }
 
-// ===================== Validation & Missing =====================
+// ===================== Validation =====================
 function validateStep(step: StepKey, p: ProfilePayload) {
   switch (step) {
     case "basics": return !!p.name && !!p.headline && !!p.bio && !!p.location;
@@ -305,25 +415,14 @@ function validateStep(step: StepKey, p: ProfilePayload) {
   }
 }
 
-function missingList(p: ProfilePayload) {
-  const out: string[] = [];
-  if (!p.name) out.push("Nume");
-  if (!p.headline) out.push("Headline");
-  if (!p.bio) out.push("Bio");
-  if (!p.location) out.push("Locație");
-  if (!p.skills.length) out.push("Minim 1 skill");
-  if (!p.education.length) out.push("Cel puțin 1 educație");
-  if (!p.experience.length) out.push("Cel puțin 1 experiență");
-  if (!p.opportunityRefs.length) out.push("Cel puțin 1 oportunitate");
-  if (!p.portfolioMedia.length) out.push("Cel puțin 1 media în portofoliu");
-  return out;
-}
-
-// ===================== Main =====================
+// ===================== Main Component =====================
 export default function StudentProfileWizard() {
   const router = useRouter();
+  const [step, setStep] = useState<StepKey>("basics");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
 
-  // State
+  // Profile State
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | undefined>();
   const [name, setName] = useState("");
   const [headline, setHeadline] = useState("");
@@ -336,10 +435,6 @@ export default function StudentProfileWizard() {
   const [portfolioMedia, setPortfolioMedia] = useState<Media[]>([]);
   const [opportunityRefs, setOpportunityRefs] = useState<OppRef[]>([]);
 
-  const [step, setStep] = useState<StepKey>("basics");
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-
   const payload: ProfilePayload = useMemo(() => ({ name, headline, bio, location, avatarDataUrl, skills, social, education, experience, portfolioMedia, opportunityRefs }), [name, headline, bio, location, avatarDataUrl, skills, social, education, experience, portfolioMedia, opportunityRefs]);
 
   // Autosave
@@ -350,293 +445,221 @@ export default function StudentProfileWizard() {
       localStorage.setItem(key, JSON.stringify(data));
     } catch { }
   }, 600);
-
   useEffect(() => { debouncedStore(payload); }, [payload]);
 
+  // Load Data
   useEffect(() => {
     async function loadData() {
       try {
-        // 1. Try fetching from DB (Source of Truth)
         const res = await fetch("/api/users/me", { credentials: "include" });
         if (res.ok) {
           const d = await res.json();
-          // Populate state from DB
-          setName(d.name || ""); // d.name is COALESCE(profile.name, users.full_name)
+          setName(d.name || "");
           setHeadline(d.headline || "");
           setBio(d.bio || "");
           setLocation(d.location || "");
-          setAvatarDataUrl(d.avatarUrl || d.avatarDataUrl); // Handle both DB field and Payload field naming
+          setAvatarDataUrl(d.avatarUrl || d.avatarDataUrl);
           setSkills(d.skills || []);
           setSocial(d.social || {});
           setEducation(d.education || []);
           setExperience(d.experience || []);
           setPortfolioMedia(d.portfolioMedia || []);
           setOpportunityRefs(d.opportunityRefs || []);
-          return; // Stop here if DB load was successful
+          return;
         }
-      } catch (err) {
-        console.error("Failed to fetch profile from DB", err);
-      }
-
-      // 2. Fallback to LocalStorage (Draft) if DB failed or empty
+      } catch (err) { console.error(err); }
+      // Fallback
       try {
         const email = localStorage.getItem("email") || "default";
         const key = `profileWizardDraft_${email}`;
         const raw = localStorage.getItem(key);
         if (raw) {
           const d = JSON.parse(raw) as ProfilePayload;
-          // setName(d.name || ""); // Keep name from basic info if possible
-          setHeadline(d.headline || "");
-          setBio(d.bio || "");
-          setLocation(d.location || "");
-          setAvatarDataUrl(d.avatarDataUrl);
-          setSkills(d.skills || []);
-          setSocial(d.social || {});
-          setEducation(d.education || []);
-          setExperience(d.experience || []);
-          setPortfolioMedia(d.portfolioMedia || []);
-          setOpportunityRefs(d.opportunityRefs || []);
+          setHeadline(d.headline || ""); setBio(d.bio || ""); setLocation(d.location || ""); setAvatarDataUrl(d.avatarDataUrl); setSkills(d.skills || []); setSocial(d.social || {});
         }
       } catch { }
     }
-
     loadData();
   }, []);
 
-  // Completion map for stepper
   const completeMap = useMemo(() => {
     const m: Record<StepKey, boolean> = { basics: false, skills: false, edu: false, exp: false, opps: false, portfolio: false, review: false };
     (Object.keys(m) as StepKey[]).forEach(k => (m[k] = validateStep(k, payload)));
     return m;
   }, [payload]);
 
-  // Save
   async function save() {
     setSaving(true);
     setMsg(null);
-
     try {
-      await fetch("/api/users/me", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(payload)
-      });
+      await fetch("/api/users/me", { method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify(payload) });
       setMsg("Salvat!");
-    } catch {
-      setMsg("Eroare la salvare");
-    } finally {
-      setSaving(false);
-      setTimeout(() => setMsg(null), 2000);
-    }
+    } catch { setMsg("Eroare la salvare"); }
+    finally { setSaving(false); setTimeout(() => setMsg(null), 2000); }
   }
 
-  const pct = pctProfile(payload);
-  const xp = xpOf(payload);
-  const miss = missingList(payload);
-
-  function next() { const idx = STEPS.findIndex(s => s.key === step); const after = STEPS[idx + 1]?.key; if (after) setStep(after); }
-  function prev() { const idx = STEPS.findIndex(s => s.key === step); const before = STEPS[idx - 1]?.key; if (before) setStep(before); }
-
-  // Keyboard Ctrl/⌘+S
-  useEffect(() => { const h = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); } }; window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h); }, [payload]);
+  const next = () => { const idx = STEPS.findIndex(s => s.key === step); if (idx < STEPS.length - 1) setStep(STEPS[idx + 1].key); };
+  const prev = () => { const idx = STEPS.findIndex(s => s.key === step); if (idx > 0) setStep(STEPS[idx - 1].key); };
 
   return (
-    <div className="flex flex-col lg:grid lg:grid-cols-[260px,1fr] gap-6 mt-6 lg:mt-10">
-      {/* Left: Stepper + checklist */}
-      <div className="space-y-4">
-        {/* Stats - Hide on mobile (shown in footer) */}
-        <div className="hidden lg:block">
-          <Card>
-            <div className="flex items-center justify-between mb-2"><div className="text-sm text-gray-600">Completitudine</div><div className="text-sm font-medium">{pct}%</div></div>
-            <div className="h-2 bg-black/10 rounded-full overflow-hidden mb-2">
-              <div
-                className={
-                  "h-full transition-all duration-300 " +
-                  (pct === 100 ? "bg-emerald-500" : pct >= 50 ? "bg-primary" : "bg-accent")
-                }
-                style={{ width: `${pct}%` }}
-              />
+    <div className="min-h-screen bg-transparent pb-20 overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 pt-8">
+
+        {/* Header */}
+        <div className="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight mb-2">Editează Profilul</h1>
+            <p className="text-lg text-gray-500 font-medium max-w-2xl">Arată lumii ce poți! Un profil complet îți aduce mai multe oportunități.</p>
+          </div>
+          <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-100">
+            <div className="text-right">
+              <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">Scor Profil</div>
+              <div className="text-lg font-black text-blue-600">{pctProfile(payload)}%</div>
             </div>
-            <div className="text-xs text-gray-600">XP: <span className="font-medium">{xp}</span></div>
-          </Card>
+            <div className="h-10 w-10 relative">
+              <svg className="h-full w-full rotate-[-90deg]" viewBox="0 0 36 36">
+                <path className="text-gray-100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+                <path className="text-blue-500" strokeDasharray={`${pctProfile(payload)}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+              </svg>
+            </div>
+          </div>
         </div>
 
-        {/* Stepper - Mobile: Horizontal Scroll, Desktop: Vertical */}
-        <nav className="sticky top-2 z-20 bg-gray-50/95 backdrop-blur py-2 lg:py-0 lg:static lg:bg-transparent -mx-4 px-4 lg:mx-0 lg:px-0 border-b lg:border-none border-black/5 lg:space-y-2 flex lg:block overflow-x-auto gap-3 no-scrollbar">
-          {STEPS.map((s, idx) => {
-            const done = completeMap[s.key];
-            const isNow = step === s.key;
-            return (
-              <button key={s.key} onClick={() => setStep(s.key)} className={cls(
-                "flex-shrink-0 text-left px-3 py-2 lg:py-3 rounded-xl ring-1 transition-all lg:w-full",
-                isNow ? "bg-primary text-white ring-primary/60 shadow scale-[0.98]" : "bg-white ring-black/10 hover:bg-black/5"
-              )}>
-                <div className="flex items-center gap-2 lg:gap-3">
-                  <div className={cls("h-5 w-5 lg:h-6 lg:w-6 rounded-full grid place-items-center text-[10px] lg:text-xs", done ? "bg-emerald-500 text-white" : "bg-black/10 text-gray-600")}>{done ? "✓" : idx + 1}</div>
-                  <div className="text-xs lg:text-sm font-medium whitespace-nowrap">{s.label}</div>
-                </div>
-              </button>
-            );
-          })}
-        </nav>
+        <div className="flex flex-col lg:grid lg:grid-cols-[280px,1fr] gap-8 lg:gap-12 items-start justify-center">
 
-        {/* Checklist - Hide on mobile to save space */}
-        <div className="hidden lg:block">
-          <Card>
-            <div className="text-sm font-medium mb-3">Checklist global (ca să nu ratezi nimic)</div>
-            <div className="space-y-2">
-              <CheckRow ok={!!name} label="Nume" />
-              <CheckRow ok={!!headline} label="Headline" />
-              <CheckRow ok={!!bio} label="Bio" />
-              <CheckRow ok={!!location} label="Locație" />
-              <CheckRow ok={skills.length > 0} label="Minim 1 skill" />
-              <CheckRow ok={education.length > 0} label="Cel puțin 1 educație" />
-              <CheckRow ok={experience.length > 0} label="Cel puțin 1 experiență" />
-              <CheckRow ok={opportunityRefs.length > 0} label="Cel puțin 1 oportunitate" />
-              <CheckRow ok={portfolioMedia.length > 0} label="Cel puțin 1 media" />
+          {/* Left Sidebar */}
+          <div className="hidden lg:block sticky top-24">
+            <Stepper current={step} completeMap={completeMap} go={setStep} />
+          </div>
+
+          {/* Mobile Stepper */}
+          <div className="lg:hidden w-full overflow-x-auto pb-4 px-1 no-scrollbar scroll-smooth flex justify-start md:justify-center">
+            <div className="flex gap-2">
+              {STEPS.map((s, idx) => (
+                <button key={s.key} onClick={() => setStep(s.key)} className={cls("flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all", step === s.key ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30" : "bg-white text-gray-500 border border-gray-100")}>
+                  {idx + 1}. {s.label}
+                </button>
+              ))}
             </div>
-          </Card>
-        </div>
-      </div>
+          </div>
 
-      {/* Right: Step content */}
-      <div className="space-y-6">
-        {step === "basics" && (
-          <Card>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <Field label="Nume" required>
-                  <TextInput
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Numele tău complet"
-                  />
-                </Field>
-                <Field label="Headline" required hint="Domeniu + focus"><TextInput value={headline} onChange={e => setHeadline(e.target.value)} placeholder="Student FII • Frontend" /></Field>
-                <Field label="Locație" required><TextInput value={location} onChange={e => setLocation(e.target.value)} placeholder="Iași, RO" /></Field>
-                <Field label="Bio" required hint="2‑3 propoziții scurte"><Textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Îmi place să construiesc UI curate și să lucrez în echipă…" /></Field>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Field label="GitHub"><TextInput value={social.github || ""} onChange={e => setSocial({ ...social, github: e.target.value })} placeholder="https://github.com/user" /></Field>
-                  <Field label="LinkedIn"><TextInput value={social.linkedin || ""} onChange={e => setSocial({ ...social, linkedin: e.target.value })} placeholder="https://linkedin.com/in/user" /></Field>
-                  <Field label="Instagram"><TextInput value={social.instagram || ""} onChange={e => setSocial({ ...social, instagram: e.target.value })} placeholder="https://instagram.com/user" /></Field>
-                  <Field label="Website"><TextInput value={social.website || ""} onChange={e => setSocial({ ...social, website: e.target.value })} placeholder="https://site.dev" /></Field>
+          {/* Main Content Area */}
+          <div className="relative animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-full">
+
+            {step === "basics" && (
+              <Card title="Despre Tine" subtitle="Cine ești și cum pot oamenii să te contacteze.">
+                <div className="grid md:grid-cols-[1fr,auto] gap-8">
+                  <div className="space-y-6">
+                    <Field label="Nume Complet" required><TextInput value={name} onChange={e => setName(e.target.value)} placeholder="Nume Prenume" /></Field>
+                    <Field label="Headline" required hint="Scurtă descriere (ex: Student @ FII)"><TextInput value={headline} onChange={e => setHeadline(e.target.value)} placeholder="Ex: Frontend Developer pasionat" /></Field>
+                    <Field label="Bio" required><Textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Povestea ta pe scurt..." /></Field>
+                    <Field label="Locație" required><TextInput value={location} onChange={e => setLocation(e.target.value)} placeholder="Iași, România" /></Field>
+                  </div>
+                  <div className="flex flex-col items-center gap-6 min-w-[200px]">
+                    <Field label="Poză Profil"><AvatarUploader value={avatarDataUrl} onChange={setAvatarDataUrl} /></Field>
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-4">
-                <Field label="Avatar">
-                  <AvatarUploader value={avatarDataUrl} onChange={setAvatarDataUrl} />
-                </Field>
-                <Card>
-                  <div className="text-sm font-medium mb-2">Ce trebuie să bifezi aici</div>
-                  <ul className="text-sm text-gray-600 list-disc ml-4 space-y-1">
-                    <li>Completează nume, headline, locație și bio</li>
-                    <li>Opțional: adaugă linkuri sociale și un avatar</li>
-                  </ul>
-                </Card>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {step === "skills" && (
-          <Card>
-            <Field label="Skill‑uri" required hint="Tastează și apasă Enter sau alege din sugestii">
-              <SkillsEditor skills={skills} setSkills={setSkills} />
-            </Field>
-          </Card>
-        )}
-
-        {step === "edu" && (
-          <Card>
-            <div className="flex items-center justify-between mb-3"><div className="text-sm text-gray-700">Adaugă cel puțin o intrare</div></div>
-            <EduEditor items={education} setItems={setEducation} />
-          </Card>
-        )}
-
-        {step === "exp" && (
-          <Card>
-            <div className="text-sm text-gray-700 mb-3">Adaugă cel puțin o experiență</div>
-            <ExpEditor items={experience} setItems={setExperience} />
-          </Card>
-        )}
-
-        {step === "opps" && (
-          <Card>
-            <div className="text-sm text-gray-700 mb-3">Adaugă minim o oportunitate (hackathon, voluntariat, proiect)</div>
-            <OppsEditor items={opportunityRefs} setItems={setOpportunityRefs} />
-          </Card>
-        )}
-
-        {step === "portfolio" && (
-          <Card>
-            <div className="text-sm text-gray-700 mb-3">Încarcă cel puțin o poză sau un video</div>
-            <MediaEditor media={portfolioMedia} setMedia={setPortfolioMedia} />
-          </Card>
-        )}
-
-        {step === "review" && (
-          <>
-            <div className="grid lg:grid-cols-2 gap-6">
-              <Card>
-                <div className="text-lg font-semibold mb-2">Rezumat rapid</div>
-                <div className="space-y-2 text-sm">
-                  <div><span className="text-gray-500">Nume:</span> <span className="font-medium">{name || "—"}</span></div>
-                  <div><span className="text-gray-500">Headline:</span> <span className="font-medium">{headline || "—"}</span></div>
-                  <div><span className="text-gray-500">Locație:</span> <span className="font-medium">{location || "—"}</span></div>
-                  <div className="flex items-start gap-2 flex-wrap"><span className="text-gray-500">Skill‑uri:</span> {skills.length ? skills.map(s => <Pill key={s}>{s}</Pill>) : "—"}</div>
-                  <div><span className="text-gray-500">Educație:</span> <span className="font-medium">{education.length}</span></div>
-                  <div><span className="text-gray-500">Experiențe:</span> <span className="font-medium">{experience.length}</span></div>
-                  <div><span className="text-gray-500">Oportunități:</span> <span className="font-medium">{opportunityRefs.length}</span></div>
-                  <div><span className="text-gray-500">Media:</span> <span className="font-medium">{portfolioMedia.length}</span></div>
+                <div className="mt-8 pt-8 border-t border-gray-100">
+                  <h4 className="text-lg font-bold text-gray-800 mb-4">Social & Contact</h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <TextInput value={social.linkedin || ""} onChange={e => setSocial({ ...social, linkedin: e.target.value })} placeholder="LinkedIn URL" />
+                    <TextInput value={social.github || ""} onChange={e => setSocial({ ...social, github: e.target.value })} placeholder="GitHub URL" />
+                    <TextInput value={social.instagram || ""} onChange={e => setSocial({ ...social, instagram: e.target.value })} placeholder="Instagram URL" />
+                    <TextInput value={social.website || ""} onChange={e => setSocial({ ...social, website: e.target.value })} placeholder="Website Personal" />
+                  </div>
                 </div>
               </Card>
-              <Card>
-                <div className="text-lg font-semibold mb-2">Ce mai lipsește</div>
-                {miss.length ? (
-                  <ul className="list-disc ml-4 text-sm text-gray-700 space-y-1">
-                    {miss.map(m => <li key={m}>{m}</li>)}
-                  </ul>
-                ) : <div className="text-sm text-emerald-700">Totul este complet ✔</div>}
+            )}
+
+            {step === "skills" && (
+              <Card title="Skill-uri & Abilități" subtitle="Ce limbaje, framework-uri sau soft skills stăpânești?">
+                <SkillsEditor skills={skills} setSkills={setSkills} />
               </Card>
-            </div>
-            <Card>
-              <div className="text-lg font-semibold mb-3">Timeline</div>
-              <Timeline education={education} experience={experience} opps={opportunityRefs} />
-            </Card>
-          </>
-        )}
+            )}
 
-        {/* Footer actions */}
-        <div className="sticky bottom-4 z-10">
-          <div className="bg-white/95 backdrop-blur ring-1 ring-black/10 rounded-2xl p-3 flex flex-wrap items-center gap-3 shadow">
-            <GhostButton onClick={prev}>Înapoi</GhostButton>
+            {step === "edu" && (
+              <Card title="Educație" subtitle="Parcursul tău academic.">
+                <EduEditor items={education} setItems={setEducation} />
+              </Card>
+            )}
 
-            <Button onClick={save} disabled={saving}>
-              {saving ? "Se salvează…" : "Salvează"}
-            </Button>
+            {step === "exp" && (
+              <Card title="Experiență Profesională" subtitle="Job-uri, internship-uri sau voluntariat.">
+                <ExpEditor items={experience} setItems={setExperience} />
+              </Card>
+            )}
 
-            {step !== "review" && (
-              <Button onClick={next} disabled={!validateStep(step, payload)}>Continuă</Button>
+            {step === "opps" && (
+              <Card title="Proiecte & Oportunități" subtitle="Participări la hackathoane, proiecte personale sau evenimente.">
+                <OppsEditor items={opportunityRefs} setItems={setOpportunityRefs} />
+              </Card>
+            )}
+
+            {step === "portfolio" && (
+              <Card title="Video CV" subtitle="O scurtă prezentare video despre tine. Arată-le cine ești!">
+                <MediaEditor media={portfolioMedia} setMedia={setPortfolioMedia} />
+              </Card>
             )}
 
             {step === "review" && (
-              <Button
-                className="ml-2"
-                onClick={() => router.push("/student/profile/preview")}
-                type="button"
-              >
-                Previzualizează profilul
-              </Button>
+              <Card title="Recapitulare" subtitle="Verifică cum arată profilul tău înainte de a salva.">
+                <div className="grid lg:grid-cols-2 gap-8 mb-8">
+                  <div className="bg-gray-50 rounded-[2rem] p-6 border border-gray-100">
+                    <div className="flex items-center gap-4 mb-4">
+                      <img src={avatarDataUrl || "https://placehold.co/100"} className="h-16 w-16 rounded-2xl object-cover shadow-sm bg-white" />
+                      <div>
+                        <h3 className="font-bold text-xl text-gray-900">{name}</h3>
+                        <p className="text-blue-600 font-medium">{headline}</p>
+                      </div>
+                    </div>
+                    <p className="text-gray-600 text-sm leading-relaxed mb-4">{bio || "Fără descriere..."}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {skills.slice(0, 5).map(s => <Pill key={s}>{s}</Pill>)}
+                      {skills.length > 5 && <span className="text-xs text-gray-400 font-medium py-1.5 px-2">+{skills.length - 5} altele</span>}
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <h4 className="font-bold text-gray-800">Timeline</h4>
+                    <Timeline education={education} experience={experience} opps={opportunityRefs} />
+                  </div>
+                </div>
+              </Card>
             )}
 
-            <div className="ml-auto text-sm text-gray-600 flex items-center gap-2">
-              <span className="px-2 py-1 rounded bg-black/5">XP: {xp}</span>
-              <span className="px-2 py-1 rounded bg-black/5">{pct}%</span>
+            {/* Floating Action Bar */}
+            <div className="sticky bottom-6 mt-8 z-30 px-4 md:px-0">
+              <div className="bg-white/90 backdrop-blur-xl border border-white/40 shadow-2xl shadow-blue-900/10 rounded-2xl p-2 px-4 flex items-center justify-between max-w-3xl mx-auto ring-1 ring-black/5">
+                <Button variant="ghost" onClick={prev} disabled={step === "basics"} className={cls(step === "basics" ? "opacity-0" : "", "px-2 md:px-4")}>
+                  <span className="hidden md:inline">← Înapoi</span>
+                  <span className="md:hidden text-lg">←</span>
+                </Button>
+
+                <div className="flex items-center gap-2">
+                  <Button onClick={save} variant="primary" disabled={saving} className="min-w-[40px] md:min-w-[140px] px-3 md:px-6 text-sm md:text-base">
+                    {saving ? <span className="animate-pulse">...</span> : <span className="hidden md:inline">Salvează</span>}
+                    <span className="md:hidden text-lg">💾</span>
+                  </Button>
+                  {step !== "review" && (
+                    <Button onClick={next} variant="secondary" className="bg-gray-100 hover:bg-gray-200 px-3 md:px-6">
+                      <span className="hidden md:inline">Continuă →</span>
+                      <span className="md:hidden text-lg">→</span>
+                    </Button>
+                  )}
+                  {step === "review" && (
+                    <Button onClick={() => router.push("/student/profile/preview")} variant="secondary" className="bg-gray-100 hover:bg-gray-200 px-3 md:px-6">
+                      <span className="hidden md:inline">Previzualizează</span>
+                    </Button>
+                  )}
+                </div>
+
+                {msg && (
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-4 bg-emerald-500 text-white px-6 py-2 rounded-full shadow-lg text-sm font-bold animate-in slide-in-from-bottom-2 fade-in whitespace-nowrap z-50">
+                    {msg}
+                  </div>
+                )}
+              </div>
             </div>
-            {msg && <span className={cls("text-sm", msg === "Salvat!" ? "text-success" : "text-primary")}>{msg}</span>}
+
           </div>
         </div>
       </div>

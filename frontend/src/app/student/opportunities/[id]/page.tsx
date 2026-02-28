@@ -2,15 +2,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { FaMapMarkerAlt, FaCalendarAlt, FaUsers, FaMoneyBillWave, FaListUl, FaStar, FaPlay } from "react-icons/fa";
+import { FaMapMarkerAlt, FaCalendarAlt, FaUsers, FaMoneyBillWave, FaListUl, FaStar, FaPlay, FaClock, FaCheckCircle, FaArrowLeft } from "react-icons/fa";
 
 export default function StudentOpportunityDetailPage() {
   const { id } = useParams();
   const [opp, setOpp] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
-
-
 
   useEffect(() => {
     if (!id) return;
@@ -21,189 +18,261 @@ export default function StudentOpportunityDetailPage() {
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        setOpp(data.opportunity ?? data); // suportă ambele forme
-
+        setOpp(data.opportunity ?? data);
       })
       .catch((e) => { console.error("Fetch error:", e); setOpp(null); })
-      .finally(() => setLoading(false))
-      ;
+      .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <div className="p-8 text-center text-lg animate-pulse">Se încarcă...</div>;
-  if (!opp) return <div className="p-8 text-center text-lg text-red-500">Oportunitatea nu a fost găsită.</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+    </div>
+  );
+
+  if (!opp) return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+      <h2 className="text-2xl font-bold text-gray-800 mb-2">Oportunitatea nu a fost găsită</h2>
+      <Link href="/student/opportunities" className="text-blue-600 hover:underline">
+        Înapoi la oportunități
+      </Link>
+    </div>
+  );
 
   return (
-    <div className="max-w-3xl mx-auto mt-12 bg-gradient-to-br from-white via-blue-50 to-violet-100 p-0 rounded-3xl shadow-2xl overflow-hidden">
-      {/* Banner */}
-      <div className="relative">
-        {opp.banner_image ? (
-          <img src={opp.banner_image} alt="banner" className="w-full h-64 object-cover" />
-        ) : (
-          <div className="h-64 w-full flex items-center justify-center bg-gradient-to-r from-primary to-accent text-white text-3xl font-bold">
-            Oportunitate
-          </div>
-        )}
-        <Link href="/student/opportunities" className="absolute top-5 left-5 bg-white/80 backdrop-blur px-4 py-2 text-primary rounded-full shadow hover:bg-white transition text-sm font-semibold border border-primary">
-          &larr; Înapoi la listă
-        </Link>
-        <div className="absolute bottom-6 left-6 bg-primary/90 rounded-xl px-5 py-2 text-white font-bold text-2xl shadow-lg drop-shadow tracking-tight animate-fade-in">
-          {opp.title}
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50/50 pb-20 pt-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-      {/* Detalii principale */}
-      <div className="p-8 pt-4">
-        <div className="flex gap-6 flex-wrap mb-5">
-          <div className="flex items-center gap-2 text-secondary">
-            <FaListUl className="text-primary" />
-            <span className="font-semibold">{opp.type}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FaCalendarAlt className="text-primary" />
-            <span>{opp.deadline ? new Date(opp.deadline).toLocaleDateString() : '-'}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FaMapMarkerAlt className="text-primary" />
-            <span>{opp.location}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FaMoneyBillWave className="text-green-600" />
-            <span className="font-semibold">{opp.price} RON</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FaUsers className="text-primary" />
-            <span>Locuri: <span className="font-bold">{opp.available_spots}</span></span>
-          </div>
-        </div>
+        {/* Navigation & Header */}
+        <div className="mb-8">
+          <Link
+            href="/student/opportunities"
+            className="group inline-flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors mb-6 font-medium"
+          >
+            <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" />
+            Înapoi la oportunități
+          </Link>
 
-        {/* Skills */}
-        <div className="mb-4 flex gap-2 flex-wrap">
-          {Array.isArray(opp.skills) && opp.skills.map((s: string, i: number) => (
-            <span key={i} className="text-xs px-3 py-1 rounded-full bg-gradient-to-r from-violet-200 via-blue-200 to-primary text-primary font-semibold shadow-sm border border-primary/20 animate-fade-in">
-              {s}
-            </span>
-          ))}
-        </div>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+            <div>
+              <div className="flex gap-3 mb-3">
+                <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider border border-blue-200">
+                  {opp.type}
+                </span>
+                {opp.deadline && (
+                  <span className={`px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider ${new Date(opp.deadline) > new Date()
+                    ? "bg-green-100 text-green-700 border-green-200"
+                    : "bg-red-100 text-red-700 border-red-200"
+                    }`}>
+                    {new Date(opp.deadline) > new Date() ? "Activ" : "Expirat"}
+                  </span>
+                )}
+              </div>
+              <h1 className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">
+                {opp.title}
+              </h1>
+            </div>
 
-        {/* Descriere */}
-        <div className="mb-6">
-          <h2 className="text-lg font-bold text-primary mb-2 flex items-center gap-2">
-            <FaListUl /> Descriere
-          </h2>
-          <p className="text-gray-700 text-base leading-relaxed">{opp.description}</p>
-        </div>
-
-        {/* Agenda, FAQ, Reviews - secțiuni creative */}
-        {/* Agenda & FAQ - Vertical Full Width Layout */}
-        <div className="flex flex-col gap-8 mb-10 w-full">
-          {/* Agenda */}
-          <div className="bg-white/80 rounded-2xl shadow-sm p-6 border border-primary/10 animate-fade-in w-full">
-            <h3 className="text-primary text-xl font-bold mb-4 flex items-center gap-2 border-b border-primary/10 pb-2">
-              <FaListUl /> Agenda
-            </h3>
-            <div className="flex flex-col gap-4 w-full">
-              {opp.agenda ? (
-                Array.isArray(opp.agenda) ? (
-                  opp.agenda.map((item: any, i: number) => (
-                    <div key={i} className="w-full bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 hover:shadow-md transition-shadow">
-                      <div className="font-bold text-secondary text-lg min-w-[100px] flex-shrink-0 border-r md:border-r-0 md:border-b border-gray-100 pb-2 md:pb-0 md:pr-4">
-                        {item.time || `Etapa ${i + 1}`}
-                      </div>
-                      <div className="text-gray-700 text-base leading-relaxed break-words whitespace-pre-wrap flex-grow">
-                        <div className="font-semibold text-gray-900 mb-1">{item.title}</div>
-                        {item.text || item.description || (typeof item === 'string' ? item : JSON.stringify(item))}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-gray-700 text-base leading-relaxed break-words whitespace-pre-wrap bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                    {typeof opp.agenda === "object" ? opp.agenda.text ?? JSON.stringify(opp.agenda) : opp.agenda}
-                  </div>
-                )
-              ) : (
-                <div className="text-gray-400 italic p-4 text-center bg-gray-50 rounded-xl">Nu există agendă specificată.</div>
-              )}
+            {/* Metadata Summary */}
+            <div className="flex flex-wrap gap-6 text-gray-600 font-medium text-sm md:text-base bg-white px-6 py-4 rounded-2xl shadow-sm border border-gray-100">
+              <div className="flex items-center gap-2">
+                <FaMapMarkerAlt className="text-blue-500" />
+                {opp.location}
+              </div>
+              <div className="w-px h-6 bg-gray-200 hidden md:block" />
+              <div className="flex items-center gap-2">
+                <FaCalendarAlt className="text-blue-500" />
+                {opp.deadline ? new Date(opp.deadline).toLocaleDateString("ro-RO", { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* FAQ */}
-          <div className="bg-white/80 rounded-2xl shadow-sm p-6 border border-primary/10 animate-fade-in w-full">
-            <h3 className="text-primary text-xl font-bold mb-4 flex items-center gap-2 border-b border-primary/10 pb-2">
-              <FaListUl /> Întrebări Frecvente (FAQ)
-            </h3>
-            <div className="flex flex-col gap-4 w-full">
-              {opp.faq ? (
-                Array.isArray(opp.faq) ? (
-                  opp.faq.map((item: any, i: number) => (
-                    <div key={i} className="w-full bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                      {item.question && (
-                        <div className="font-bold text-gray-900 text-lg mb-2 flex items-start gap-2">
-                          <span className="text-secondary">Q:</span>
-                          <span className="break-words">{item.question}</span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+          {/* Left Column: Main Content */}
+          <div className="lg:col-span-2 space-y-8">
+
+            {/* Banner Image - Fully Visible */}
+            <div className="bg-white p-2 rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+              {opp.banner_image ? (
+                <img
+                  src={opp.banner_image}
+                  alt={opp.title}
+                  className="w-full h-auto max-h-[500px] object-contain rounded-2xl bg-gray-50"
+                />
+              ) : (
+                <div className="w-full h-[300px] rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center text-blue-200">
+                  <FaStar size={64} />
+                </div>
+              )}
+            </div>
+
+            {/* Description */}
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <span className="p-2 rounded-lg bg-blue-50 text-blue-600"><FaListUl /></span>
+                Despre Oportunitate
+              </h2>
+              <div className="prose prose-lg text-gray-600 max-w-none leading-relaxed whitespace-pre-line">
+                {opp.description}
+              </div>
+
+              {/* Tags */}
+              {opp.tags && opp.tags.length > 0 && (
+                <div className="mt-8 pt-6 border-t border-gray-100">
+                  <div className="flex flex-wrap gap-2">
+                    {typeof opp.tags === 'string'
+                      ? opp.tags.split(',').map((tag: string, i: number) => (
+                        <span key={i} className="px-3 py-1 rounded-md bg-gray-50 text-gray-600 text-sm font-medium border border-gray-100">#{tag.trim()}</span>
+                      ))
+                      : Array.isArray(opp.tags) && opp.tags.map((tag: string, i: number) => (
+                        <span key={i} className="px-3 py-1 rounded-md bg-gray-50 text-gray-600 text-sm font-medium border border-gray-100">#{tag}</span>
+                      ))
+                    }
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Video Promo (Before Agenda) */}
+            {opp.promo_video && (
+              <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <span className="p-2 rounded-lg bg-red-50 text-red-600"><FaPlay /></span>
+                  Video Promo
+                </h3>
+                <div className="bg-black rounded-2xl overflow-hidden shadow-lg aspect-video relative group">
+                  <video
+                    src={opp.promo_video}
+                    controls
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Agenda */}
+            {opp.agenda && (
+              <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <span className="p-2 rounded-lg bg-purple-50 text-purple-600"><FaClock /></span>
+                  Agendă & Program
+                </h3>
+                <div className="space-y-4">
+                  {Array.isArray(opp.agenda) ? (
+                    opp.agenda.map((item: any, i: number) => (
+                      <div key={i} className="flex gap-4 items-start p-4 rounded-2xl bg-gray-50/50 hover:bg-white border border-transparent hover:border-purple-100 hover:shadow-sm transition-all">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm shadow-sm">
+                          {i + 1}
                         </div>
-                      )}
-                      <div className="text-gray-700 text-base leading-relaxed break-words whitespace-pre-wrap pl-6 border-l-2 border-secondary/20">
-                        {item.answer || item.text || JSON.stringify(item)}
+                        <div>
+                          <p className="font-bold text-gray-900 text-base mb-1">{item.time || `Etapa ${i + 1}`}</p>
+                          <p className="text-gray-600 leading-relaxed">{item.title || item.text || (typeof item === 'string' ? item : '')}</p>
+                        </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="bg-gray-50 p-6 rounded-2xl text-gray-700 leading-relaxed whitespace-pre-line border border-gray-100">
+                      {typeof opp.agenda === 'object' ? (opp.agenda as any).text : opp.agenda}
                     </div>
-                  ))
-                ) : (
-                  <div className="text-gray-700 text-base leading-relaxed break-words whitespace-pre-wrap bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                    {typeof opp.faq === "object" ? opp.faq.text ?? JSON.stringify(opp.faq) : opp.faq}
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* FAQ */}
+            {opp.faq && (Array.isArray(opp.faq) ? opp.faq.length > 0 : !!opp.faq) && (
+              <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <span className="p-2 rounded-lg bg-orange-50 text-orange-600"><FaCheckCircle /></span>
+                  Întrebări Frecvente
+                </h2>
+                <div className="space-y-4">
+                  {Array.isArray(opp.faq) ? opp.faq.map((item: any, i: number) => (
+                    <div key={i} className="border border-gray-100 rounded-2xl p-6 hover:border-orange-200 hover:bg-orange-50/20 transition-all bg-white">
+                      <h4 className="font-bold text-gray-900 mb-2 flex items-start gap-3 text-lg">
+                        <span className="text-orange-500 bg-orange-100 w-6 h-6 rounded-full flex items-center justify-center text-xs mt-1 shrink-0">?</span>
+                        {item.question}
+                      </h4>
+                      <div className="pl-9 text-gray-600 leading-relaxed">{item.answer || item.text}</div>
+                    </div>
+                  )) : (
+                    <p className="text-gray-600 p-4 border border-gray-100 rounded-2xl bg-gray-50">{typeof opp.faq === 'object' ? (opp.faq as any).text : opp.faq}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+          </div>
+
+          {/* Right Column: Sticky Sidebar */}
+          <div className="lg:col-span-1 space-y-6">
+
+            {/* Action Card */}
+            <div className="bg-white rounded-3xl p-6 shadow-xl shadow-blue-500/10 border border-blue-100 lg:sticky lg:top-8 transition-all hover:shadow-2xl hover:shadow-blue-500/15">
+              <div className="text-center mb-8 relative">
+                <div className="absolute top-0 right-0 p-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500 block animate-pulse"></span>
+                </div>
+                <p className="text-gray-500 text-sm font-bold uppercase tracking-widest mb-2">Preț</p>
+                <div className="text-5xl font-black text-gray-900 tracking-tight">
+                  {opp.price > 0 ? `${opp.price} RON` : "Gratuit"}
+                </div>
+              </div>
+
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <div className="flex items-center gap-3 text-gray-600 font-medium">
+                    <FaUsers className="text-blue-500" /> Locuri total
                   </div>
-                )
+                  <span className="font-bold text-gray-900 text-lg">{opp.available_spots}</span>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <div className="flex items-center gap-3 text-gray-600 font-medium">
+                    <FaMapMarkerAlt className="text-blue-500" /> Locație
+                  </div>
+                  <span className="font-bold text-gray-900 text-right text-sm max-w-[50%] truncate" title={opp.location}>{opp.location}</span>
+                </div>
+              </div>
+
+              {opp.cta_url ? (
+                <div className="space-y-4">
+                  <a
+                    href={opp.cta_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-lg text-center block shadow-lg shadow-blue-600/30 hover:shadow-xl hover:scale-[1.02] transition-all transform"
+                  >
+                    Aplică Acum
+                  </a>
+                  <p className="text-xs text-center text-gray-400">
+                    Se deschide într-o filă nouă pe site-ul oficial.
+                  </p>
+                </div>
               ) : (
-                <div className="text-gray-400 italic p-4 text-center bg-gray-50 rounded-xl">Nu există întrebări frecvente.</div>
+                <div className="bg-gray-50 rounded-xl p-4 text-center border border-gray-200">
+                  <p className="text-gray-500 font-medium text-sm">Înscrierile sunt momentan închise sau se fac direct la organizație.</p>
+                </div>
               )}
             </div>
-          </div>
-        </div>
 
-        {/* Galerie */}
-
-
-
-        {/* Video promo */}
-        {opp.promo_video && (
-          <div className="mb-8">
-            <div className="font-bold mb-2 text-primary text-lg">Check this out</div>
-            <div className="rounded-xl overflow-hidden bg-black flex items-center justify-center aspect-video max-w-xl mx-auto">
-              <video
-                controls
-                src={opp.promo_video}
-                className="w-full h-full object-contain"
-                style={{ maxHeight: "400px", maxWidth: "100%" }}
-              >
-                Video promo
-              </video>
-            </div>
-          </div>
-        )}
-
-        {/* Call to Action */}
-        <div className="text-center mt-12">
-          {opp.cta_url ? (
-            <a
-              href={opp.cta_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-white font-bold px-8 py-3 rounded-2xl shadow-lg text-lg transition-all duration-200 hover:scale-105"
-            >
-              Aplică acum și descoperă oportunitatea!
-            </a>
-          ) : (
-            <button
-              className="bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-white font-bold px-8 py-3 rounded-2xl shadow-lg text-lg transition-all duration-200 hover:scale-105"
-              disabled
-              title="Momentan nu poți aplica direct"
-            >
-              Aplică acum și descoperă oportunitatea!
-            </button>
-          )}
-          <div className="mt-2 text-xs text-gray-500">
-            {opp.cta_url
-              ? "* Vei fi redirecționat către pagina oficială a organizației."
-              : "* Pentru mai multe detalii, contactează organizația."}
+            {/* Skills Card */}
+            {opp.skills && opp.skills.length > 0 && (
+              <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-gray-900">
+                  <FaStar className="text-yellow-400" /> Abilități & Competențe
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {opp.skills.map((skill: string, i: number) => (
+                    <span key={i} className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-sm font-bold border border-blue-100">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

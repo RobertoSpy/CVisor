@@ -13,12 +13,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CVISOR",
-  description: "Platforma ta de carieră și oportunități",
+  title: "CVISOR — Platforma de Oportunități pentru Studenți",
+  description: "Prima platformă din România care conectează studenții cu asociațiile studențești. Descoperă oportunități de voluntariat, evenimente, workshopuri și petreceri — totul gratuit!",
+  keywords: ["studenți", "oportunități", "voluntariat", "asociații studențești", "Iași", "evenimente", "CVISOR"],
   manifest: "/manifest.json",
   icons: {
     icon: "/albastru.svg",
-    apple: "/icon-192.png", // Fallback for iOS
+    apple: "/icon-192.png",
   },
   appleWebApp: {
     capable: true,
@@ -27,6 +28,13 @@ export const metadata: Metadata = {
   },
   formatDetection: {
     telephone: false,
+  },
+  openGraph: {
+    title: "CVISOR — Platforma de Oportunități pentru Studenți",
+    description: "Descoperă oportunități de voluntariat, evenimente și workshopuri. Totul gratuit!",
+    type: "website",
+    locale: "ro_RO",
+    siteName: "CVISOR",
   },
 };
 
@@ -39,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="ro">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

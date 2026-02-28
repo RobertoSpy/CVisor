@@ -12,8 +12,11 @@ jest.mock('../../middleware/verifyToken', () => (req, res, next) => {
 jest.mock('../../db', () => ({
   pool: {
     query: jest.fn(),
+    connect: jest.fn(),
   },
 }));
+
+jest.mock('../../workers', () => ({ startWorkers: jest.fn() }));
 
 describe('Security Integration Tests', () => {
 

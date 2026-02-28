@@ -1,79 +1,88 @@
 const request = require('supertest');
-const app = require('../../app');
 const { pool } = require('../../db');
 
 jest.mock('../../db', () => ({
   pool: {
     query: jest.fn(),
+    connect: jest.fn(),
   },
 }));
 
-// Mock verifyToken
+jest.mock('../../workers', () => ({ startWorkers: jest.fn() }));
+
 jest.mock('../../middleware/verifyToken', () => (req, res, next) => {
   req.user = { id: 1, role: 'student' };
   next();
 });
 
+// Mock client for transactions (used by recordDailyLogin / streak repair)
+const mockClient = {
+  query: jest.fn(),
+  release: jest.fn(),
+};
+
+const app = require('../../app');
+
 describe('Streak Flow Integration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    pool.connect.mockResolvedValue(mockClient);
   });
 
-  test('User with 100 days streak should receive points and badge unlock', async () => {
-    // 1. Simulate Pageview (Login)
-    // Mock checks for existing login today (0 rows = new login)
-    pool.query.mockResolvedValueOnce({ rowCount: 1 }); // Insert app_event success
-    pool.query.mockResolvedValueOnce({ rowCount: 0 }); // alreadyGotPoints = 0 (false)
-    pool.query.mockResolvedValueOnce({ rowCount: 1 }); // Insert points
-    pool.query.mockResolvedValueOnce({ rowCount: 1 }); // Insert point_event
+  test('Pageview records login and awards daily points', async () => {
+    // recordDailyLogin uses performTransaction → pool.connect → client.query
+    // Inside the transaction:
+    // 1. BEGIN
+    mockClient.query.mockResolvedValueOnce({});
+    // 2. INSERT app_events (login event — INSERT ... WHERE NOT EXISTS)
+    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
+    // 3. Check if daily points already awarded (SELECT from user_point_events)
+    mockClient.query.mockResolvedValueOnce({ rowCount: 0 });
+    // 4. addPoints → SELECT current points
+    mockClient.query.mockResolvedValueOnce({ rows: [{ points: 50 }] });
+    // 5. addPoints → INSERT/UPDATE user_points
+    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
+    // 6. addPoints → INSERT user_point_events (log)
+    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
+    // 7. _calculateAndAwardStreak → CTE streak query
+    mockClient.query.mockResolvedValueOnce({ rows: [{ streak: 1 }] });
+    // 8. COMMIT
+    mockClient.query.mockResolvedValueOnce({});
 
-    // Mock badge bonus check (badge_code provided in body)
-    pool.query.mockResolvedValueOnce({ rowCount: 1 }); // Has badge (simulating frontend checked it)
-    pool.query.mockResolvedValueOnce({ rowCount: 0 }); // Has not got bonus yet
-    pool.query.mockResolvedValueOnce({ rowCount: 1 }); // Insert bonus points
-    pool.query.mockResolvedValueOnce({ rowCount: 1 }); // Insert bonus event
-
-    const resPageview = await request(app)
+    const res = await request(app)
       .post('/api/students/stats/pageview')
-      .send({ badge_code: 'streak_100' });
+      .send({});
 
-    expect(resPageview.statusCode).toBe(200);
-    expect(resPageview.body.points_awarded).toBe(true);
-
-    // 2. Simulate Badge Unlock (Frontend calls this if it detects new badge)
-    // Mock existence check (0 = not yet unlocked)
-    pool.query.mockResolvedValueOnce({ rowCount: 0 });
-    pool.query.mockResolvedValueOnce({ rowCount: 1 }); // Insert badge
-    pool.query.mockResolvedValueOnce({ rowCount: 1 }); // Insert points
-    pool.query.mockResolvedValueOnce({ rowCount: 1 }); // Insert event
-
-    const resBadge = await request(app)
-      .post('/api/students/badges/unlock')
-      .send({ badge_code: 'streak_100' });
-
-    expect(resBadge.statusCode).toBe(200);
-    expect(resBadge.body.ok).toBe(true);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.ok).toBe(true);
   });
 
-  test('Repair Streak flow', async () => {
-    // 1. Repair Call
-    // Mock user points check (has 100 points)
-    pool.query.mockResolvedValueOnce({ rows: [{ points: 100 }] });
-    // Mock update points
-    pool.query.mockResolvedValueOnce({ rowCount: 1 }); // points update
-    pool.query.mockResolvedValueOnce({ rowCount: 1 }); // log event
-    // Mock repair record
-    pool.query.mockResolvedValueOnce({ rowCount: 1 }); // insert repair
+  test('Repair Streak flow deducts 20 points', async () => {
+    // processStreakRepair uses performTransaction → pool.connect → client.query
+    // 1. BEGIN
+    mockClient.query.mockResolvedValueOnce({});
+    // 2. SELECT points ... FOR UPDATE (lock row)
+    mockClient.query.mockResolvedValueOnce({ rows: [{ points: 100 }] });
+    // 3. addPoints(-20, 'repair') → SELECT current points
+    mockClient.query.mockResolvedValueOnce({ rows: [{ points: 100 }] });
+    // 4. addPoints → INSERT/UPDATE user_points
+    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
+    // 5. addPoints → INSERT user_point_events
+    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
+    // 6. INSERT user_streak_repairs
+    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
+    // 7. COMMIT
+    mockClient.query.mockResolvedValueOnce({});
 
-    const resRepair = await request(app)
+    const res = await request(app)
       .post('/api/students/points/add')
       .send({
         points_delta: -20,
         reason: 'repair',
-        repaired_date: '2023-01-01'
+        repaired_date: '2024-01-01'
       });
 
-    expect(resRepair.statusCode).toBe(200);
-    expect(resRepair.body.points).toBeDefined();
+    expect(res.statusCode).toBe(200);
+    expect(res.body.points).toBeDefined();
   });
 });

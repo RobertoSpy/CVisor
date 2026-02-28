@@ -146,18 +146,18 @@ export default function OpportunityCard({ opportunity: opp, onEdit, onDelete, re
 
       {/* Acțiuni */}
       {!readOnly && (
-        <div className="mt-4 flex gap-2 justify-center">
+        <div className="mt-4 flex gap-3 justify-center">
           <button
-            className="px-3 py-1 rounded-lg bg-accent text-white hover:bg-primary transition shadow text-sm"
+            className="flex-1 px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition shadow-md hover:shadow-lg text-sm font-bold flex items-center justify-center gap-2"
             onClick={() => onEdit(opp)}
           >
-            Editează
+            ✏️ Editează
           </button>
           <button
-            className="px-3 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 transition shadow text-sm"
+            className="flex-1 px-4 py-2 rounded-xl bg-white text-red-500 border-2 border-red-100 hover:bg-red-50 hover:border-red-200 transition shadow-sm text-sm font-bold flex items-center justify-center gap-2"
             onClick={() => onDelete(opp.id)}
           >
-            Șterge
+            🗑️ Șterge
           </button>
         </div>
       )}

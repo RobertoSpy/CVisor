@@ -1,5 +1,6 @@
 import { Opportunity } from "../types";
 import toast from "react-hot-toast";
+import ApiClient from "../../../../lib/api/client";
 
 // Toate funcțiile de handler pentru OpportunitiesPage
 export function useOpportunityHandlers({
@@ -51,17 +52,9 @@ export function useOpportunityHandlers({
     const data = new FormData();
     data.append("file", file);
 
-    fetch("/api/upload", {
-      method: "POST",
-      credentials: "include",
-      body: data,
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Upload failed");
-        return res.json();
-      })
-      .then((data) => {
-        setForm((f: any) => ({ ...f, banner_image: data.url }));
+    ApiClient.post<{ url: string }>("/api/upload", data)
+      .then((resData) => {
+        setForm((f: any) => ({ ...f, banner_image: resData.url }));
         toast.success("Banner încărcat!");
       })
       .catch(() => {
@@ -85,17 +78,9 @@ export function useOpportunityHandlers({
     const data = new FormData();
     data.append("file", file);
 
-    fetch("/api/upload", {
-      method: "POST",
-      credentials: "include",
-      body: data,
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Upload failed");
-        return res.json();
-      })
-      .then((data) => {
-        setForm((f: any) => ({ ...f, promo_video: data.url }));
+    ApiClient.post<{ url: string }>("/api/upload", data)
+      .then((resData) => {
+        setForm((f: any) => ({ ...f, promo_video: resData.url }));
         toast.success("Video încărcat!");
       })
       .catch(() => {
@@ -130,20 +115,14 @@ export function useOpportunityHandlers({
       agenda: form.agenda && typeof form.agenda === "string" ? { text: form.agenda } : form.agenda || {},
       faq: form.faq && typeof form.faq === "string" ? [{ text: form.faq }] : form.faq || [],
       participants: [],
+      // Sanitize numbers and optional strings
+      price: form.price === "" ? undefined : Number(form.price),
+      available_spots: form.available_spots === "" ? undefined : Number(form.available_spots),
+      description: form.description && form.description.length >= 10 ? form.description : undefined,
+      cta_url: form.cta_url || undefined,
     };
 
-    fetch("/api/organizations/opportunities", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(payload),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Eroare la creare");
-        return res.json();
-      })
+    ApiClient.post<{ pointsAdded?: number, opportunity?: any }>("/api/organizations/opportunities", payload)
       .then((data) => {
         if (data.pointsAdded) {
           toast.success(`Felicitări! Ai primit ${data.pointsAdded} puncte pentru crearea oportunității! 🌟`, {
@@ -199,17 +178,9 @@ export function useOpportunityHandlers({
     const data = new FormData();
     data.append("file", file);
 
-    fetch("/api/upload", {
-      method: "POST",
-      credentials: "include",
-      body: data,
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Upload failed");
-        return res.json();
-      })
-      .then((data) => {
-        setEditForm((f: any) => ({ ...f, banner_image: data.url }));
+    ApiClient.post<{ url: string }>("/api/upload", data)
+      .then((resData) => {
+        setEditForm((f: any) => ({ ...f, banner_image: resData.url }));
         toast.success("Banner actualizat!");
       })
       .catch(() => toast.error("Eroare upload banner"));
@@ -231,17 +202,9 @@ export function useOpportunityHandlers({
     const data = new FormData();
     data.append("file", file);
 
-    fetch("/api/upload", {
-      method: "POST",
-      credentials: "include",
-      body: data,
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Upload failed");
-        return res.json();
-      })
-      .then((data) => {
-        setEditForm((f: any) => ({ ...f, promo_video: data.url }));
+    ApiClient.post<{ url: string }>("/api/upload", data)
+      .then((resData) => {
+        setEditForm((f: any) => ({ ...f, promo_video: resData.url }));
         toast.success("Video actualizat!");
       })
       .catch(() => toast.error("Eroare upload video"));
@@ -276,23 +239,14 @@ export function useOpportunityHandlers({
       faq: editForm.faq && typeof editForm.faq === "string"
         ? editForm.faq.split("\n").map((text: string) => ({ text }))
         : editForm.faq || [],
-      mentors: editForm.mentors && typeof editForm.mentors === "string"
-        ? JSON.parse(editForm.mentors)
-        : editForm.mentors || [],
+      // Sanitize numbers and optional strings
+      price: editForm.price === "" ? undefined : Number(editForm.price),
+      available_spots: editForm.available_spots === "" ? undefined : Number(editForm.available_spots),
+      description: editForm.description && editForm.description.length >= 10 ? editForm.description : undefined,
+      cta_url: editForm.cta_url || undefined,
     };
 
-    fetch(`/api/organizations/opportunities/${editId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(payload),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Eroare la editare");
-        return res.json();
-      })
+    ApiClient.put<{ opportunity?: any } | any>(`/api/organizations/opportunities/${editId}`, payload)
       .then((data) => {
         toast.success("Oportunitate actualizată!");
         setEditId(null);
@@ -327,12 +281,8 @@ export function useOpportunityHandlers({
   // Ștergere oportunitate
   function handleDelete(id: string) {
     if (!confirm("Sigur vrei să ștergi această oportunitate?")) return;
-    fetch(`/api/organizations/opportunities/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Eroare la ștergere");
+    ApiClient.delete(`/api/organizations/opportunities/${id}`)
+      .then(() => {
         setOpportunities((prev: any[]) => prev.filter((o) => o.id !== id));
         toast.success("Oportunitate ștearsă");
       })

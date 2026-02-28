@@ -1,4 +1,4 @@
-"use client";
+// Server Component — no "use client" for SEO
 import { FiUsers, FiBriefcase, FiHelpCircle } from "react-icons/fi";
 
 const partners = [

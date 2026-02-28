@@ -1,7 +1,7 @@
 const cron = require("node-cron");
 const { pool } = require("../db");
 const crypto = require("crypto");
-const { newsletterQueue } = require("../lib/queue");
+const { newsletterQueue } = require("../queues");
 
 const styles = {
   container: "font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb;",

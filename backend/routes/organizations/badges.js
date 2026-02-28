@@ -1,6 +1,7 @@
 const express = require("express");
 const { pool } = require("../../db");
 const verifyToken = require("../../middleware/verifyToken");
+const { validate, badgeUnlockSchema } = require("../../middleware/validation");
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ router.get("/badges", verifyToken, async (req, res) => {
   res.json({ badges: rows.map(r => r.badge_code) });
 });
 
-router.post("/badges/unlock", verifyToken, async (req, res) => {
+router.post("/badges/unlock", verifyToken, validate(badgeUnlockSchema), async (req, res) => {
   const uid = req.user.id;
   const { badge_code } = req.body;
   // Verifică dacă există deja

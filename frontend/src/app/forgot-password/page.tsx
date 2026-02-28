@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import ApiClient from "../../lib/api/client";
 
 export default function ForgotPasswordPage() {
   const [step, setStep] = useState(1); // 1: Email, 2: Code + New Password
@@ -19,17 +20,11 @@ export default function ForgotPasswordPage() {
     setError(null);
     setMessage(null);
     try {
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      await ApiClient.post<{ message?: string }>("/api/auth/forgot-password", { email });
       setMessage("Codul a fost trimis! Verifică emailul.");
       setStep(2);
-    } catch (err: any) {
-      setError(err.message || "Eroare la trimiterea codului");
+    } catch (err: unknown) {
+      setError((err as { message?: string })?.message || "Eroare la trimiterea codului");
     } finally {
       setLoading(false);
     }
@@ -41,17 +36,11 @@ export default function ForgotPasswordPage() {
     setError(null);
     setMessage(null);
     try {
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code, newPassword }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      await ApiClient.post<{ message?: string }>("/api/auth/reset-password", { email, code, newPassword });
       setMessage("Parola a fost resetată cu succes! Te redirecționăm...");
       setTimeout(() => router.push("/login"), 2000);
-    } catch (err: any) {
-      setError(err.message || "Eroare la resetarea parolei");
+    } catch (err: unknown) {
+      setError((err as { message?: string })?.message || "Eroare la resetarea parolei");
     } finally {
       setLoading(false);
     }
